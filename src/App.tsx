@@ -1,0 +1,28 @@
+import { HashRouter, Routes, Route } from 'react-router-dom';
+import Layout from './components/Layout';
+import Home from './pages/Home';
+import IdiomsBrowse from './pages/IdiomsBrowse';
+import IdiomsQuiz from './pages/IdiomsQuiz';
+import SentencePractice from './pages/SentencePractice';
+import ConfusablesQuiz from './pages/ConfusablesQuiz';
+import ProgressPage from './pages/ProgressPage';
+import { AppDataProvider } from './lib/AppDataContext';
+
+export default function App() {
+  return (
+    <AppDataProvider>
+      <HashRouter>
+        <Routes>
+          <Route element={<Layout />}>
+            <Route path="/" element={<Home />} />
+            <Route path="/idioms" element={<IdiomsBrowse />} />
+            <Route path="/idioms/quiz" element={<IdiomsQuiz />} />
+            <Route path="/idioms/sentence" element={<SentencePractice />} />
+            <Route path="/confusables" element={<ConfusablesQuiz />} />
+            <Route path="/progress" element={<ProgressPage />} />
+          </Route>
+        </Routes>
+      </HashRouter>
+    </AppDataProvider>
+  );
+}
