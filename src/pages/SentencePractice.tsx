@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { idioms, type Idiom } from '../data/idioms';
 import { checkSentence } from '../lib/sentenceCheck';
 import { useAppDataContext } from '../lib/AppDataContext';
+import { COIN_PER_SENTENCE_PASS, STAR_PER_SENTENCE_PASS } from '../lib/rewards';
 
 function randomIdiom(excludeId?: string): Idiom {
   const pool = excludeId ? idioms.filter((i) => i.id !== excludeId) : idioms;
@@ -9,7 +10,7 @@ function randomIdiom(excludeId?: string): Idiom {
 }
 
 export default function SentencePractice() {
-  const { data, logSentence } = useAppDataContext();
+  const { data, logSentence, reward } = useAppDataContext();
   const [idiom, setIdiom] = useState<Idiom>(() => randomIdiom());
   const [sentence, setSentence] = useState('');
   const [result, setResult] = useState<{ passed: boolean; messages: string[] } | null>(null);
@@ -24,6 +25,9 @@ export default function SentencePractice() {
       passed: check.passed,
       date: new Date().toISOString(),
     });
+    if (check.passed) {
+      reward(COIN_PER_SENTENCE_PASS, STAR_PER_SENTENCE_PASS);
+    }
   }
 
   function handleNext() {
@@ -84,6 +88,11 @@ export default function SentencePractice() {
                 {m}
               </p>
             ))}
+            {result.passed && (
+              <p className="text-emerald-700 font-medium">
+                獲得 🪙 {COIN_PER_SENTENCE_PASS}、⭐ {STAR_PER_SENTENCE_PASS}！
+              </p>
+            )}
             <p className="text-gray-500 pt-2 border-t border-gray-200 mt-2">
               參考例句：{idiom.example}
             </p>

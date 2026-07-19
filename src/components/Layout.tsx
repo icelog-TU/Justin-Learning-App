@@ -8,6 +8,8 @@ const NAV_ITEMS = [
   { to: '/idioms/quiz', label: '成語測驗', icon: '🎯' },
   { to: '/idioms/sentence', label: '成語造句', icon: '✏️' },
   { to: '/confusables', label: '錯別字測驗', icon: '🔍' },
+  { to: '/gacha', label: '轉蛋', icon: '🎁' },
+  { to: '/characters', label: '角色收藏', icon: '🎴' },
   { to: '/progress', label: '學習紀錄', icon: '🏆' },
 ];
 
@@ -27,10 +29,14 @@ export default function Layout() {
               成語 × 錯別字，天天進步一點點！
             </p>
           </div>
-          <div className="flex gap-2 text-xs sm:text-sm font-semibold shrink-0">
+          <div className="flex flex-wrap justify-end gap-1.5 text-xs sm:text-sm font-semibold shrink-0 max-w-[55%]">
+            <div className="bg-white/20 rounded-full px-2.5 py-1 flex items-center gap-1 whitespace-nowrap">
+              <span>🪙</span>
+              <span>{data.coins}</span>
+            </div>
             <div className="bg-white/20 rounded-full px-2.5 py-1 flex items-center gap-1 whitespace-nowrap">
               <span>⭐</span>
-              <span>{data.points} 分</span>
+              <span>{data.stars}</span>
             </div>
             <div className="bg-white/20 rounded-full px-2.5 py-1 flex items-center gap-1 whitespace-nowrap">
               <span>🔥</span>

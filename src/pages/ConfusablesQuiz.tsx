@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { confusableQuestions, confusableGroups, type ConfusableQuestion } from '../data/confusables';
 import { pickRandom, shuffle } from '../lib/quizUtils';
 import { useAppDataContext } from '../lib/AppDataContext';
+import { COIN_PER_CORRECT, STAR_PER_CORRECT, QUIZ_PERFECT_BONUS_COINS, QUIZ_PERFECT_BONUS_STARS } from '../lib/rewards';
 
 const QUIZ_LENGTH = 12;
 
@@ -19,7 +20,7 @@ function groupTitle(groupId: string) {
 }
 
 export default function ConfusablesQuiz() {
-  const { answer } = useAppDataContext();
+  const { answer, reward } = useAppDataContext();
   const [questions, setQuestions] = useState<RoundQuestion[]>(() => buildQuestions());
   const [index, setIndex] = useState(0);
   const [selected, setSelected] = useState<string | null>(null);
@@ -37,6 +38,7 @@ export default function ConfusablesQuiz() {
     answer('confusableStats', current.id, correct);
     if (correct) {
       setScore((s) => s + 1);
+      reward(COIN_PER_CORRECT, STAR_PER_CORRECT);
     } else {
       setWrongList((w) => [...w, current]);
     }
@@ -44,6 +46,9 @@ export default function ConfusablesQuiz() {
 
   function handleNext() {
     if (index + 1 >= questions.length) {
+      if (score === questions.length) {
+        reward(QUIZ_PERFECT_BONUS_COINS, QUIZ_PERFECT_BONUS_STARS);
+      }
       setFinished(true);
       return;
     }
@@ -68,6 +73,11 @@ export default function ConfusablesQuiz() {
           <h2 className="text-xl font-bold text-gray-800">
             測驗結束！答對 {score} / {questions.length} 題
           </h2>
+          <p className="text-sm text-gray-500">
+            獲得 🪙 {score * COIN_PER_CORRECT + (score === questions.length ? QUIZ_PERFECT_BONUS_COINS : 0)}、
+            ⭐ {score * STAR_PER_CORRECT + (score === questions.length ? QUIZ_PERFECT_BONUS_STARS : 0)}
+            {score === questions.length && '（滿分獎勵！）'}
+          </p>
           <button
             type="button"
             onClick={handleRestart}

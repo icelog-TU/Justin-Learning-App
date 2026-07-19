@@ -6,6 +6,8 @@ import IdiomsQuiz from './pages/IdiomsQuiz';
 import SentencePractice from './pages/SentencePractice';
 import ConfusablesQuiz from './pages/ConfusablesQuiz';
 import ProgressPage from './pages/ProgressPage';
+import GachaPage from './pages/GachaPage';
+import CharactersPage from './pages/CharactersPage';
 import { AppDataProvider } from './lib/AppDataContext';
 
 export default function App() {
@@ -19,6 +21,8 @@ export default function App() {
             <Route path="/idioms/quiz" element={<IdiomsQuiz />} />
             <Route path="/idioms/sentence" element={<SentencePractice />} />
             <Route path="/confusables" element={<ConfusablesQuiz />} />
+            <Route path="/gacha" element={<GachaPage />} />
+            <Route path="/characters" element={<CharactersPage />} />
             <Route path="/progress" element={<ProgressPage />} />
           </Route>
         </Routes>

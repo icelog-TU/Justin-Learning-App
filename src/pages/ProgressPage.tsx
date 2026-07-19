@@ -2,18 +2,20 @@ import { idioms } from '../data/idioms';
 import { confusableQuestions } from '../data/confusables';
 import { useAppDataContext } from '../lib/AppDataContext';
 import { getStreakDays } from '../lib/storage';
+import { GACHA_BASES, MAX_EXPONENT } from '../lib/rewards';
 
-function badgeFor(points: number) {
-  if (points >= 600) return { label: '中文高手', icon: '👑' };
-  if (points >= 300) return { label: '成語小達人', icon: '🥇' };
-  if (points >= 100) return { label: '進步中的學習者', icon: '🌱' };
+function badgeFor(charactersOwned: number) {
+  if (charactersOwned >= GACHA_BASES.length * MAX_EXPONENT) return { label: '中文高手', icon: '👑' };
+  if (charactersOwned >= MAX_EXPONENT) return { label: '成語小達人', icon: '🥇' };
+  if (charactersOwned >= 5) return { label: '進步中的學習者', icon: '🌱' };
   return { label: '初學者', icon: '🐣' };
 }
 
 export default function ProgressPage() {
   const { data } = useAppDataContext();
   const streak = getStreakDays(data.visitDates);
-  const badge = badgeFor(data.points);
+  const charactersOwned = Object.keys(data.characters).length;
+  const badge = badgeFor(charactersOwned);
 
   const idiomAttempts = Object.values(data.idiomStats);
   const idiomAttemptedCount = idiomAttempts.length;
@@ -37,13 +39,37 @@ export default function ProgressPage() {
         <p className="font-bold text-lg text-gray-800">{badge.label}</p>
         <div className="flex justify-center gap-6 pt-2 text-sm">
           <div>
-            <p className="text-2xl font-bold text-orange-600">{data.points}</p>
-            <p className="text-gray-400">總分</p>
+            <p className="text-2xl font-bold text-orange-600">🪙 {data.coins}</p>
+            <p className="text-gray-400">金幣</p>
+          </div>
+          <div>
+            <p className="text-2xl font-bold text-amber-500">⭐ {data.stars}</p>
+            <p className="text-gray-400">星星</p>
           </div>
           <div>
             <p className="text-2xl font-bold text-red-500">{streak}</p>
             <p className="text-gray-400">連續天數</p>
           </div>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-2xl shadow p-5">
+        <h3 className="font-bold text-gray-800 mb-2">🎴 角色收藏</h3>
+        <p className="text-sm text-gray-600 mb-2">
+          已收集 {charactersOwned} / {GACHA_BASES.length * MAX_EXPONENT} 個角色
+        </p>
+        <div className="grid grid-cols-5 gap-2 text-center text-xs text-gray-500">
+          {GACHA_BASES.map((base) => {
+            const owned = Array.from({ length: MAX_EXPONENT }, (_, i) => i + 1).filter(
+              (exp) => data.characters[`${base}^${exp}`] !== undefined,
+            ).length;
+            return (
+              <div key={base}>
+                <p className="font-bold text-gray-700">{owned}/{MAX_EXPONENT}</p>
+                <p>{base} 的 n 次方</p>
+              </div>
+            );
+          })}
         </div>
       </div>
 

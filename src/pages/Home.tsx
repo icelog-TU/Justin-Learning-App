@@ -1,7 +1,6 @@
 import { Link } from 'react-router-dom';
-import { idioms } from '../data/idioms';
-import { confusableQuestions } from '../data/confusables';
 import { useAppDataContext } from '../lib/AppDataContext';
+import { GACHA_BASES, MAX_EXPONENT } from '../lib/rewards';
 
 const CARDS = [
   {
@@ -32,26 +31,48 @@ const CARDS = [
     desc: '形近字、音近字選字練習',
     color: 'bg-purple-100 text-purple-700',
   },
+  {
+    to: '/gacha',
+    icon: '🎁',
+    title: '轉蛋',
+    desc: '用金幣轉蛋，收集 2 的 n 次方角色',
+    color: 'bg-pink-100 text-pink-700',
+  },
+  {
+    to: '/characters',
+    icon: '🎴',
+    title: '角色收藏',
+    desc: '用星星給角色愛心，培養好感度',
+    color: 'bg-amber-100 text-amber-700',
+  },
 ];
 
 export default function Home() {
   const { data } = useAppDataContext();
   const idiomsMastered = Object.values(data.idiomStats).filter((s) => s.correct > 0 && s.lastCorrect).length;
+  const totalCharacters = Object.keys(data.characters).length;
+  const totalSlots = GACHA_BASES.length * MAX_EXPONENT;
 
   return (
     <div className="space-y-6">
-      <section className="bg-white rounded-2xl shadow p-5 grid grid-cols-3 gap-4 text-center">
+      <section className="bg-white rounded-2xl shadow p-5 grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
         <div>
-          <p className="text-2xl font-bold text-orange-600">{idioms.length}</p>
-          <p className="text-xs text-gray-500 mt-1">成語總數</p>
+          <p className="text-2xl font-bold text-orange-600">🪙 {data.coins}</p>
+          <p className="text-xs text-gray-500 mt-1">金幣</p>
+        </div>
+        <div>
+          <p className="text-2xl font-bold text-amber-500">⭐ {data.stars}</p>
+          <p className="text-xs text-gray-500 mt-1">星星</p>
+        </div>
+        <div>
+          <p className="text-2xl font-bold text-pink-600">
+            {totalCharacters}/{totalSlots}
+          </p>
+          <p className="text-xs text-gray-500 mt-1">角色收藏</p>
         </div>
         <div>
           <p className="text-2xl font-bold text-emerald-600">{idiomsMastered}</p>
           <p className="text-xs text-gray-500 mt-1">已答對成語</p>
-        </div>
-        <div>
-          <p className="text-2xl font-bold text-purple-600">{confusableQuestions.length}</p>
-          <p className="text-xs text-gray-500 mt-1">錯別字題目</p>
         </div>
       </section>
 

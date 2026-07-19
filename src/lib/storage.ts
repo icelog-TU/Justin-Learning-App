@@ -1,3 +1,13 @@
+import {
+  MAX_EXPONENT,
+  GACHA_COST_COINS,
+  HEART_COST_STARS,
+  DUPE_CONSOLATION_STARS,
+  characterId,
+  currentUnlockedBase,
+  type GachaResult,
+} from './rewards';
+
 const STORAGE_KEY = 'justin-chinese-app-v1';
 
 export interface ItemStat {
@@ -20,7 +30,10 @@ export interface AppData {
   confusableStats: Record<string, ItemStat>;
   sentenceLog: SentenceLogEntry[];
   visitDates: string[];
-  points: number;
+  coins: number;
+  stars: number;
+  /** character id ("base^exponent") -> hearts given so far */
+  characters: Record<string, number>;
 }
 
 function emptyData(): AppData {
@@ -29,7 +42,9 @@ function emptyData(): AppData {
     confusableStats: {},
     sentenceLog: [],
     visitDates: [],
-    points: 0,
+    coins: 0,
+    stars: 0,
+    characters: {},
   };
 }
 
@@ -88,12 +103,48 @@ export function recordAnswer(
     lastCorrect: correct,
     lastSeenAt: new Date().toISOString(),
   };
-  data.points += correct ? 10 : 0;
   return data;
 }
 
 export function recordSentence(data: AppData, entry: SentenceLogEntry): AppData {
   data.sentenceLog = [entry, ...data.sentenceLog].slice(0, 200);
-  if (entry.passed) data.points += 15;
   return data;
+}
+
+export function earnRewards(data: AppData, coins: number, stars: number): AppData {
+  data.coins += coins;
+  data.stars += stars;
+  return data;
+}
+
+export function rollGacha(data: AppData): { data: AppData; result: GachaResult | null } {
+  if (data.coins < GACHA_COST_COINS) return { data, result: null };
+  const base = currentUnlockedBase(data.characters);
+  if (base === null) return { data, result: null };
+
+  data.coins -= GACHA_COST_COINS;
+  const exponent = 1 + Math.floor(Math.random() * MAX_EXPONENT);
+  const id = characterId(base, exponent);
+  const isDupe = data.characters[id] !== undefined;
+
+  if (isDupe) {
+    data.stars += DUPE_CONSOLATION_STARS;
+  } else {
+    data.characters[id] = 0;
+  }
+
+  return { data, result: { id, base, exponent, isDupe } };
+}
+
+export function giveHeart(data: AppData, id: string): { data: AppData; success: boolean } {
+  const hearts = data.characters[id];
+  if (hearts === undefined) return { data, success: false };
+  const [, exponentStr] = id.split('^');
+  const maxHearts = Number(exponentStr);
+  if (hearts >= maxHearts) return { data, success: false };
+  if (data.stars < HEART_COST_STARS) return { data, success: false };
+
+  data.stars -= HEART_COST_STARS;
+  data.characters[id] = hearts + 1;
+  return { data, success: true };
 }

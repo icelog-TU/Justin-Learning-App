@@ -7,7 +7,11 @@ import {
   recordVisitToday,
   recordAnswer,
   recordSentence,
+  earnRewards,
+  rollGacha as rollGachaMutation,
+  giveHeart as giveHeartMutation,
 } from './storage';
+import type { GachaResult } from './rewards';
 
 export function useAppData() {
   const [data, setData] = useState<AppData>(() => recordVisitToday(loadData()));
@@ -24,5 +28,29 @@ export function useAppData() {
     setData((prev) => ({ ...recordSentence({ ...prev }, entry) }));
   }, []);
 
-  return { data, answer, logSentence };
+  const reward = useCallback((coins: number, stars: number) => {
+    setData((prev) => ({ ...earnRewards({ ...prev }, coins, stars) }));
+  }, []);
+
+  const rollGacha = useCallback((): GachaResult | null => {
+    let result: GachaResult | null = null;
+    setData((prev) => {
+      const outcome = rollGachaMutation({ ...prev, characters: { ...prev.characters } });
+      result = outcome.result;
+      return outcome.data;
+    });
+    return result;
+  }, []);
+
+  const giveHeart = useCallback((id: string): boolean => {
+    let success = false;
+    setData((prev) => {
+      const outcome = giveHeartMutation({ ...prev, characters: { ...prev.characters } }, id);
+      success = outcome.success;
+      return outcome.data;
+    });
+    return success;
+  }, []);
+
+  return { data, answer, logSentence, reward, rollGacha, giveHeart };
 }
