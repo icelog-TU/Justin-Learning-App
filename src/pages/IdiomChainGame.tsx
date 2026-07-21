@@ -160,6 +160,10 @@ export default function IdiomChainGame() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  useEffect(() => {
+    if (targetChar) speak(targetChar);
+  }, [targetChar]);
+
   const candidates = targetChar ? findCandidates(pool, usedIds, targetChar, targetZhuyin) : [];
   const deadEnd = targetChar !== '' && candidates.length === 0;
 
@@ -328,7 +332,16 @@ export default function IdiomChainGame() {
 
       <div className="bg-white rounded-2xl shadow p-6 text-center space-y-3">
         <p className="text-xs text-gray-400">請接一個成語，開頭是……</p>
-        <p className="text-5xl font-extrabold text-teal-600">{targetChar}</p>
+        <button
+          type="button"
+          onClick={() => targetChar && speak(targetChar)}
+          className="text-5xl font-extrabold text-teal-600 mx-auto flex items-center justify-center gap-2"
+          aria-label="再聽一次發音"
+          title="再聽一次發音"
+        >
+          {targetChar}
+          <span className="text-xl">🔊</span>
+        </button>
         <p className="text-xs text-gray-400">（讀音：{targetZhuyin}）</p>
 
         {deadEnd && (

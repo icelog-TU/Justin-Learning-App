@@ -73,6 +73,25 @@ function buildInteractionTiers(base: number, exponent: number, maxHearts: number
   return tiers;
 }
 
+/** How happy the character's face looks, from blank to overjoyed, based on affection progress. */
+const MOOD_STAGES: { min: number; emoji: string }[] = [
+  { min: 0, emoji: '😐' },
+  { min: 0.2, emoji: '🙂' },
+  { min: 0.4, emoji: '😊' },
+  { min: 0.6, emoji: '😄' },
+  { min: 0.8, emoji: '🥰' },
+  { min: 1, emoji: '🤩' },
+];
+
+function characterMood(hearts: number, maxHearts: number): string {
+  const ratio = maxHearts > 0 ? hearts / maxHearts : 0;
+  let mood = MOOD_STAGES[0].emoji;
+  for (const stage of MOOD_STAGES) {
+    if (ratio >= stage.min) mood = stage.emoji;
+  }
+  return mood;
+}
+
 interface HeartParticle {
   id: number;
   tx: number;
@@ -145,8 +164,11 @@ export default function CharacterDetailPage() {
       playUnlockFanfare();
       setJustUnlocked(newlyUnlockedIndex);
       window.setTimeout(() => setJustUnlocked(null), 700);
-      window.setTimeout(() => speak('恭喜！解鎖新互動！'), 550);
     }
+
+    // Every single heart gets a spoken reaction — odd counts say thanks, even counts celebrate — so
+    // giving a heart always feels acknowledged, not just the ones that happen to unlock a new tier.
+    window.setTimeout(() => speak(after % 2 === 1 ? '謝謝你的愛心！' : '恭喜！解鎖新互動！'), 550);
   }
 
   function handleGreeting() {
@@ -200,6 +222,12 @@ export default function CharacterDetailPage() {
             >
               {exponent}
             </div>
+            <span
+              className="absolute -bottom-1 -right-1 text-3xl bg-white rounded-full shadow"
+              style={shaking ? { animation: 'unlock-pop 0.6s ease-out' } : undefined}
+            >
+              {characterMood(hearts, maxHearts)}
+            </span>
           </div>
           <p className="text-3xl font-extrabold text-orange-600 mt-3">{label}</p>
         </button>
