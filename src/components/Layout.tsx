@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { useAppDataContext } from '../lib/AppDataContext';
 import { getStreakDays } from '../lib/storage';
@@ -19,6 +20,14 @@ const NAV_ITEMS = [
 export default function Layout() {
   const { data, celebration } = useAppDataContext();
   const streak = getStreakDays(data.visitDates);
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  useEffect(() => {
+    document.body.style.overflow = menuOpen ? 'hidden' : '';
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [menuOpen]);
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -54,27 +63,64 @@ export default function Layout() {
         </div>
       </header>
 
-      <nav className="bg-white border-b border-orange-100 shadow-sm">
-        <div className="max-w-4xl mx-auto px-2 flex gap-1 overflow-x-auto">
+      <div className="bg-white border-b border-orange-100 shadow-sm">
+        <div className="max-w-4xl mx-auto px-2">
+          <button
+            type="button"
+            onClick={() => setMenuOpen(true)}
+            className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-gray-600 hover:bg-gray-50 hover:text-orange-600"
+            aria-label="開啟選單"
+          >
+            <span className="text-xl leading-none">☰</span>
+            <span className="text-sm font-medium">選單</span>
+          </button>
+        </div>
+      </div>
+
+      {menuOpen && (
+        <div
+          className="fixed inset-0 bg-black/40 z-30"
+          onClick={() => setMenuOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+      <div
+        className={`fixed top-0 left-0 h-full w-64 max-w-[80%] bg-white shadow-xl z-40 flex flex-col transition-transform duration-200 ${
+          menuOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
+        <div className="flex items-center justify-between px-4 py-4 border-b border-gray-100">
+          <span className="font-bold text-gray-700">選單</span>
+          <button
+            type="button"
+            onClick={() => setMenuOpen(false)}
+            aria-label="收起選單"
+            className="text-2xl leading-none text-gray-400 hover:text-gray-600 px-1"
+          >
+            ←
+          </button>
+        </div>
+        <nav className="flex-1 overflow-y-auto py-2">
           {NAV_ITEMS.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
               end={item.end}
+              onClick={() => setMenuOpen(false)}
               className={({ isActive }) =>
-                `flex items-center gap-1 px-3 py-3 text-sm font-medium whitespace-nowrap border-b-4 transition-colors ${
+                `flex items-center gap-3 px-4 py-3 text-sm font-medium border-l-4 transition-colors ${
                   isActive
-                    ? 'border-orange-500 text-orange-600'
-                    : 'border-transparent text-gray-500 hover:text-orange-500'
+                    ? 'border-orange-500 text-orange-600 bg-orange-50'
+                    : 'border-transparent text-gray-600 hover:bg-gray-50'
                 }`
               }
             >
-              <span className="text-base">{item.icon}</span>
+              <span className="text-lg">{item.icon}</span>
               <span>{item.label}</span>
             </NavLink>
           ))}
-        </div>
-      </nav>
+        </nav>
+      </div>
 
       <main className="flex-1 max-w-4xl w-full mx-auto px-4 py-6">
         <Outlet />
