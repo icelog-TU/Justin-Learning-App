@@ -47,7 +47,7 @@ export default function ConfusablesQuiz() {
   function handleNext() {
     if (index + 1 >= questions.length) {
       if (score === questions.length) {
-        reward(QUIZ_PERFECT_BONUS_COINS, QUIZ_PERFECT_BONUS_STARS);
+        reward(QUIZ_PERFECT_BONUS_COINS, QUIZ_PERFECT_BONUS_STARS, { big: true });
       }
       setFinished(true);
       return;

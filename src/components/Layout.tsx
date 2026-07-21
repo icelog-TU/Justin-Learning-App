@@ -1,6 +1,7 @@
 import { NavLink, Outlet } from 'react-router-dom';
 import { useAppDataContext } from '../lib/AppDataContext';
 import { getStreakDays } from '../lib/storage';
+import CelebrationOverlay from './CelebrationOverlay';
 
 const NAV_ITEMS = [
   { to: '/', label: '首頁', icon: '🏠', end: true },
@@ -15,11 +16,12 @@ const NAV_ITEMS = [
 ];
 
 export default function Layout() {
-  const { data } = useAppDataContext();
+  const { data, celebration } = useAppDataContext();
   const streak = getStreakDays(data.visitDates);
 
   return (
     <div className="min-h-screen flex flex-col">
+      <CelebrationOverlay trigger={celebration} />
       <header className="bg-orange-500 text-white shadow-md">
         <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between gap-2">
           <div className="min-w-0">
@@ -33,11 +35,15 @@ export default function Layout() {
           <div className="flex flex-wrap justify-end gap-1.5 text-xs sm:text-sm font-semibold shrink-0 max-w-[55%]">
             <div className="bg-white/20 rounded-full px-2.5 py-1 flex items-center gap-1 whitespace-nowrap">
               <span>🪙</span>
-              <span>{data.coins}</span>
+              <span key={data.coins} style={{ display: 'inline-block', animation: 'pill-pop 0.4s ease-out' }}>
+                {data.coins}
+              </span>
             </div>
             <div className="bg-white/20 rounded-full px-2.5 py-1 flex items-center gap-1 whitespace-nowrap">
               <span>⭐</span>
-              <span>{data.stars}</span>
+              <span key={data.stars} style={{ display: 'inline-block', animation: 'pill-pop 0.4s ease-out' }}>
+                {data.stars}
+              </span>
             </div>
             <div className="bg-white/20 rounded-full px-2.5 py-1 flex items-center gap-1 whitespace-nowrap">
               <span>🔥</span>

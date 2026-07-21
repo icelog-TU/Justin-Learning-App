@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   type AppData,
   type SentenceLogEntry,
@@ -14,9 +14,12 @@ import {
   updateLongestChain,
 } from './storage';
 import type { GachaResult } from './rewards';
+import type { CelebrationTrigger } from '../components/CelebrationOverlay';
 
 export function useAppData() {
   const [data, setData] = useState<AppData>(() => recordVisitToday(loadData()));
+  const [celebration, setCelebration] = useState<CelebrationTrigger | null>(null);
+  const celebrationCounter = useRef(0);
 
   useEffect(() => {
     saveData(data);
@@ -30,8 +33,10 @@ export function useAppData() {
     setData((prev) => ({ ...recordSentence({ ...prev }, entry) }));
   }, []);
 
-  const reward = useCallback((coins: number, stars: number) => {
+  const reward = useCallback((coins: number, stars: number, opts?: { big?: boolean }) => {
     setData((prev) => ({ ...earnRewards({ ...prev }, coins, stars) }));
+    celebrationCounter.current += 1;
+    setCelebration({ coins, stars, nonce: celebrationCounter.current, big: opts?.big });
   }, []);
 
   const rollGacha = useCallback((): GachaResult | null => {
@@ -62,5 +67,5 @@ export function useAppData() {
     setData((prev) => ({ ...updateLongestChain({ ...prev }, length) }));
   }, []);
 
-  return { data, answer, logSentence, reward, rollGacha, giveHeart, addChainLink, reportChainLength };
+  return { data, answer, logSentence, reward, rollGacha, giveHeart, addChainLink, reportChainLength, celebration };
 }

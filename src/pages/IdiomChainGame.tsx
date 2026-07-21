@@ -127,15 +127,12 @@ export default function IdiomChainGame() {
     const nextHistory = [...chainHistory, entry];
     const nextUsedIds = new Set(usedIds);
     nextUsedIds.add(entry.id);
-
-    reward(COIN_PER_CHAIN_LINK, STAR_PER_CHAIN_LINK);
     addChainLink();
 
-    let bonusMessage = '';
-    if (nextHistory.length % CHAIN_MILESTONE_INTERVAL === 0) {
-      reward(CHAIN_MILESTONE_BONUS_COINS, CHAIN_MILESTONE_BONUS_STARS);
-      bonusMessage = `🎉 接了 ${nextHistory.length} 個成語，額外獎勵 🪙${CHAIN_MILESTONE_BONUS_COINS}、⭐${CHAIN_MILESTONE_BONUS_STARS}！`;
-    }
+    const isMilestone = nextHistory.length % CHAIN_MILESTONE_INTERVAL === 0;
+    const totalCoins = COIN_PER_CHAIN_LINK + (isMilestone ? CHAIN_MILESTONE_BONUS_COINS : 0);
+    const totalStars = STAR_PER_CHAIN_LINK + (isMilestone ? CHAIN_MILESTONE_BONUS_STARS : 0);
+    reward(totalCoins, totalStars, { big: isMilestone });
 
     setChainHistory(nextHistory);
     setUsedIds(nextUsedIds);
@@ -145,7 +142,9 @@ export default function IdiomChainGame() {
     setHintEntry(null);
     setFeedback({
       type: 'success',
-      message: bonusMessage || `✅ 接對了！獲得 🪙${COIN_PER_CHAIN_LINK}、⭐${STAR_PER_CHAIN_LINK}`,
+      message: isMilestone
+        ? `🎉 接了 ${nextHistory.length} 個成語，額外獎勵 🪙${totalCoins}、⭐${totalStars}！`
+        : `✅ 接對了！獲得 🪙${totalCoins}、⭐${totalStars}`,
     });
   }
 
