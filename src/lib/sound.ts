@@ -104,3 +104,11 @@ export function playInteractionSound() {
   tone(ctx, 784, t, 0.08, 'triangle', 0.1);
   tone(ctx, 988, t + 0.05, 0.14, 'triangle', 0.1);
 }
+
+/** Plays the moment giving a heart pushes a character's affection past a new interaction's unlock threshold. */
+export function playUnlockFanfare() {
+  const ctx = getContext();
+  if (!ctx) return;
+  const t = ctx.currentTime;
+  [784, 988, 1175, 1568, 1976].forEach((f, i) => tone(ctx, f, t + i * 0.07, 0.25, 'triangle', 0.13));
+}

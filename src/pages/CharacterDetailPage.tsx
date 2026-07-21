@@ -9,57 +9,76 @@ import {
   formatBigNumber,
   characterValue,
 } from '../lib/rewards';
-import { playPageEnterSound, playHeartSound, playInteractionSound } from '../lib/sound';
+import { numberToChineseWords } from '../lib/chineseNumber';
+import { speak } from '../lib/speech';
+import { playPageEnterSound, playHeartSound, playInteractionSound, playUnlockFanfare } from '../lib/sound';
 
-interface Interaction {
-  pct: number;
+interface InteractionTier {
+  requiredHearts: number;
   icon: string;
   label: string;
-  message: (base: number, exponent: number, hearts: number) => string;
+  message: string;
 }
 
-const INTERACTIONS: Interaction[] = [
+const TEMPLATES: {
+  icon: string;
+  label: string;
+  message: (base: number, exponent: number, requiredHearts: number) => string;
+}[] = [
   {
-    pct: 0,
     icon: '👋',
     label: '打招呼',
     message: (base, exponent) => `你好！我是 ${formatCharacterLabel(base, exponent)}，也就是 ${base} 的 ${exponent} 次方！`,
   },
   {
-    pct: 0.25,
     icon: '💬',
     label: '聊聊天',
-    message: (base, exponent) =>
-      `如果每次都變成 ${base} 倍，重複 ${exponent} 次，最後會變成原來的 ${formatBigNumber(characterValue(base, exponent))} 倍喔！`,
+    message: (base, _exponent, requiredHearts) =>
+      `如果每次都變成 ${base} 倍，重複 ${requiredHearts} 次，會變成原來的 ${formatBigNumber(characterValue(base, requiredHearts))} 倍！`,
   },
   {
-    pct: 0.5,
     icon: '🎮',
     label: '一起玩遊戲',
-    message: (base, exponent) =>
-      exponent > 1
-        ? `考考你：${base} 的 ${exponent - 1} 次方是多少？答案是 ${formatBigNumber(characterValue(base, exponent - 1))}！`
+    message: (base, _exponent, requiredHearts) =>
+      requiredHearts > 1
+        ? `考考你：${base} 的 ${requiredHearts - 1} 次方是多少？答案是 ${formatBigNumber(characterValue(base, requiredHearts - 1))}！`
         : `我是 ${base} 的 1 次方，就是 ${base} 自己！`,
   },
   {
-    pct: 0.75,
     icon: '🤫',
     label: '說悄悄話',
     message: (base, exponent) => `偷偷告訴你，我最要好的朋友是 ${formatCharacterLabel(base, exponent + 1)}！去轉蛋認識他吧～`,
   },
   {
-    pct: 1,
     icon: '🌟',
-    label: '特別回憶',
-    message: (base, exponent) => `謝謝你把愛心都給滿了！${formatCharacterLabel(base, exponent)} 和你是最好的朋友 ❤️`,
+    label: '特別時刻',
+    message: (_base, _exponent, requiredHearts) => `謝謝你給我 ${requiredHearts} 顆愛心！我們的感情越來越好了 ❤️`,
   },
 ];
+
+/** More hearts = more unlockable tiers, roughly one every 2 hearts, so big numbers stay a real journey. */
+function buildInteractionTiers(base: number, exponent: number, maxHearts: number): InteractionTier[] {
+  const tierCount = Math.max(1, Math.round(maxHearts / 2));
+  const tiers: InteractionTier[] = [];
+  for (let i = 1; i <= tierCount; i++) {
+    const requiredHearts = Math.round((i / tierCount) * maxHearts);
+    const template = TEMPLATES[(i - 1) % TEMPLATES.length];
+    tiers.push({
+      requiredHearts,
+      icon: template.icon,
+      label: template.label,
+      message: template.message(base, exponent, requiredHearts),
+    });
+  }
+  return tiers;
+}
 
 export default function CharacterDetailPage() {
   const { id: rawId } = useParams<{ id: string }>();
   const id = rawId ? decodeURIComponent(rawId) : '';
   const { data, giveHeart } = useAppDataContext();
   const [message, setMessage] = useState<string | null>(null);
+  const [justUnlocked, setJustUnlocked] = useState<number | null>(null);
 
   useEffect(() => {
     playPageEnterSound();
@@ -82,16 +101,37 @@ export default function CharacterDetailPage() {
   const maxHearts = exponent;
   const isFull = hearts >= maxHearts;
   const canGiveHeart = !isFull && data.stars >= HEART_COST_STARS;
+  const tiers = buildInteractionTiers(base, exponent, maxHearts);
+  const value = characterValue(base, exponent);
+  const label = formatCharacterLabel(base, exponent);
 
   function handleGiveHeart() {
-    if (giveHeart(id)) {
-      playHeartSound();
+    const before = hearts;
+    if (!giveHeart(id)) return;
+    playHeartSound();
+    const after = before + 1;
+    const newlyUnlockedIndex = tiers.findIndex((tier) => tier.requiredHearts > before && tier.requiredHearts <= after);
+    if (newlyUnlockedIndex !== -1) {
+      playUnlockFanfare();
+      setJustUnlocked(newlyUnlockedIndex);
+      window.setTimeout(() => setJustUnlocked(null), 700);
     }
   }
 
-  function handleInteract(interaction: Interaction) {
-    setMessage(interaction.message(base, exponent, hearts));
+  function handleGreeting() {
+    const text = `你好！我是 ${label}，也就是 ${base} 的 ${exponent} 次方！`;
+    setMessage(text);
+    speak(text);
+  }
+
+  function handleSpeakValue() {
+    speak(numberToChineseWords(value));
+  }
+
+  function handleInteract(tier: InteractionTier) {
+    setMessage(tier.message);
     playInteractionSound();
+    speak(tier.message);
   }
 
   return (
@@ -101,9 +141,22 @@ export default function CharacterDetailPage() {
       </Link>
 
       <div className="bg-white rounded-2xl shadow p-6 text-center space-y-2">
-        <p className="text-6xl">{BASE_EMOJI[base]}</p>
-        <p className="text-3xl font-extrabold text-orange-600">{formatCharacterLabel(base, exponent)}</p>
-        <p className="text-sm text-gray-400">= {formatBigNumber(characterValue(base, exponent))}</p>
+        <button type="button" onClick={handleGreeting} className="mx-auto block" aria-label="跟角色打招呼">
+          <p className="text-6xl">{BASE_EMOJI[base]}</p>
+          <p className="text-3xl font-extrabold text-orange-600">{label}</p>
+        </button>
+        <p className="text-sm text-gray-400 flex items-center justify-center gap-1.5">
+          = {formatBigNumber(value)}
+          <button
+            type="button"
+            onClick={handleSpeakValue}
+            className="text-sky-500 hover:text-sky-600"
+            aria-label="唸出這個數字"
+            title="唸出這個數字"
+          >
+            🔊
+          </button>
+        </p>
 
         <div className="pt-2">
           <p className="text-sm text-gray-600">
@@ -125,37 +178,40 @@ export default function CharacterDetailPage() {
         </button>
       </div>
 
+      {message && (
+        <div className="bg-pink-50 rounded-2xl shadow p-4 text-sm text-gray-700">
+          <span className="font-semibold text-pink-600">{label}：</span>
+          {message}
+        </div>
+      )}
+
       <div className="bg-white rounded-2xl shadow p-5 space-y-3">
-        <h3 className="font-bold text-gray-800">互動</h3>
+        <h3 className="font-bold text-gray-800">互動（共 {tiers.length} 種）</h3>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-          {INTERACTIONS.map((interaction) => {
-            const unlocked = hearts / maxHearts >= interaction.pct;
+          {tiers.map((tier, i) => {
+            const unlocked = hearts >= tier.requiredHearts;
             return (
               <button
-                key={interaction.label}
+                key={i}
                 type="button"
                 disabled={!unlocked}
-                onClick={() => handleInteract(interaction)}
+                onClick={() => handleInteract(tier)}
+                style={justUnlocked === i ? { animation: 'unlock-pop 0.7s ease-out' } : undefined}
                 className={`rounded-xl border p-3 text-center space-y-1 ${
                   unlocked
                     ? 'bg-white border-orange-100 hover:border-orange-300'
                     : 'bg-gray-50 border-gray-100 text-gray-300'
                 }`}
               >
-                <p className="text-2xl">{unlocked ? interaction.icon : '🔒'}</p>
-                <p className="text-xs font-medium">{interaction.label}</p>
-                {!unlocked && <p className="text-[10px] text-gray-400">好感度達 {interaction.pct * 100}% 解鎖</p>}
+                <p className="text-2xl">{unlocked ? tier.icon : '🔒'}</p>
+                <p className="text-xs font-medium">{tier.label}</p>
+                <p className={`text-[10px] ${unlocked ? 'text-pink-500' : 'text-gray-400'}`}>
+                  需要 {tier.requiredHearts} 顆愛心
+                </p>
               </button>
             );
           })}
         </div>
-
-        {message && (
-          <div className="bg-pink-50 rounded-xl p-4 text-sm text-gray-700">
-            <span className="font-semibold text-pink-600">{formatCharacterLabel(base, exponent)}：</span>
-            {message}
-          </div>
-        )}
       </div>
     </div>
   );

@@ -66,3 +66,21 @@ body {
     opacity: 0;
   }
 }
+
+@keyframes unlock-pop {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(244, 114, 182, 0.6);
+  }
+  30% {
+    transform: scale(1.15);
+    box-shadow: 0 0 0 8px rgba(244, 114, 182, 0);
+  }
+  60% {
+    transform: scale(0.97);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(244, 114, 182, 0);
+  }
+}
