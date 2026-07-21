@@ -39,6 +39,13 @@ export interface BookmarkedIdiom {
   addedAt: string;
 }
 
+/** A completed chain-game round, kept so Justin can look back at which idioms he chained together. */
+export interface ChainRoundLog {
+  words: string[];
+  length: number;
+  completedAt: string;
+}
+
 export interface AppData {
   idiomStats: Record<string, ItemStat>;
   confusableStats: Record<string, ItemStat>;
@@ -53,6 +60,8 @@ export interface AppData {
   customIdioms: CustomChainEntry[];
   /** Idioms Justin starred to review later — his "成語筆記本". */
   bookmarkedIdioms: BookmarkedIdiom[];
+  /** History of completed chain-game rounds, most recent first — for reviewing past chains. */
+  chainRoundHistory: ChainRoundLog[];
 }
 
 function emptyData(): AppData {
@@ -67,6 +76,7 @@ function emptyData(): AppData {
     chainStats: { totalLinks: 0, longestChain: 0 },
     customIdioms: [],
     bookmarkedIdioms: [],
+    chainRoundHistory: [],
   };
 }
 
@@ -180,6 +190,14 @@ export function updateLongestChain(data: AppData, chainLength: number): AppData 
   if (chainLength > data.chainStats.longestChain) {
     data.chainStats = { ...data.chainStats, longestChain: chainLength };
   }
+  return data;
+}
+
+/** Records a completed chain-game round's full idiom list for later review. No-op for empty rounds. */
+export function recordChainRound(data: AppData, words: string[]): AppData {
+  if (words.length === 0) return data;
+  const entry: ChainRoundLog = { words, length: words.length, completedAt: new Date().toISOString() };
+  data.chainRoundHistory = [entry, ...data.chainRoundHistory].slice(0, 200);
   return data;
 }
 

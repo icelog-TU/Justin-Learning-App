@@ -23,16 +23,16 @@ export default function Layout() {
   return (
     <div className="min-h-screen flex flex-col">
       <CelebrationOverlay trigger={celebration} />
-      <header className="bg-orange-500 text-white shadow-md">
+      <header className="bg-orange-500 text-white shadow-md sticky top-0 z-20">
         <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between gap-2">
-          <div className="min-w-0">
+          <NavLink to="/" className="min-w-0">
             <h1 className="text-lg sm:text-2xl font-bold tracking-wide whitespace-nowrap overflow-hidden text-ellipsis">
               Justin 的中文練功房
             </h1>
             <p className="text-orange-100 text-xs sm:text-sm whitespace-nowrap overflow-hidden text-ellipsis">
               成語 × 錯別字，天天進步一點點！
             </p>
-          </div>
+          </NavLink>
           <div className="flex flex-wrap justify-end gap-1.5 text-xs sm:text-sm font-semibold shrink-0 max-w-[55%]">
             <div className="bg-white/20 rounded-full px-2.5 py-1 flex items-center gap-1 whitespace-nowrap">
               <span>🪙</span>
@@ -54,7 +54,7 @@ export default function Layout() {
         </div>
       </header>
 
-      <nav className="bg-white border-b border-orange-100 sticky top-0 z-10 shadow-sm">
+      <nav className="bg-white border-b border-orange-100 shadow-sm">
         <div className="max-w-4xl mx-auto px-2 flex gap-1 overflow-x-auto">
           {NAV_ITEMS.map((item) => (
             <NavLink

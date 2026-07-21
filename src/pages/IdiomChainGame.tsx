@@ -51,7 +51,8 @@ const MOE_ATTRIBUTION = '資料來源：教育部《成語典》（創用CC 姓�
 const HINT_COUNT_OPTIONS = [3, 6, 9, 12];
 
 export default function IdiomChainGame() {
-  const { data, reward, addChainLink, reportChainLength, addCustomIdiom, toggleBookmark } = useAppDataContext();
+  const { data, reward, addChainLink, reportChainLength, addCustomIdiom, toggleBookmark, recordChainRound } =
+    useAppDataContext();
   const [pool, setPool] = useState<ChainEntry[]>(() => [
     ...buildCuratedPool(),
     ...buildCustomPool(data.customIdioms),
@@ -117,12 +118,25 @@ export default function IdiomChainGame() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const chainHistoryRef = useRef(chainHistory);
+  chainHistoryRef.current = chainHistory;
+
+  useEffect(() => {
+    return () => {
+      if (chainHistoryRef.current.length > 0) {
+        recordChainRound(chainHistoryRef.current.map((entry) => entry.word));
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const candidates = targetChar ? findCandidates(pool, usedIds, targetChar, targetZhuyin) : [];
   const deadEnd = targetChar !== '' && candidates.length === 0;
 
   function handleReroll() {
     if (chainHistory.length > 0) {
       reportChainLength(chainHistory.length);
+      recordChainRound(chainHistory.map((entry) => entry.word));
     }
     startNewChain(pool);
   }

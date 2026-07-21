@@ -15,6 +15,7 @@ import {
   updateLongestChain,
   addCustomIdiom as addCustomIdiomMutation,
   toggleBookmark as toggleBookmarkMutation,
+  recordChainRound as recordChainRoundMutation,
 } from './storage';
 import type { GachaResult } from './rewards';
 import type { CustomChainEntry } from './chainGame';
@@ -81,6 +82,12 @@ export function useAppData() {
     }));
   }, []);
 
+  const recordChainRound = useCallback((words: string[]) => {
+    setData((prev) => ({
+      ...recordChainRoundMutation({ ...prev, chainRoundHistory: [...prev.chainRoundHistory] }, words),
+    }));
+  }, []);
+
   return {
     data,
     answer,
@@ -93,5 +100,6 @@ export function useAppData() {
     celebration,
     addCustomIdiom,
     toggleBookmark,
+    recordChainRound,
   };
 }

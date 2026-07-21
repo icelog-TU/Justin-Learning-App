@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { idioms } from '../data/idioms';
 import { confusableQuestions } from '../data/confusables';
 import { useAppDataContext } from '../lib/AppDataContext';
@@ -14,6 +15,7 @@ function badgeFor(charactersOwned: number) {
 export default function ProgressPage() {
   const { data } = useAppDataContext();
   const streak = getStreakDays(data.visitDates);
+  const [expandedRound, setExpandedRound] = useState<number | null>(null);
   const charactersOwned = Object.keys(data.characters).length;
   const badge = badgeFor(charactersOwned);
 
@@ -82,6 +84,51 @@ export default function ProgressPage() {
           <h3 className="font-bold text-gray-800 mb-2 text-sm">🔗 最長連續紀錄</h3>
           <p className="text-2xl font-bold text-teal-600">{data.chainStats.longestChain}</p>
         </div>
+      </div>
+
+      <div className="bg-white rounded-2xl shadow p-5">
+        <h3 className="font-bold text-gray-800 mb-2">📜 成語接龍歷史紀錄</h3>
+        <p className="text-sm text-gray-600 mb-3">
+          已經玩了 {data.chainRoundHistory.length} 輪，點一輪可以展開看接了哪些成語
+        </p>
+        {data.chainRoundHistory.length === 0 ? (
+          <p className="text-sm text-gray-400">還沒有完整結束過一輪接龍，換一次新的開頭字後就會留下紀錄！</p>
+        ) : (
+          <div className="space-y-2 max-h-96 overflow-y-auto">
+            {data.chainRoundHistory.map((round, i) => {
+              const isOpen = expandedRound === i;
+              return (
+                <div key={i} className="border border-gray-100 rounded-xl overflow-hidden">
+                  <button
+                    type="button"
+                    onClick={() => setExpandedRound(isOpen ? null : i)}
+                    className="w-full flex items-center justify-between gap-2 px-3 py-2 text-sm bg-gray-50 hover:bg-gray-100"
+                  >
+                    <span className="font-medium text-gray-700">
+                      第 {data.chainRoundHistory.length - i} 輪 · 接了 {round.length} 個成語
+                    </span>
+                    <span className="flex items-center gap-2 text-xs text-gray-400">
+                      {new Date(round.completedAt).toLocaleString('zh-TW')}
+                      <span>{isOpen ? '▲' : '▼'}</span>
+                    </span>
+                  </button>
+                  {isOpen && (
+                    <div className="flex flex-wrap items-center gap-2 px-3 py-3">
+                      {round.words.map((word, j) => (
+                        <div key={j} className="flex items-center gap-2">
+                          <span className="bg-teal-50 text-teal-700 font-semibold text-sm rounded-full px-3 py-1">
+                            {word}
+                          </span>
+                          {j < round.words.length - 1 && <span className="text-gray-300">→</span>}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       <div className="grid sm:grid-cols-2 gap-4">
