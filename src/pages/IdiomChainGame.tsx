@@ -1,8 +1,16 @@
 import { useEffect, useRef, useState } from 'react';
 import { useAppDataContext } from '../lib/AppDataContext';
-import { findCandidates, findByWord, matchesTarget, maskHint, pickRandomStart } from '../lib/chainGame';
-import { getZhuyin } from '../lib/zhuyin';
-import type { ChainIdiom } from '../data/idiomChain';
+import {
+  buildCuratedPool,
+  buildMoePool,
+  findCandidates,
+  findByWord,
+  matchesTarget,
+  maskHint,
+  pickRandomStart,
+  type ChainEntry,
+  type MoeRawEntry,
+} from '../lib/chainGame';
 import {
   COIN_PER_CHAIN_LINK,
   STAR_PER_CHAIN_LINK,
@@ -34,23 +42,45 @@ interface Feedback {
   message: string;
 }
 
+const MOE_ATTRIBUTION = '資料來源：教育部《成語典》（創用CC 姓名標示－禁止改作 3.0 台灣授權條款）';
+
 export default function IdiomChainGame() {
   const { data, reward, addChainLink, reportChainLength } = useAppDataContext();
+  const [pool, setPool] = useState<ChainEntry[]>(() => buildCuratedPool());
+  const [moeLoaded, setMoeLoaded] = useState(false);
   const [targetChar, setTargetChar] = useState('');
-  const [targetPinyin, setTargetPinyin] = useState('');
-  const [chainHistory, setChainHistory] = useState<ChainIdiom[]>([]);
+  const [targetZhuyin, setTargetZhuyin] = useState('');
+  const [chainHistory, setChainHistory] = useState<ChainEntry[]>([]);
   const [usedIds, setUsedIds] = useState<Set<string>>(new Set());
   const [inputValue, setInputValue] = useState('');
   const [feedback, setFeedback] = useState<Feedback | null>(null);
-  const [hintEntry, setHintEntry] = useState<ChainIdiom | null>(null);
+  const [hintEntry, setHintEntry] = useState<ChainEntry | null>(null);
   const [listening, setListening] = useState(false);
   const recognitionRef = useRef<MinimalSpeechRecognition | null>(null);
   const speechSupported = getSpeechRecognitionCtor() !== null;
 
-  function startNewChain() {
-    const start = pickRandomStart();
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`${import.meta.env.BASE_URL}data/moe-idioms.json`)
+      .then((res) => (res.ok ? res.json() : Promise.reject(new Error('fetch failed'))))
+      .then((raw: MoeRawEntry[]) => {
+        if (cancelled) return;
+        setPool((prev) => [...prev, ...buildMoePool(raw)]);
+        setMoeLoaded(true);
+      })
+      .catch(() => {
+        // Offline or blocked: the game still works fine with just the curated 94.
+        setMoeLoaded(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  function startNewChain(fromPool: ChainEntry[]) {
+    const start = pickRandomStart(fromPool);
     setTargetChar(start.firstChar);
-    setTargetPinyin(start.firstPinyin);
+    setTargetZhuyin(start.firstZhuyin);
     setChainHistory([]);
     setUsedIds(new Set());
     setInputValue('');
@@ -59,25 +89,25 @@ export default function IdiomChainGame() {
   }
 
   useEffect(() => {
-    startNewChain();
+    startNewChain(pool);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const candidates = targetChar ? findCandidates(usedIds, targetChar, targetPinyin) : [];
+  const candidates = targetChar ? findCandidates(pool, usedIds, targetChar, targetZhuyin) : [];
   const deadEnd = targetChar !== '' && candidates.length === 0;
 
   function handleReroll() {
     if (chainHistory.length > 0) {
       reportChainLength(chainHistory.length);
     }
-    startNewChain();
+    startNewChain(pool);
   }
 
   function handleSubmit() {
     const raw = inputValue.trim();
     if (!raw) return;
 
-    const entry = findByWord(raw);
+    const entry = findByWord(pool, raw);
     if (!entry) {
       setFeedback({ type: 'error', message: '這個成語我們的題庫裡還沒有喔，換一個試試看？' });
       return;
@@ -86,7 +116,7 @@ export default function IdiomChainGame() {
       setFeedback({ type: 'error', message: '這個成語已經接過了，換一個吧！' });
       return;
     }
-    if (!matchesTarget(entry, targetChar, targetPinyin)) {
+    if (!matchesTarget(entry, targetChar, targetZhuyin)) {
       setFeedback({
         type: 'error',
         message: `「${entry.word}」的開頭要接得上「${targetChar}」（同字或同音）才行喔，再想想！`,
@@ -110,7 +140,7 @@ export default function IdiomChainGame() {
     setChainHistory(nextHistory);
     setUsedIds(nextUsedIds);
     setTargetChar(entry.lastChar);
-    setTargetPinyin(entry.lastPinyin);
+    setTargetZhuyin(entry.lastZhuyin);
     setInputValue('');
     setHintEntry(null);
     setFeedback({
@@ -162,12 +192,15 @@ export default function IdiomChainGame() {
         <p className="text-sm text-gray-500">
           接一個開頭是這個字、或是<span className="font-semibold text-teal-600">讀音相同</span>的成語，可以無限接下去！
         </p>
+        <p className="text-xs text-gray-400 mt-1">
+          題庫共 {pool.length} 個成語{!moeLoaded && '（教育部成語典載入中…）'}
+        </p>
       </div>
 
       <div className="bg-white rounded-2xl shadow p-6 text-center space-y-3">
         <p className="text-xs text-gray-400">請接一個成語，開頭是……</p>
         <p className="text-5xl font-extrabold text-teal-600">{targetChar}</p>
-        <p className="text-xs text-gray-400">（讀音：{getZhuyin(targetChar)}）</p>
+        <p className="text-xs text-gray-400">（讀音：{targetZhuyin}）</p>
 
         {deadEnd && (
           <p className="text-sm text-amber-600 bg-amber-50 rounded-lg px-3 py-2">
@@ -245,6 +278,7 @@ export default function IdiomChainGame() {
               <span className="font-semibold text-gray-500">意思：</span>
               {hintEntry.meaning}
             </p>
+            {hintEntry.source === 'moe' && <p className="text-[11px] text-gray-400">{MOE_ATTRIBUTION}</p>}
           </div>
         )}
       </div>
@@ -277,6 +311,8 @@ export default function IdiomChainGame() {
           <p className="text-xs text-gray-500 mt-1">最長連續紀錄</p>
         </div>
       </div>
+
+      <p className="text-center text-[11px] text-gray-400">{MOE_ATTRIBUTION}</p>
     </div>
   );
 }
