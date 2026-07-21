@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useAppDataContext } from '../lib/AppDataContext';
 import {
   GACHA_BASES,
@@ -10,6 +11,7 @@ import {
   formatCharacterLabel,
   formatBigNumber,
   characterValue,
+  characterId,
 } from '../lib/rewards';
 import type { GachaResult } from '../lib/rewards';
 import { playGachaSpinSound, playGachaRevealSound } from '../lib/sound';
@@ -71,7 +73,10 @@ export default function GachaPage() {
         )}
 
         {lastResult && (
-          <div className="mt-4 bg-orange-50 rounded-2xl p-6 space-y-2 animate-in fade-in">
+          <Link
+            to={`/characters/${encodeURIComponent(characterId(lastResult.base, lastResult.exponent))}`}
+            className="block mt-4 bg-orange-50 hover:bg-orange-100 transition-colors rounded-2xl p-6 space-y-2 animate-in fade-in"
+          >
             {lastResult.isDupe ? (
               <>
                 <p className="text-4xl">{BASE_EMOJI[lastResult.base]}</p>
@@ -92,7 +97,8 @@ export default function GachaPage() {
                 <p className="font-bold text-emerald-600">獲得新角色！</p>
               </>
             )}
-          </div>
+            <p className="text-xs font-medium text-orange-500">👉 點我看角色頁面</p>
+          </Link>
         )}
       </div>
 
