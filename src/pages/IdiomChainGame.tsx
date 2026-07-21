@@ -6,7 +6,6 @@ import {
   buildEditorialPool,
   findCandidates,
   findByWord,
-  isHintable,
   matchesTarget,
   maskHint,
   pickRandomStart,
@@ -14,6 +13,7 @@ import {
   type MoeRawEntry,
   type EditorialRawEntry,
 } from '../lib/chainGame';
+import { shuffle } from '../lib/quizUtils';
 import {
   COIN_PER_CHAIN_LINK,
   STAR_PER_CHAIN_LINK,
@@ -57,7 +57,7 @@ export default function IdiomChainGame() {
   const [usedIds, setUsedIds] = useState<Set<string>>(new Set());
   const [inputValue, setInputValue] = useState('');
   const [feedback, setFeedback] = useState<Feedback | null>(null);
-  const [hintEntry, setHintEntry] = useState<ChainEntry | null>(null);
+  const [hintEntries, setHintEntries] = useState<ChainEntry[]>([]);
   const [listening, setListening] = useState(false);
   const recognitionRef = useRef<MinimalSpeechRecognition | null>(null);
   const speechSupported = getSpeechRecognitionCtor() !== null;
@@ -96,7 +96,7 @@ export default function IdiomChainGame() {
     setChainHistory([]);
     setUsedIds(new Set());
     setInputValue('');
-    setHintEntry(null);
+    setHintEntries([]);
     setFeedback(null);
   }
 
@@ -151,7 +151,7 @@ export default function IdiomChainGame() {
     setTargetChar(entry.lastChar);
     setTargetZhuyin(entry.lastZhuyin);
     setInputValue('');
-    setHintEntry(null);
+    setHintEntries([]);
     setFeedback({
       type: 'success',
       message: isMilestone
@@ -165,16 +165,7 @@ export default function IdiomChainGame() {
       setFeedback({ type: 'info', message: '這個字暫時接不下去了，換一個新的開頭字試試吧！' });
       return;
     }
-    const hintable = candidates.filter(isHintable);
-    if (hintable.length === 0) {
-      setFeedback({
-        type: 'info',
-        message: '這個字接得下去，但我們題庫裡還沒有它的解釋，你自己想想看吧！💪',
-      });
-      return;
-    }
-    const pick = hintable[Math.floor(Math.random() * hintable.length)];
-    setHintEntry(pick);
+    setHintEntries(shuffle(candidates).slice(0, 3));
   }
 
   function startListening() {
@@ -279,7 +270,7 @@ export default function IdiomChainGame() {
             onClick={handleHint}
             className="flex-1 bg-sky-100 text-sky-700 rounded-full py-2 text-sm font-medium hover:bg-sky-200"
           >
-            💡 提示
+            💡 提示（3 個）
           </button>
           <button
             type="button"
@@ -290,14 +281,34 @@ export default function IdiomChainGame() {
           </button>
         </div>
 
-        {hintEntry && (
-          <div className="bg-sky-50 rounded-xl p-4 text-left space-y-1">
-            <p className="text-2xl font-bold text-sky-700 tracking-widest text-center">{maskHint(hintEntry.word)}</p>
-            <p className="text-sm text-gray-600">
-              <span className="font-semibold text-gray-500">意思：</span>
-              {hintEntry.meaning}
-            </p>
-            {hintEntry.source === 'moe' && <p className="text-[11px] text-gray-400">{MOE_ATTRIBUTION}</p>}
+        {hintEntries.length > 0 && (
+          <div className="space-y-2">
+            {hintEntries.map((entry) => (
+              <div key={entry.id} className="bg-sky-50 rounded-xl p-4 text-left space-y-1">
+                <p className="text-2xl font-bold text-sky-700 tracking-widest text-center">{maskHint(entry.word)}</p>
+                {entry.meaning ? (
+                  <>
+                    <p className="text-sm text-gray-600">
+                      <span className="font-semibold text-gray-500">意思：</span>
+                      {entry.meaning}
+                    </p>
+                    {entry.source === 'moe' && <p className="text-[11px] text-gray-400">{MOE_ATTRIBUTION}</p>}
+                  </>
+                ) : (
+                  <div className="flex items-center justify-between gap-2 pt-1">
+                    <p className="text-xs text-gray-400">我們題庫裡還沒有這個成語的解釋</p>
+                    <a
+                      href={`https://www.google.com/search?q=${encodeURIComponent(`成語 ${entry.word} 意思`)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="shrink-0 text-xs font-medium bg-sky-500 text-white rounded-full px-3 py-1.5 hover:bg-sky-600"
+                    >
+                      🔍 查意思
+                    </a>
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
         )}
       </div>
