@@ -4,6 +4,13 @@ import { GACHA_BASES, MAX_EXPONENT } from '../lib/rewards';
 
 const CARDS = [
   {
+    to: '/idioms/chain',
+    icon: '🔗',
+    title: '成語接龍',
+    desc: '用打字或語音接成語，可以無限接下去',
+    color: 'bg-teal-100 text-teal-700',
+  },
+  {
     to: '/idioms',
     icon: '📖',
     title: '成語卡片',
@@ -23,13 +30,6 @@ const CARDS = [
     title: '成語造句',
     desc: '練習用成語寫出一個通順的句子',
     color: 'bg-emerald-100 text-emerald-700',
-  },
-  {
-    to: '/idioms/chain',
-    icon: '🔗',
-    title: '成語接龍',
-    desc: '用打字或語音接成語，可以無限接下去',
-    color: 'bg-teal-100 text-teal-700',
   },
   {
     to: '/confusables',

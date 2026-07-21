@@ -5,10 +5,10 @@ import CelebrationOverlay from './CelebrationOverlay';
 
 const NAV_ITEMS = [
   { to: '/', label: '首頁', icon: '🏠', end: true },
+  { to: '/idioms/chain', label: '成語接龍', icon: '🔗' },
   { to: '/idioms', label: '成語卡片', icon: '📖' },
   { to: '/idioms/quiz', label: '成語測驗', icon: '🎯' },
   { to: '/idioms/sentence', label: '成語造句', icon: '✏️' },
-  { to: '/idioms/chain', label: '成語接龍', icon: '🔗' },
   { to: '/confusables', label: '錯別字測驗', icon: '🔍' },
   { to: '/gacha', label: '轉蛋', icon: '🎁' },
   { to: '/characters', label: '角色收藏', icon: '🎴' },
