@@ -12,6 +12,7 @@ import {
   formatCharacterLabel,
   formatBigNumber,
   characterValue,
+  characterColor,
 } from '../lib/rewards';
 import { playHeartSound } from '../lib/sound';
 
@@ -81,7 +82,13 @@ export default function CharactersPage() {
               {owned ? (
                 <>
                   <Link to={`/characters/${encodeURIComponent(id)}`} className="block">
-                    <p className="text-lg font-extrabold text-orange-600">{formatCharacterLabel(selectedBase, exp)}</p>
+                    <div
+                      className="mx-auto w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm"
+                      style={{ backgroundColor: characterColor(exp) }}
+                    >
+                      {exp}
+                    </div>
+                    <p className="text-lg font-extrabold text-orange-600 mt-1">{formatCharacterLabel(selectedBase, exp)}</p>
                     <p className="text-[11px] text-gray-400 leading-tight">
                       {formatBigNumber(characterValue(selectedBase, exp))}
                     </p>

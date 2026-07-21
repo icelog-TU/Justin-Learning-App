@@ -1,13 +1,13 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useAppDataContext } from '../lib/AppDataContext';
 import {
   HEART_COST_STARS,
-  BASE_EMOJI,
   parseCharacterId,
   formatCharacterLabel,
   formatBigNumber,
   characterValue,
+  characterColor,
 } from '../lib/rewards';
 import { numberToChineseWords } from '../lib/chineseNumber';
 import { speak } from '../lib/speech';
@@ -28,7 +28,7 @@ const TEMPLATES: {
   {
     icon: '👋',
     label: '打招呼',
-    message: (base, exponent) => `你好！我是 ${formatCharacterLabel(base, exponent)}，也就是 ${base} 的 ${exponent} 次方！`,
+    message: (base, exponent) => `你好！我是 ${base} 的 ${exponent} 次方！`,
   },
   {
     icon: '💬',
@@ -47,7 +47,7 @@ const TEMPLATES: {
   {
     icon: '🤫',
     label: '說悄悄話',
-    message: (base, exponent) => `偷偷告訴你，我最要好的朋友是 ${formatCharacterLabel(base, exponent + 1)}！去轉蛋認識他吧～`,
+    message: (base, exponent) => `偷偷告訴你，我最要好的朋友是 ${base} 的 ${exponent + 1} 次方！去轉蛋認識他吧～`,
   },
   {
     icon: '🌟',
@@ -73,12 +73,33 @@ function buildInteractionTiers(base: number, exponent: number, maxHearts: number
   return tiers;
 }
 
+interface HeartParticle {
+  id: number;
+  tx: number;
+  ty: number;
+  rot: number;
+  delay: number;
+}
+
+function buildHeartParticles(idSeed: number): HeartParticle[] {
+  return Array.from({ length: 7 }, (_, i) => ({
+    id: idSeed + i,
+    tx: (Math.random() - 0.5) * 170,
+    ty: -(70 + Math.random() * 110),
+    rot: (Math.random() - 0.5) * 200,
+    delay: Math.random() * 0.12,
+  }));
+}
+
 export default function CharacterDetailPage() {
   const { id: rawId } = useParams<{ id: string }>();
   const id = rawId ? decodeURIComponent(rawId) : '';
   const { data, giveHeart } = useAppDataContext();
   const [message, setMessage] = useState<string | null>(null);
   const [justUnlocked, setJustUnlocked] = useState<number | null>(null);
+  const [heartParticles, setHeartParticles] = useState<HeartParticle[]>([]);
+  const [shaking, setShaking] = useState(false);
+  const particleIdRef = useRef(0);
 
   useEffect(() => {
     playPageEnterSound();
@@ -104,11 +125,19 @@ export default function CharacterDetailPage() {
   const tiers = buildInteractionTiers(base, exponent, maxHearts);
   const value = characterValue(base, exponent);
   const label = formatCharacterLabel(base, exponent);
+  const color = characterColor(exponent);
 
   function handleGiveHeart() {
     const before = hearts;
     if (!giveHeart(id)) return;
     playHeartSound();
+
+    particleIdRef.current += 7;
+    setHeartParticles(buildHeartParticles(particleIdRef.current));
+    setShaking(true);
+    window.setTimeout(() => setHeartParticles([]), 950);
+    window.setTimeout(() => setShaking(false), 650);
+
     const after = before + 1;
     const newlyUnlockedIndex = tiers.findIndex((tier) => tier.requiredHearts > before && tier.requiredHearts <= after);
     if (newlyUnlockedIndex !== -1) {
@@ -119,7 +148,7 @@ export default function CharacterDetailPage() {
   }
 
   function handleGreeting() {
-    const text = `你好！我是 ${label}，也就是 ${base} 的 ${exponent} 次方！`;
+    const text = TEMPLATES[0].message(base, exponent, 0);
     setMessage(text);
     speak(text);
   }
@@ -140,10 +169,36 @@ export default function CharacterDetailPage() {
         ← 回角色收藏
       </Link>
 
-      <div className="bg-white rounded-2xl shadow p-6 text-center space-y-2">
+      <div className="bg-white rounded-2xl shadow p-6 text-center space-y-3">
         <button type="button" onClick={handleGreeting} className="mx-auto block" aria-label="跟角色打招呼">
-          <p className="text-6xl">{BASE_EMOJI[base]}</p>
-          <p className="text-3xl font-extrabold text-orange-600">{label}</p>
+          <div className="relative mx-auto w-28 h-28">
+            {heartParticles.map((p) => (
+              <span
+                key={p.id}
+                className="absolute text-2xl left-1/2 top-1/2"
+                style={
+                  {
+                    '--tx': `${p.tx}px`,
+                    '--ty': `${p.ty}px`,
+                    '--rot': `${p.rot}deg`,
+                    animation: `heart-burst-particle 0.9s ease-out ${p.delay}s forwards`,
+                  } as React.CSSProperties
+                }
+              >
+                💗
+              </span>
+            ))}
+            <div
+              className="w-28 h-28 rounded-full flex items-center justify-center text-white font-extrabold text-3xl shadow-inner"
+              style={{
+                backgroundColor: color,
+                animation: shaking ? 'heart-happy 0.65s ease-in-out' : undefined,
+              }}
+            >
+              {exponent}
+            </div>
+          </div>
+          <p className="text-3xl font-extrabold text-orange-600 mt-3">{label}</p>
         </button>
         <p className="text-sm text-gray-400 flex items-center justify-center gap-1.5">
           = {formatBigNumber(value)}
@@ -159,12 +214,20 @@ export default function CharacterDetailPage() {
         </p>
 
         <div className="pt-2">
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-gray-600 mb-2">
             好感度：{hearts > 0 ? formatCharacterLabel(base, hearts) : '尚未培養'}（{hearts} / {maxHearts} 顆愛心
             {isFull && ' 💯'}）
           </p>
-          <div className="h-2 bg-gray-100 rounded-full overflow-hidden mt-2 max-w-xs mx-auto">
-            <div className="h-full bg-pink-500" style={{ width: `${(hearts / maxHearts) * 100}%` }} />
+          <div className="flex flex-wrap justify-center gap-1 max-w-sm mx-auto">
+            {Array.from({ length: maxHearts }, (_, i) => (
+              <span
+                key={i}
+                className="text-xl leading-none"
+                style={i === hearts - 1 && shaking ? { animation: 'unlock-pop 0.6s ease-out' } : undefined}
+              >
+                {i < hearts ? '❤️' : '🤍'}
+              </span>
+            ))}
           </div>
         </div>
 

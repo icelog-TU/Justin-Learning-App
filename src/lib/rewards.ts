@@ -58,6 +58,16 @@ export function formatBigNumber(n: bigint): string {
   return n.toLocaleString('en-US');
 }
 
+/**
+ * Rainbow hue for a specific exponent (1..MAX_EXPONENT), so every character in a 33-member
+ * collection is its own distinct color instead of one flat base color repeated 33 times —
+ * exponent 1 is red, exponent 33 is violet, sweeping smoothly through the spectrum between.
+ */
+export function characterColor(exponent: number, maxExponent: number = MAX_EXPONENT): string {
+  const hue = maxExponent > 1 ? ((exponent - 1) / (maxExponent - 1)) * 300 : 0;
+  return `hsl(${hue.toFixed(0)}, 70%, 50%)`;
+}
+
 /** Which base is currently open for gacha pulls: the first base in order that isn't fully collected yet. */
 export function currentUnlockedBase(characters: Record<string, number>): number | null {
   for (const base of GACHA_BASES) {

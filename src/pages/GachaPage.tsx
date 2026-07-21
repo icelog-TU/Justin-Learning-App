@@ -12,6 +12,7 @@ import {
   formatBigNumber,
   characterValue,
   characterId,
+  characterColor,
 } from '../lib/rewards';
 import type { GachaResult } from '../lib/rewards';
 import { playGachaSpinSound, playGachaRevealSound } from '../lib/sound';
@@ -77,9 +78,14 @@ export default function GachaPage() {
             to={`/characters/${encodeURIComponent(characterId(lastResult.base, lastResult.exponent))}`}
             className="block mt-4 bg-orange-50 hover:bg-orange-100 transition-colors rounded-2xl p-6 space-y-2 animate-in fade-in"
           >
+            <div
+              className="mx-auto w-20 h-20 rounded-full flex items-center justify-center text-white font-extrabold text-2xl"
+              style={{ backgroundColor: characterColor(lastResult.exponent) }}
+            >
+              {lastResult.exponent}
+            </div>
             {lastResult.isDupe ? (
               <>
-                <p className="text-4xl">{BASE_EMOJI[lastResult.base]}</p>
                 <p className="font-bold text-gray-700">
                   抽到重複的 {formatCharacterLabel(lastResult.base, lastResult.exponent)}
                 </p>
@@ -87,7 +93,6 @@ export default function GachaPage() {
               </>
             ) : (
               <>
-                <p className="text-5xl">{BASE_EMOJI[lastResult.base]}</p>
                 <p className="text-2xl font-extrabold text-orange-600">
                   {formatCharacterLabel(lastResult.base, lastResult.exponent)}
                 </p>
