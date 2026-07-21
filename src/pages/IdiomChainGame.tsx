@@ -48,6 +48,7 @@ interface Feedback {
 }
 
 const MOE_ATTRIBUTION = '資料來源：教育部《成語典》（創用CC 姓名標示－禁止改作 3.0 台灣授權條款）';
+const HINT_COUNT_OPTIONS = [3, 6, 9, 12];
 
 export default function IdiomChainGame() {
   const { data, reward, addChainLink, reportChainLength, addCustomIdiom, toggleBookmark } = useAppDataContext();
@@ -63,6 +64,7 @@ export default function IdiomChainGame() {
   const [inputValue, setInputValue] = useState('');
   const [feedback, setFeedback] = useState<Feedback | null>(null);
   const [hintEntries, setHintEntries] = useState<ChainEntry[]>([]);
+  const [hintCount, setHintCount] = useState(3);
   const [addCandidate, setAddCandidate] = useState<string | null>(null);
   const [newMeaning, setNewMeaning] = useState('');
   const [listening, setListening] = useState(false);
@@ -104,6 +106,7 @@ export default function IdiomChainGame() {
     setUsedIds(new Set());
     setInputValue('');
     setHintEntries([]);
+    setHintCount(3);
     setAddCandidate(null);
     setNewMeaning('');
     setFeedback(null);
@@ -174,12 +177,13 @@ export default function IdiomChainGame() {
     });
   }
 
-  function handleHint() {
+  function handleHint(count: number = hintCount) {
     if (candidates.length === 0) {
       setFeedback({ type: 'info', message: '這個字暫時接不下去了，換一個新的開頭字試試吧！' });
       return;
     }
-    setHintEntries(pickHints(candidates, targetChar, targetZhuyin, 3));
+    setHintCount(count);
+    setHintEntries(pickHints(candidates, targetChar, targetZhuyin, count));
   }
 
   function handleAddCustomIdiom() {
@@ -357,14 +361,41 @@ export default function IdiomChainGame() {
           </div>
         )}
 
+        <div className="flex items-center justify-center gap-1.5 pt-1 flex-wrap">
+          <span className="text-xs text-gray-400">提示數量：</span>
+          {HINT_COUNT_OPTIONS.map((n) => (
+            <button
+              key={n}
+              type="button"
+              onClick={() => handleHint(n)}
+              className={`rounded-full px-3 py-1 text-xs font-medium ${
+                hintCount === n && hintEntries.length > 0
+                  ? 'bg-sky-500 text-white'
+                  : 'bg-sky-50 text-sky-600 hover:bg-sky-100'
+              }`}
+            >
+              {n} 個
+            </button>
+          ))}
+        </div>
+
         <div className="flex gap-2 pt-1">
           <button
             type="button"
-            onClick={handleHint}
+            onClick={() => handleHint()}
             className="flex-1 bg-sky-100 text-sky-700 rounded-full py-2 text-sm font-medium hover:bg-sky-200"
           >
-            💡 提示（3 個）
+            💡 提示（{hintCount} 個）
           </button>
+          {hintEntries.length > 0 && (
+            <button
+              type="button"
+              onClick={() => handleHint()}
+              className="flex-1 bg-violet-100 text-violet-700 rounded-full py-2 text-sm font-medium hover:bg-violet-200"
+            >
+              🔀 換一批
+            </button>
+          )}
           <button
             type="button"
             onClick={handleReroll}

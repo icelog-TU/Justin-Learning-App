@@ -126,7 +126,11 @@ export function findCandidates(
   return pool.filter((entry) => !usedIds.has(entry.id) && matchesTarget(entry, targetChar, targetZhuyin));
 }
 
-/** Picks up to n hints, preferring the best match tier (see matchTier), randomized within each tier. */
+/**
+ * Picks up to n hints, preferring the best match tier (see matchTier), randomized within each tier.
+ * Entries that would look identical once masked (e.g. two different idioms sharing the same first
+ * and last character) are deduplicated so kids don't see the same-looking card twice.
+ */
 export function pickHints(
   candidates: ChainEntry[],
   targetChar: string,
@@ -138,7 +142,16 @@ export function pickHints(
     buckets[matchTier(entry, targetChar, targetZhuyin)].push(entry);
   }
   const ordered = [...shuffle(buckets[0]), ...shuffle(buckets[1]), ...shuffle(buckets[2])];
-  return ordered.slice(0, n);
+  const result: ChainEntry[] = [];
+  const seenMasks = new Set<string>();
+  for (const entry of ordered) {
+    const mask = maskHint(entry.word);
+    if (seenMasks.has(mask)) continue;
+    seenMasks.add(mask);
+    result.push(entry);
+    if (result.length >= n) break;
+  }
+  return result;
 }
 
 export function pickRandomStart(pool: ChainEntry[]): ChainEntry {
