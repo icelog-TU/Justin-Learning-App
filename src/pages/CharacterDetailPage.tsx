@@ -99,6 +99,7 @@ export default function CharacterDetailPage() {
   const [justUnlocked, setJustUnlocked] = useState<number | null>(null);
   const [heartParticles, setHeartParticles] = useState<HeartParticle[]>([]);
   const [shaking, setShaking] = useState(false);
+  const [seenTiers, setSeenTiers] = useState<Set<number>>(new Set());
   const particleIdRef = useRef(0);
 
   useEffect(() => {
@@ -144,6 +145,7 @@ export default function CharacterDetailPage() {
       playUnlockFanfare();
       setJustUnlocked(newlyUnlockedIndex);
       window.setTimeout(() => setJustUnlocked(null), 700);
+      window.setTimeout(() => speak('恭喜！解鎖新互動！'), 550);
     }
   }
 
@@ -157,10 +159,11 @@ export default function CharacterDetailPage() {
     speak(numberToChineseWords(value));
   }
 
-  function handleInteract(tier: InteractionTier) {
+  function handleInteract(tier: InteractionTier, index: number) {
     setMessage(tier.message);
     playInteractionSound();
     speak(tier.message);
+    setSeenTiers((prev) => new Set(prev).add(index));
   }
 
   return (
@@ -253,19 +256,27 @@ export default function CharacterDetailPage() {
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           {tiers.map((tier, i) => {
             const unlocked = hearts >= tier.requiredHearts;
+            const unseen = unlocked && !seenTiers.has(i);
+            const animations = [
+              justUnlocked === i ? 'unlock-pop 0.7s ease-out' : null,
+              unseen ? 'twinkle-glow 1.5s ease-in-out infinite' : null,
+            ]
+              .filter(Boolean)
+              .join(', ');
             return (
               <button
                 key={i}
                 type="button"
                 disabled={!unlocked}
-                onClick={() => handleInteract(tier)}
-                style={justUnlocked === i ? { animation: 'unlock-pop 0.7s ease-out' } : undefined}
-                className={`rounded-xl border p-3 text-center space-y-1 ${
+                onClick={() => handleInteract(tier, i)}
+                style={animations ? { animation: animations } : undefined}
+                className={`rounded-xl border p-3 text-center space-y-1 relative ${
                   unlocked
                     ? 'bg-white border-orange-100 hover:border-orange-300'
                     : 'bg-gray-50 border-gray-100 text-gray-300'
                 }`}
               >
+                {unseen && <span className="absolute -top-1.5 -right-1.5 text-sm">✨</span>}
                 <p className="text-2xl">{unlocked ? tier.icon : '🔒'}</p>
                 <p className="text-xs font-medium">{tier.label}</p>
                 <p className={`text-[10px] ${unlocked ? 'text-pink-500' : 'text-gray-400'}`}>
