@@ -20,35 +20,123 @@ interface InteractionTier {
   message: string;
 }
 
+/** Deterministic per-character pick — same character always gets the same variant, different characters differ. */
+function seedFor(base: number, exponent: number, salt: number): number {
+  return base * 977 + exponent * 331 + salt * 131;
+}
+
+function pick<T>(arr: T[], seed: number): T {
+  return arr[((seed % arr.length) + arr.length) % arr.length];
+}
+
+const FOODS = ['牛肉麵', '壽司', '披薩', '水餃', '咖哩飯', '炒飯', '漢堡', '義大利麵', '滷肉飯', '火鍋', '燒烤', '三明治', '炸雞', '拉麵', '便當', '蚵仔煎'];
+const SONGS = ['小星星', '兩隻老虎', '生日快樂歌', '造飛機', '捕魚歌', '天黑黑', '虫虫飛', '望春風', '丟手帕', '小蜜蜂', '小蘋果', '妹妹背著洋娃娃'];
+const DANCES = ['芭蕾舞', '街舞', '兔子舞', '機器人舞', '扭扭舞', '國標舞', '手指舞'];
+const SHOWS = ['巧虎', '海綿寶寶', '佩佩豬', '恐龍卡通', '汪汪隊立大功', '神奇寶貝', '櫻桃小丸子', '哆啦A夢', '湯瑪士小火車', '小小兵'];
+const STARS = ['天狼星', '織女星', '北極星', '牛郎星', '獵戶座', '火星', '土星', '北斗七星'];
+const MOUNTAINS = [
+  { name: '陽明山', height: 1120 },
+  { name: '玉山', height: 3952 },
+  { name: '合歡山', height: 3417 },
+  { name: '阿里山', height: 2216 },
+  { name: '七星山', height: 1120 },
+  { name: '大霸尖山', height: 3492 },
+];
+const SPORTS = ['游泳', '羽毛球', '網球', '足球', '籃球', '桌球', '棒球', '排球', '慢跑', '騎腳踏車'];
+const DRAW_SUBJECTS = ['小狗', '城堡', '彩虹', '太空船', '恐龍', '花朵', '大海', '山景'];
+const BOOKS = ['西遊記', '三國演義', '安徒生童話', '格林童話', '小王子', '愛麗絲夢遊仙境', '昆蟲記', '十萬個為什麼'];
+const KITES = ['老鷹風箏', '蝴蝶風箏', '彩虹風箏', '金魚風箏', '龍形風箏'];
+const PICNIC_SPOTS = ['大安森林公園', '河濱公園', '中正紀念堂', '植物園', '青年公園'];
+const CAMP_SPOTS = ['溪頭', '武陵農場', '阿里山', '日月潭', '墾丁'];
+const BBQ_FOODS = ['香腸', '玉米', '雞翅', '棉花糖', '魷魚'];
+const FISH = ['吳郭魚', '鯉魚', '鱸魚', '鯽魚', '鰻魚'];
+const BEACHES = ['墾丁海灘', '福隆海灘', '白沙灣', '小琉球'];
+const MOVIES = ['動物方城市', '冰雪奇緣', '海底總動員', '功夫熊貓', '怪獸電力公司', '腦筋急轉彎'];
+const BAKED_GOODS = ['杯子蛋糕', '餅乾', '麵包', '鬆餅', '馬芬蛋糕'];
+const FLOWERS = ['向日葵', '玫瑰', '鬱金香', '櫻花', '薰衣草'];
+const GAMES = ['大富翁', '跳棋', '撲克牌', '大老二', 'UNO'];
+const FOLD_SHAPES = ['紙鶴', '紙飛機', '愛心', '星星', '青蛙'];
+const ROOMS = ['房間', '客廳', '書房', '陽台'];
+const FRUITS = ['蘋果', '草莓', '葡萄', '橘子', '西瓜', '芒果'];
+const CRAFTS = ['卡片', '黏土公仔', '紙風車', '串珠手環'];
+const FIREWORK_COLORS = ['金色', '紅色', '綠色', '紫色', '彩虹色'];
+const ANIMALS = ['獅子', '長頸鹿', '貓熊', '企鵝', '大象', '老虎'];
+
+/**
+ * 33 distinct daily-life activities (one per possible exponent, so even a maxed-out 2^33 never
+ * repeats a category) — each one's specific content (which song, which food, which mountain...)
+ * is picked deterministically per character, so different characters describe the same activity
+ * differently too.
+ */
 const TEMPLATES: {
   icon: string;
   label: string;
   message: (base: number, exponent: number, requiredHearts: number) => string;
 }[] = [
-  {
-    icon: '👋',
-    label: '打招呼',
-    message: (base, exponent) => `你好！我是 ${base} 的 ${exponent} 次方！`,
-  },
+  { icon: '👋', label: '打招呼', message: (base, exponent) => `你好！我是 ${base} 的 ${exponent} 次方！` },
   {
     icon: '💬',
     label: '聊聊天',
     message: (base, _exponent, requiredHearts) =>
       `如果每次都變成 ${base} 倍，重複 ${requiredHearts} 次，會變成原來的 ${formatBigNumber(characterValue(base, requiredHearts))} 倍！`,
   },
+  { icon: '🍽️', label: '一起吃飯', message: (base, exponent) => `我們一起吃了${pick(FOODS, seedFor(base, exponent, 2))}，好好吃！` },
+  { icon: '🎤', label: '一起唱歌', message: (base, exponent) => `我們一起唱了《${pick(SONGS, seedFor(base, exponent, 3))}》，唱得好開心！` },
+  { icon: '💃', label: '一起跳舞', message: (base, exponent) => `我們一起跳了${pick(DANCES, seedFor(base, exponent, 4))}！` },
+  { icon: '📺', label: '一起看電視', message: (base, exponent) => `我們一起看了《${pick(SHOWS, seedFor(base, exponent, 5))}》！` },
   {
-    icon: '🎮',
-    label: '一起玩遊戲',
-    message: (base, _exponent, requiredHearts) =>
-      requiredHearts > 1
-        ? `考考你：${base} 的 ${requiredHearts - 1} 次方是多少？答案是 ${formatBigNumber(characterValue(base, requiredHearts - 1))}！`
-        : `我是 ${base} 的 1 次方，就是 ${base} 自己！`,
+    icon: '🧽',
+    label: '一起洗碗',
+    message: (base, exponent) => `我們一起洗了 ${(seedFor(base, exponent, 6) % 8) + 2} 個碗，廚房變得好乾淨！`,
   },
+  { icon: '🌟', label: '一起看星星', message: (base, exponent) => `我們一起看到了${pick(STARS, seedFor(base, exponent, 7))}，好漂亮！` },
+  {
+    icon: '⛰️',
+    label: '一起爬山',
+    message: (base, exponent) => {
+      const m = pick(MOUNTAINS, seedFor(base, exponent, 8));
+      return `我們一起爬了${m.name}，海拔 ${m.height} 公尺！`;
+    },
+  },
+  { icon: '🏃', label: '一起運動', message: (base, exponent) => `我們一起做了${pick(SPORTS, seedFor(base, exponent, 9))}運動！` },
   {
     icon: '🤫',
     label: '說悄悄話',
     message: (base, exponent) => `偷偷告訴你，我最要好的朋友是 ${base} 的 ${exponent + 1} 次方！去轉蛋認識他吧～`,
   },
+  { icon: '🎨', label: '一起畫畫', message: (base, exponent) => `我們一起畫了一幅${pick(DRAW_SUBJECTS, seedFor(base, exponent, 11))}的畫！` },
+  { icon: '📚', label: '一起看書', message: (base, exponent) => `我們一起看了《${pick(BOOKS, seedFor(base, exponent, 12))}》！` },
+  { icon: '🪁', label: '一起放風箏', message: (base, exponent) => `我們一起放了${pick(KITES, seedFor(base, exponent, 13))}，飛得好高！` },
+  { icon: '🧺', label: '一起野餐', message: (base, exponent) => `我們一起去${pick(PICNIC_SPOTS, seedFor(base, exponent, 14))}野餐！` },
+  { icon: '🏕️', label: '一起露營', message: (base, exponent) => `我們一起去${pick(CAMP_SPOTS, seedFor(base, exponent, 15))}露營！` },
+  { icon: '🍖', label: '一起烤肉', message: (base, exponent) => `我們一起烤了${pick(BBQ_FOODS, seedFor(base, exponent, 16))}，好香喔！` },
+  { icon: '🎣', label: '一起釣魚', message: (base, exponent) => `我們一起釣到了一條${pick(FISH, seedFor(base, exponent, 17))}！` },
+  {
+    icon: '🚲',
+    label: '一起騎腳踏車',
+    message: (base, exponent) => `我們一起騎了 ${(seedFor(base, exponent, 18) % 20) + 1} 公里的腳踏車！`,
+  },
+  { icon: '🏖️', label: '一起堆沙堡', message: (base, exponent) => `我們一起在${pick(BEACHES, seedFor(base, exponent, 19))}堆了沙堡！` },
+  { icon: '🎬', label: '一起看電影', message: (base, exponent) => `我們一起看了《${pick(MOVIES, seedFor(base, exponent, 20))}》！` },
+  { icon: '🧁', label: '一起烘焙', message: (base, exponent) => `我們一起烤了${pick(BAKED_GOODS, seedFor(base, exponent, 21))}！` },
+  { icon: '🌱', label: '一起種花', message: (base, exponent) => `我們一起種了${pick(FLOWERS, seedFor(base, exponent, 22))}！` },
+  { icon: '🎲', label: '一起玩桌遊', message: (base, exponent) => `我們一起玩了${pick(GAMES, seedFor(base, exponent, 23))}！` },
+  {
+    icon: '🧩',
+    label: '一起拼圖',
+    message: (base, exponent) => `我們一起完成了一幅 ${((seedFor(base, exponent, 24) % 9) + 1) * 100} 片的拼圖！`,
+  },
+  { icon: '📄', label: '一起摺紙', message: (base, exponent) => `我們一起摺了${pick(FOLD_SHAPES, seedFor(base, exponent, 25))}！` },
+  { icon: '🧹', label: '一起打掃', message: (base, exponent) => `我們一起把${pick(ROOMS, seedFor(base, exponent, 26))}打掃得好乾淨！` },
+  { icon: '🍎', label: '一起摘水果', message: (base, exponent) => `我們一起摘了${pick(FRUITS, seedFor(base, exponent, 27))}！` },
+  { icon: '✂️', label: '一起做勞作', message: (base, exponent) => `我們一起做了${pick(CRAFTS, seedFor(base, exponent, 28))}！` },
+  {
+    icon: '🌠',
+    label: '一起看流星雨',
+    message: (base, exponent) => `我們一起看到了 ${(seedFor(base, exponent, 29) % 12) + 1} 顆流星，快許願！`,
+  },
+  { icon: '🎆', label: '一起放煙火', message: (base, exponent) => `我們一起放了${pick(FIREWORK_COLORS, seedFor(base, exponent, 30))}的煙火！` },
+  { icon: '🦁', label: '一起去動物園', message: (base, exponent) => `我們一起去動物園看了${pick(ANIMALS, seedFor(base, exponent, 31))}！` },
   {
     icon: '🌟',
     label: '特別時刻',

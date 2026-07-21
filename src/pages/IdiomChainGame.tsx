@@ -85,7 +85,7 @@ export default function IdiomChainGame() {
   const [hintPool, setHintPool] = useState<ChainEntry[]>([]);
   const [hintPage, setHintPage] = useState(0);
   const [hintCount, setHintCount] = useState(3);
-  const [prioritizeQuality, setPrioritizeQuality] = useState(false);
+  const [prioritizeQuality, setPrioritizeQuality] = useState(true);
   const [addCandidate, setAddCandidate] = useState<string | null>(null);
   const [newMeaning, setNewMeaning] = useState('');
   const [listening, setListening] = useState(false);
@@ -105,7 +105,7 @@ export default function IdiomChainGame() {
     setHintPool([]);
     setHintPage(0);
     setHintCount(3);
-    setPrioritizeQuality(false);
+    setPrioritizeQuality(true);
     setAddCandidate(null);
     setNewMeaning('');
     setFeedback(null);
