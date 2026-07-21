@@ -24,6 +24,7 @@ import {
   CHAIN_MILESTONE_BONUS_COINS,
   CHAIN_MILESTONE_BONUS_STARS,
 } from '../lib/rewards';
+import { speak } from '../lib/speech';
 
 interface MinimalSpeechRecognition {
   lang: string;
@@ -87,6 +88,7 @@ export default function IdiomChainGame() {
   const [hintPool, setHintPool] = useState<ChainEntry[]>([]);
   const [hintPage, setHintPage] = useState(0);
   const [hintCount, setHintCount] = useState(3);
+  const [prioritizeQuality, setPrioritizeQuality] = useState(false);
   const [addCandidate, setAddCandidate] = useState<string | null>(null);
   const [newMeaning, setNewMeaning] = useState('');
   const [listening, setListening] = useState(false);
@@ -106,6 +108,7 @@ export default function IdiomChainGame() {
     setHintPool([]);
     setHintPage(0);
     setHintCount(3);
+    setPrioritizeQuality(false);
     setAddCandidate(null);
     setNewMeaning('');
     setFeedback(null);
@@ -222,13 +225,14 @@ export default function IdiomChainGame() {
     });
   }
 
-  function handleHint(count: number = hintCount) {
+  function handleHint(count: number = hintCount, quality: boolean = prioritizeQuality) {
     if (candidates.length === 0) {
       setFeedback({ type: 'info', message: '這個字暫時接不下去了，換一個新的開頭字試試吧！' });
       return;
     }
     setHintCount(count);
-    setHintPool(rankHintCandidates(candidates, targetChar, targetZhuyin));
+    setPrioritizeQuality(quality);
+    setHintPool(rankHintCandidates(candidates, targetChar, targetZhuyin, quality));
     setHintPage(0);
   }
 
@@ -432,6 +436,28 @@ export default function IdiomChainGame() {
           ))}
         </div>
 
+        <div className="flex items-center justify-center gap-1.5 pt-1 flex-wrap">
+          <span className="text-xs text-gray-400">排序方式：</span>
+          <button
+            type="button"
+            onClick={() => handleHint(hintCount, false)}
+            className={`rounded-full px-3 py-1 text-xs font-medium ${
+              !prioritizeQuality ? 'bg-teal-500 text-white' : 'bg-teal-50 text-teal-600 hover:bg-teal-100'
+            }`}
+          >
+            同字優先
+          </button>
+          <button
+            type="button"
+            onClick={() => handleHint(hintCount, true)}
+            className={`rounded-full px-3 py-1 text-xs font-medium ${
+              prioritizeQuality ? 'bg-teal-500 text-white' : 'bg-teal-50 text-teal-600 hover:bg-teal-100'
+            }`}
+          >
+            🥇 金牌優先
+          </button>
+        </div>
+
         <div className="flex gap-2 pt-1">
           <button
             type="button"
@@ -469,6 +495,15 @@ export default function IdiomChainGame() {
                   {isBookmarked(entry.word) ? '⭐' : '☆'}
                 </button>
                 <p className="text-2xl font-bold text-sky-700 tracking-widest text-center pt-4">{maskHint(entry.word)}</p>
+                <div className="flex justify-center pb-1">
+                  <button
+                    type="button"
+                    onClick={() => speak(entry.word)}
+                    className="flex items-center gap-1 text-xs font-medium text-sky-600 bg-white border border-sky-200 rounded-full px-3 py-1 hover:bg-sky-50"
+                  >
+                    🔊 聽發音
+                  </button>
+                </div>
                 {entry.meaning ? (
                   <>
                     <p className="text-sm text-gray-600">

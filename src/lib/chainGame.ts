@@ -149,10 +149,13 @@ export function findCandidates(
 }
 
 /**
- * Ranks every candidate for the current target, preferring the best match tier (see matchTier)
- * and, within that, the best quality level (see qualityLevel) — so official/explained idioms
- * surface before obscure no-explanation ones that merely match. Randomized within each
- * (match tier, quality level) group so the order isn't always alphabetical-ish.
+ * Ranks every candidate for the current target along two axes: match tier (see matchTier) and
+ * quality level (see qualityLevel). By default match tier is primary — same-character matches
+ * lead — which can bury an all-🥉 same-character run behind higher-quality same-reading matches.
+ * Pass `prioritizeQuality: true` to flip that: quality level becomes primary, surfacing every
+ * 🥇 idiom (same character OR same reading) before any 🥈/🥉, for when the same-character group
+ * happens to be all obscure entries.
+ * Randomized within each (primary, secondary) group so the order isn't always alphabetical-ish.
  * Entries that would look identical once masked (e.g. two different idioms sharing the same first
  * and last character) are deduplicated so kids don't see the same-looking card twice.
  *
@@ -163,17 +166,19 @@ export function rankHintCandidates(
   candidates: ChainEntry[],
   targetChar: string,
   targetZhuyin: string,
+  prioritizeQuality = false,
 ): ChainEntry[] {
-  // buckets[matchTier][3 - qualityLevel] — quality level 3 (best) sorts first within each match tier.
   const buckets: ChainEntry[][][] = [[[], [], []], [[], [], []], [[], [], []]];
   for (const entry of candidates) {
     const tier = matchTier(entry, targetChar, targetZhuyin);
-    buckets[tier][3 - qualityLevel(entry)].push(entry);
+    const levelIdx = 3 - qualityLevel(entry); // 0 (best/🥇) .. 2 (🥉)
+    const [primary, secondary] = prioritizeQuality ? [levelIdx, tier] : [tier, levelIdx];
+    buckets[primary][secondary].push(entry);
   }
   const ordered: ChainEntry[] = [];
-  for (const tierBuckets of buckets) {
-    for (const levelBucket of tierBuckets) {
-      ordered.push(...shuffle(levelBucket));
+  for (const primaryBucket of buckets) {
+    for (const secondaryBucket of primaryBucket) {
+      ordered.push(...shuffle(secondaryBucket));
     }
   }
   const result: ChainEntry[] = [];
