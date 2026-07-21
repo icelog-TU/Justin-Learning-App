@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useAppDataContext } from '../lib/AppDataContext';
 import { findCandidates, findByWord, matchesTarget, maskHint, pickRandomStart } from '../lib/chainGame';
+import { getZhuyin } from '../lib/zhuyin';
 import type { ChainIdiom } from '../data/idiomChain';
 import {
   COIN_PER_CHAIN_LINK,
@@ -166,7 +167,7 @@ export default function IdiomChainGame() {
       <div className="bg-white rounded-2xl shadow p-6 text-center space-y-3">
         <p className="text-xs text-gray-400">請接一個成語，開頭是……</p>
         <p className="text-5xl font-extrabold text-teal-600">{targetChar}</p>
-        <p className="text-xs text-gray-400">（讀音：{targetPinyin}）</p>
+        <p className="text-xs text-gray-400">（讀音：{getZhuyin(targetChar)}）</p>
 
         {deadEnd && (
           <p className="text-sm text-amber-600 bg-amber-50 rounded-lg px-3 py-2">
