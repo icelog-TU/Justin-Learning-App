@@ -12,6 +12,7 @@ import {
   maskHint,
   pickHints,
   pickRandomStart,
+  qualityLevel,
   type ChainEntry,
   type MoeRawEntry,
   type EditorialRawEntry,
@@ -49,6 +50,11 @@ interface Feedback {
 
 const MOE_ATTRIBUTION = '資料來源：教育部《成語典》（創用CC 姓名標示－禁止改作 3.0 台灣授權條款）';
 const HINT_COUNT_OPTIONS = [3, 6, 9, 12];
+const LEVEL_BADGE: Record<1 | 2 | 3, { icon: string; label: string; className: string }> = {
+  3: { icon: '🥇', label: '精選', className: 'bg-amber-100 text-amber-700' },
+  2: { icon: '🥈', label: '常見', className: 'bg-slate-100 text-slate-600' },
+  1: { icon: '🥉', label: '罕見', className: 'bg-orange-50 text-orange-500' },
+};
 
 export default function IdiomChainGame() {
   const { data, reward, addChainLink, reportChainLength, addCustomIdiom, toggleBookmark, recordChainRound } =
@@ -423,6 +429,12 @@ export default function IdiomChainGame() {
           <div className="space-y-2">
             {hintEntries.map((entry) => (
               <div key={entry.id} className="bg-sky-50 rounded-xl p-4 text-left space-y-1 relative">
+                <span
+                  className={`absolute top-2 left-2 text-[11px] font-medium rounded-full px-2 py-0.5 ${LEVEL_BADGE[qualityLevel(entry)].className}`}
+                  title={`成語等級：${LEVEL_BADGE[qualityLevel(entry)].label}`}
+                >
+                  {LEVEL_BADGE[qualityLevel(entry)].icon} {LEVEL_BADGE[qualityLevel(entry)].label}
+                </span>
                 <button
                   type="button"
                   onClick={() => handleToggleBookmark(entry)}
@@ -432,7 +444,7 @@ export default function IdiomChainGame() {
                 >
                   {isBookmarked(entry.word) ? '⭐' : '☆'}
                 </button>
-                <p className="text-2xl font-bold text-sky-700 tracking-widest text-center">{maskHint(entry.word)}</p>
+                <p className="text-2xl font-bold text-sky-700 tracking-widest text-center pt-4">{maskHint(entry.word)}</p>
                 {entry.meaning ? (
                   <>
                     <p className="text-sm text-gray-600">

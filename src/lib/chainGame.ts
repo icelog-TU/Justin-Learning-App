@@ -12,13 +12,17 @@ export interface MoeRawEntry {
   lastZhuyin: string;
 }
 
-/** No meaning field — these come from MOE's 30-reference-book editorial word list, word-only. */
+/**
+ * No meaning field — these come from MOE's 30-reference-book editorial word list, word-only.
+ * `frequency` is how many of the 30 reference books include the word (2–18 in our filtered set).
+ */
 export interface EditorialRawEntry {
   word: string;
   firstChar: string;
   firstZhuyin: string;
   lastChar: string;
   lastZhuyin: string;
+  frequency: number;
 }
 
 /** A word Justin's family added themselves via the "加入我的題庫" flow, kept in localStorage. */
@@ -42,6 +46,8 @@ export interface ChainEntry {
   firstZhuyin: string;
   lastChar: string;
   lastZhuyin: string;
+  /** Only set for 'editorial' entries — how many of the 30 reference books include the word. */
+  frequency?: number;
 }
 
 export function toBaseZhuyin(zhuyin: string): string {
@@ -81,6 +87,7 @@ export function buildEditorialPool(raw: EditorialRawEntry[]): ChainEntry[] {
     firstZhuyin: entry.firstZhuyin,
     lastChar: entry.lastChar,
     lastZhuyin: entry.lastZhuyin,
+    frequency: entry.frequency,
   }));
 }
 
@@ -100,6 +107,20 @@ export function buildCustomPool(entries: CustomChainEntry[]): ChainEntry[] {
 
 export function isHintable(entry: ChainEntry): boolean {
   return entry.source !== 'editorial';
+}
+
+/** An 'editorial' entry cited by at least this many of the 30 reference books counts as commonly used. */
+const EDITORIAL_HIGH_FREQUENCY_THRESHOLD = 5;
+
+/**
+ * How trustworthy/well-known an idiom is, for ranking hints: 3 = has a real explanation (MOE's
+ * 成語典, our own curated set, or a custom entry Justin's family filled in) — 2 = no explanation,
+ * but cited by several of the 30 reference books — 1 = no explanation and rarely cited.
+ */
+export function qualityLevel(entry: ChainEntry): 1 | 2 | 3 {
+  if (entry.source === 'moe' || entry.source === 'curated') return 3;
+  if (entry.source === 'custom') return entry.meaning ? 3 : 1;
+  return (entry.frequency ?? 0) >= EDITORIAL_HIGH_FREQUENCY_THRESHOLD ? 2 : 1;
 }
 
 export function matchesTarget(entry: ChainEntry, targetChar: string, targetZhuyin: string): boolean {
@@ -127,7 +148,9 @@ export function findCandidates(
 }
 
 /**
- * Picks up to n hints, preferring the best match tier (see matchTier), randomized within each tier.
+ * Picks up to n hints, preferring the best match tier (see matchTier) and, within that, the best
+ * quality level (see qualityLevel) — so official/explained idioms surface before obscure
+ * no-explanation ones that merely match. Randomized within each (match tier, quality level) group.
  * Entries that would look identical once masked (e.g. two different idioms sharing the same first
  * and last character) are deduplicated so kids don't see the same-looking card twice.
  */
@@ -137,11 +160,18 @@ export function pickHints(
   targetZhuyin: string,
   n: number,
 ): ChainEntry[] {
-  const buckets: ChainEntry[][] = [[], [], []];
+  // buckets[matchTier][3 - qualityLevel] — quality level 3 (best) sorts first within each match tier.
+  const buckets: ChainEntry[][][] = [[[], [], []], [[], [], []], [[], [], []]];
   for (const entry of candidates) {
-    buckets[matchTier(entry, targetChar, targetZhuyin)].push(entry);
+    const tier = matchTier(entry, targetChar, targetZhuyin);
+    buckets[tier][3 - qualityLevel(entry)].push(entry);
   }
-  const ordered = [...shuffle(buckets[0]), ...shuffle(buckets[1]), ...shuffle(buckets[2])];
+  const ordered: ChainEntry[] = [];
+  for (const tierBuckets of buckets) {
+    for (const levelBucket of tierBuckets) {
+      ordered.push(...shuffle(levelBucket));
+    }
+  }
   const result: ChainEntry[] = [];
   const seenMasks = new Set<string>();
   for (const entry of ordered) {
