@@ -73,6 +73,17 @@ export default function ProgressPage() {
         </div>
       </div>
 
+      <div className="bg-white rounded-2xl shadow p-5 grid grid-cols-2 gap-4 text-center">
+        <div>
+          <h3 className="font-bold text-gray-800 mb-2 text-sm">🔗 累計接龍次數</h3>
+          <p className="text-2xl font-bold text-teal-600">{data.chainStats.totalLinks}</p>
+        </div>
+        <div>
+          <h3 className="font-bold text-gray-800 mb-2 text-sm">🔗 最長連續紀錄</h3>
+          <p className="text-2xl font-bold text-teal-600">{data.chainStats.longestChain}</p>
+        </div>
+      </div>
+
       <div className="grid sm:grid-cols-2 gap-4">
         <div className="bg-white rounded-2xl shadow p-5">
           <h3 className="font-bold text-gray-800 mb-2">📖 成語測驗</h3>

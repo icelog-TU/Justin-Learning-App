@@ -25,6 +25,13 @@ const CARDS = [
     color: 'bg-emerald-100 text-emerald-700',
   },
   {
+    to: '/idioms/chain',
+    icon: '🔗',
+    title: '成語接龍',
+    desc: '用打字或語音接成語，可以無限接下去',
+    color: 'bg-teal-100 text-teal-700',
+  },
+  {
     to: '/confusables',
     icon: '🔍',
     title: '錯別字測驗',

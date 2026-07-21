@@ -10,6 +10,8 @@ import {
   earnRewards,
   rollGacha as rollGachaMutation,
   giveHeart as giveHeartMutation,
+  recordChainLink,
+  updateLongestChain,
 } from './storage';
 import type { GachaResult } from './rewards';
 
@@ -52,5 +54,13 @@ export function useAppData() {
     return success;
   }, []);
 
-  return { data, answer, logSentence, reward, rollGacha, giveHeart };
+  const addChainLink = useCallback(() => {
+    setData((prev) => ({ ...recordChainLink({ ...prev }) }));
+  }, []);
+
+  const reportChainLength = useCallback((length: number) => {
+    setData((prev) => ({ ...updateLongestChain({ ...prev }, length) }));
+  }, []);
+
+  return { data, answer, logSentence, reward, rollGacha, giveHeart, addChainLink, reportChainLength };
 }

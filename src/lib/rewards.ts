@@ -11,6 +11,12 @@ export const QUIZ_PERFECT_BONUS_COINS = 20;
 export const QUIZ_PERFECT_BONUS_STARS = 10;
 export const DUPE_CONSOLATION_STARS = 5;
 
+export const COIN_PER_CHAIN_LINK = 8;
+export const STAR_PER_CHAIN_LINK = 4;
+export const CHAIN_MILESTONE_INTERVAL = 5;
+export const CHAIN_MILESTONE_BONUS_COINS = 15;
+export const CHAIN_MILESTONE_BONUS_STARS = 8;
+
 export const BASE_EMOJI: Record<number, string> = {
   2: '🔵',
   3: '🟢',

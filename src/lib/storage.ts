@@ -25,6 +25,11 @@ export interface SentenceLogEntry {
   date: string;
 }
 
+export interface ChainStats {
+  totalLinks: number;
+  longestChain: number;
+}
+
 export interface AppData {
   idiomStats: Record<string, ItemStat>;
   confusableStats: Record<string, ItemStat>;
@@ -34,6 +39,7 @@ export interface AppData {
   stars: number;
   /** character id ("base^exponent") -> hearts given so far */
   characters: Record<string, number>;
+  chainStats: ChainStats;
 }
 
 function emptyData(): AppData {
@@ -45,6 +51,7 @@ function emptyData(): AppData {
     coins: 0,
     stars: 0,
     characters: {},
+    chainStats: { totalLinks: 0, longestChain: 0 },
   };
 }
 
@@ -147,4 +154,16 @@ export function giveHeart(data: AppData, id: string): { data: AppData; success: 
   data.stars -= HEART_COST_STARS;
   data.characters[id] = hearts + 1;
   return { data, success: true };
+}
+
+export function recordChainLink(data: AppData): AppData {
+  data.chainStats = { ...data.chainStats, totalLinks: data.chainStats.totalLinks + 1 };
+  return data;
+}
+
+export function updateLongestChain(data: AppData, chainLength: number): AppData {
+  if (chainLength > data.chainStats.longestChain) {
+    data.chainStats = { ...data.chainStats, longestChain: chainLength };
+  }
+  return data;
 }
