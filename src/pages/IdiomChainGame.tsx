@@ -25,6 +25,7 @@ import {
   CHAIN_MILESTONE_BONUS_STARS,
 } from '../lib/rewards';
 import { speak } from '../lib/speech';
+import { buildIdiomSearchUrl } from '../lib/googleSearch';
 
 interface MinimalSpeechRecognition {
   lang: string;
@@ -65,10 +66,6 @@ function pageWindow(current: number, total: number): number[] {
     if (p >= 0 && p < total) pages.add(p);
   }
   return Array.from(pages).sort((a, b) => a - b);
-}
-
-function googleSearchUrl(word: string): string {
-  return `https://www.google.com/search?q=${encodeURIComponent(`成語 ${word} 意思 典故`)}`;
 }
 
 export default function IdiomChainGame() {
@@ -517,7 +514,7 @@ export default function IdiomChainGame() {
                 )}
                 <div className="flex justify-end pt-1">
                   <a
-                    href={googleSearchUrl(entry.word)}
+                    href={buildIdiomSearchUrl(entry.word)}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="shrink-0 text-xs font-medium bg-sky-500 text-white rounded-full px-3 py-1.5 hover:bg-sky-600"

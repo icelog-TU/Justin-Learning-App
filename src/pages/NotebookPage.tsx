@@ -1,4 +1,5 @@
 import { useAppDataContext } from '../lib/AppDataContext';
+import { buildIdiomSearchUrl } from '../lib/googleSearch';
 
 const MOE_ATTRIBUTION = '資料來源：教育部《成語典》（創用CC 姓名標示－禁止改作 3.0 台灣授權條款）';
 
@@ -42,18 +43,18 @@ export default function NotebookPage() {
                   {entry.source === 'moe' && <p className="text-[11px] text-gray-400">{MOE_ATTRIBUTION}</p>}
                 </>
               ) : (
-                <div className="flex items-center justify-between gap-2 pt-1">
-                  <p className="text-xs text-gray-400">還沒有這個成語的解釋</p>
-                  <a
-                    href={`https://www.google.com/search?q=${encodeURIComponent(`成語 ${entry.word} 意思`)}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="shrink-0 text-xs font-medium bg-sky-500 text-white rounded-full px-3 py-1.5 hover:bg-sky-600"
-                  >
-                    🔍 查意思
-                  </a>
-                </div>
+                <p className="text-xs text-gray-400">還沒有這個成語的解釋</p>
               )}
+              <div className="flex justify-end pt-1">
+                <a
+                  href={buildIdiomSearchUrl(entry.word)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="shrink-0 text-xs font-medium bg-sky-500 text-white rounded-full px-3 py-1.5 hover:bg-sky-600"
+                >
+                  🔍 查意思／典故
+                </a>
+              </div>
             </div>
           ))}
         </div>
