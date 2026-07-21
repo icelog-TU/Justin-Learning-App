@@ -110,12 +110,13 @@ export function isHintable(entry: ChainEntry): boolean {
 }
 
 /** An 'editorial' entry cited by at least this many of the 30 reference books counts as commonly used. */
-const EDITORIAL_HIGH_FREQUENCY_THRESHOLD = 5;
+const EDITORIAL_HIGH_FREQUENCY_THRESHOLD = 10;
 
 /**
  * How trustworthy/well-known an idiom is, for ranking hints: 3 = has a real explanation (MOE's
  * 成語典, our own curated set, or a custom entry Justin's family filled in) — 2 = no explanation,
- * but cited by several of the 30 reference books — 1 = no explanation and rarely cited.
+ * but cited by 10+ of the 30 reference books — 1 = no explanation and cited by fewer than 10
+ * (entries cited by 3 or fewer books are dropped from the editorial dataset entirely).
  */
 export function qualityLevel(entry: ChainEntry): 1 | 2 | 3 {
   if (entry.source === 'moe' || entry.source === 'curated') return 3;
@@ -148,17 +149,20 @@ export function findCandidates(
 }
 
 /**
- * Picks up to n hints, preferring the best match tier (see matchTier) and, within that, the best
- * quality level (see qualityLevel) — so official/explained idioms surface before obscure
- * no-explanation ones that merely match. Randomized within each (match tier, quality level) group.
+ * Ranks every candidate for the current target, preferring the best match tier (see matchTier)
+ * and, within that, the best quality level (see qualityLevel) — so official/explained idioms
+ * surface before obscure no-explanation ones that merely match. Randomized within each
+ * (match tier, quality level) group so the order isn't always alphabetical-ish.
  * Entries that would look identical once masked (e.g. two different idioms sharing the same first
  * and last character) are deduplicated so kids don't see the same-looking card twice.
+ *
+ * Returns the full ranked list — callers paginate it (see IdiomChainGame's hint pages) rather than
+ * re-rolling a fresh random top-n each time, so "next page" reliably surfaces idioms not seen yet.
  */
-export function pickHints(
+export function rankHintCandidates(
   candidates: ChainEntry[],
   targetChar: string,
   targetZhuyin: string,
-  n: number,
 ): ChainEntry[] {
   // buckets[matchTier][3 - qualityLevel] — quality level 3 (best) sorts first within each match tier.
   const buckets: ChainEntry[][][] = [[[], [], []], [[], [], []], [[], [], []]];
@@ -179,7 +183,6 @@ export function pickHints(
     if (seenMasks.has(mask)) continue;
     seenMasks.add(mask);
     result.push(entry);
-    if (result.length >= n) break;
   }
   return result;
 }

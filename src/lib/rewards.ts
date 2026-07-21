@@ -1,6 +1,6 @@
 export const GACHA_BASES = [2, 3, 4, 5, 6] as const;
 export const MAX_EXPONENT = 33;
-export const GACHA_COST_COINS = 25;
+export const GACHA_COST_COINS = 10;
 export const HEART_COST_STARS = 3;
 
 export const COIN_PER_CORRECT = 5;

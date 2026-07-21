@@ -54,3 +54,53 @@ export function playSuccessChime(big = false) {
   const notes = big ? [523, 659, 784, 1047, 1319] : [523, 659, 784];
   notes.forEach((f, i) => tone(ctx, f, t + i * 0.09, 0.28, 'triangle', 0.13));
 }
+
+/** Quick whirring clicks while the gacha "wheel" is spinning. */
+export function playGachaSpinSound() {
+  const ctx = getContext();
+  if (!ctx) return;
+  const t = ctx.currentTime;
+  for (let i = 0; i < 6; i++) {
+    tone(ctx, 320 + i * 55, t + i * 0.08, 0.06, 'square', 0.06);
+  }
+}
+
+/** Plays when the gacha result is revealed — a bright fanfare for a new character, a softer tone for a dupe. */
+export function playGachaRevealSound(isNew: boolean) {
+  const ctx = getContext();
+  if (!ctx) return;
+  const t = ctx.currentTime;
+  if (isNew) {
+    [659, 831, 988, 1319, 1568].forEach((f, i) => tone(ctx, f, t + i * 0.08, 0.3, 'triangle', 0.13));
+  } else {
+    tone(ctx, 700, t, 0.12, 'sine', 0.08);
+    tone(ctx, 550, t + 0.1, 0.16, 'sine', 0.08);
+  }
+}
+
+/** A soft "whoosh in" for entering a character's own page. */
+export function playPageEnterSound() {
+  const ctx = getContext();
+  if (!ctx) return;
+  const t = ctx.currentTime;
+  tone(ctx, 880, t, 0.1, 'sine', 0.08);
+  tone(ctx, 1175, t + 0.06, 0.14, 'sine', 0.09);
+}
+
+/** Plays when giving a character a heart. */
+export function playHeartSound() {
+  const ctx = getContext();
+  if (!ctx) return;
+  const t = ctx.currentTime;
+  tone(ctx, 1046, t, 0.1, 'sine', 0.1);
+  tone(ctx, 1568, t + 0.08, 0.2, 'sine', 0.1);
+}
+
+/** Plays when tapping one of a character's unlocked interactions. */
+export function playInteractionSound() {
+  const ctx = getContext();
+  if (!ctx) return;
+  const t = ctx.currentTime;
+  tone(ctx, 784, t, 0.08, 'triangle', 0.1);
+  tone(ctx, 988, t + 0.05, 0.14, 'triangle', 0.1);
+}

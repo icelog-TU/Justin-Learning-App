@@ -12,6 +12,7 @@ import {
   characterValue,
 } from '../lib/rewards';
 import type { GachaResult } from '../lib/rewards';
+import { playGachaSpinSound, playGachaRevealSound } from '../lib/sound';
 
 export default function GachaPage() {
   const { data, rollGacha } = useAppDataContext();
@@ -25,10 +26,12 @@ export default function GachaPage() {
     if (rolling) return;
     setRolling(true);
     setLastResult(null);
+    playGachaSpinSound();
     window.setTimeout(() => {
       const result = rollGacha();
       setLastResult(result);
       setRolling(false);
+      if (result) playGachaRevealSound(!result.isDupe);
     }, 500);
   }
 

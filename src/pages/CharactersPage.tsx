@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useAppDataContext } from '../lib/AppDataContext';
 import {
   GACHA_BASES,
@@ -12,6 +13,7 @@ import {
   formatBigNumber,
   characterValue,
 } from '../lib/rewards';
+import { playHeartSound } from '../lib/sound';
 
 export default function CharactersPage() {
   const { data, giveHeart } = useAppDataContext();
@@ -73,20 +75,24 @@ export default function CharactersPage() {
             >
               {owned ? (
                 <>
-                  <p className="text-lg font-extrabold text-orange-600">{formatCharacterLabel(selectedBase, exp)}</p>
-                  <p className="text-[11px] text-gray-400 leading-tight">
-                    {formatBigNumber(characterValue(selectedBase, exp))}
-                  </p>
-                  <p className="text-xs text-gray-600">
-                    好感度：{hearts > 0 ? formatCharacterLabel(selectedBase, hearts) : '尚未培養'}
-                  </p>
-                  <p className="text-[11px] text-gray-400">
-                    {hearts} / {exp} 顆愛心{isFull && ' 💯'}
-                  </p>
+                  <Link to={`/characters/${encodeURIComponent(id)}`} className="block">
+                    <p className="text-lg font-extrabold text-orange-600">{formatCharacterLabel(selectedBase, exp)}</p>
+                    <p className="text-[11px] text-gray-400 leading-tight">
+                      {formatBigNumber(characterValue(selectedBase, exp))}
+                    </p>
+                    <p className="text-xs text-gray-600">
+                      好感度：{hearts > 0 ? formatCharacterLabel(selectedBase, hearts) : '尚未培養'}
+                    </p>
+                    <p className="text-[11px] text-gray-400">
+                      {hearts} / {exp} 顆愛心{isFull && ' 💯'}
+                    </p>
+                  </Link>
                   <button
                     type="button"
                     disabled={!canGiveHeart}
-                    onClick={() => giveHeart(id)}
+                    onClick={() => {
+                      if (giveHeart(id)) playHeartSound();
+                    }}
                     className="mt-1 w-full text-xs font-medium rounded-full py-1 bg-pink-500 disabled:bg-gray-200 disabled:text-gray-400 text-white"
                   >
                     {isFull ? '已滿 ❤️' : `給愛心 (${HEART_COST_STARS}⭐)`}

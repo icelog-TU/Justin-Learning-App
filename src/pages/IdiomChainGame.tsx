@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import { useAppDataContext } from '../lib/AppDataContext';
 import {
   buildCuratedPool,
@@ -10,7 +10,7 @@ import {
   findByWord,
   matchesTarget,
   maskHint,
-  pickHints,
+  rankHintCandidates,
   pickRandomStart,
   qualityLevel,
   type ChainEntry,
@@ -56,6 +56,20 @@ const LEVEL_BADGE: Record<1 | 2 | 3, { icon: string; label: string; className: s
   1: { icon: '🥉', label: '罕見', className: 'bg-orange-50 text-orange-500' },
 };
 
+/** First page, last page, and up to 3 pages around `current` (all 0-based) — for a compact page-jump bar. */
+function pageWindow(current: number, total: number): number[] {
+  if (total <= 0) return [];
+  const pages = new Set<number>([0, total - 1]);
+  for (let p = current - 1; p <= current + 1; p++) {
+    if (p >= 0 && p < total) pages.add(p);
+  }
+  return Array.from(pages).sort((a, b) => a - b);
+}
+
+function googleSearchUrl(word: string): string {
+  return `https://www.google.com/search?q=${encodeURIComponent(`成語 ${word} 意思 典故`)}`;
+}
+
 export default function IdiomChainGame() {
   const { data, reward, addChainLink, reportChainLength, addCustomIdiom, toggleBookmark, recordChainRound } =
     useAppDataContext();
@@ -70,13 +84,32 @@ export default function IdiomChainGame() {
   const [usedIds, setUsedIds] = useState<Set<string>>(new Set());
   const [inputValue, setInputValue] = useState('');
   const [feedback, setFeedback] = useState<Feedback | null>(null);
-  const [hintEntries, setHintEntries] = useState<ChainEntry[]>([]);
+  const [hintPool, setHintPool] = useState<ChainEntry[]>([]);
+  const [hintPage, setHintPage] = useState(0);
   const [hintCount, setHintCount] = useState(3);
   const [addCandidate, setAddCandidate] = useState<string | null>(null);
   const [newMeaning, setNewMeaning] = useState('');
   const [listening, setListening] = useState(false);
   const recognitionRef = useRef<MinimalSpeechRecognition | null>(null);
   const speechSupported = getSpeechRecognitionCtor() !== null;
+
+  const chainHistoryRef = useRef(chainHistory);
+  chainHistoryRef.current = chainHistory;
+
+  function startNewChain(fromPool: ChainEntry[]) {
+    const start = pickRandomStart(fromPool);
+    setTargetChar(start.firstChar);
+    setTargetZhuyin(start.firstZhuyin);
+    setChainHistory([]);
+    setUsedIds(new Set());
+    setInputValue('');
+    setHintPool([]);
+    setHintPage(0);
+    setHintCount(3);
+    setAddCandidate(null);
+    setNewMeaning('');
+    setFeedback(null);
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -92,40 +125,31 @@ export default function IdiomChainGame() {
       loadJson<EditorialRawEntry[]>('data/editorial-idioms.json'),
     ]).then(([moeRaw, editorialRaw]) => {
       if (cancelled) return;
-      setPool((prev) => [
-        ...prev,
+      const fullPool = [
+        ...pool,
         ...(moeRaw ? buildMoePool(moeRaw) : []),
         ...(editorialRaw ? buildEditorialPool(editorialRaw) : []),
-      ]);
+      ];
+      setPool(fullPool);
       setExtraLoaded(true);
+      // The very first target character (picked below, before this data arrives) only had our small
+      // hand-curated set to draw from. Re-roll it once the full ~9,800-word pool is ready, but only
+      // if Justin hasn't chained anything yet — don't yank the target out from under an active game.
+      if (chainHistoryRef.current.length === 0) {
+        startNewChain(fullPool);
+      }
     });
 
     return () => {
       cancelled = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  function startNewChain(fromPool: ChainEntry[]) {
-    const start = pickRandomStart(fromPool);
-    setTargetChar(start.firstChar);
-    setTargetZhuyin(start.firstZhuyin);
-    setChainHistory([]);
-    setUsedIds(new Set());
-    setInputValue('');
-    setHintEntries([]);
-    setHintCount(3);
-    setAddCandidate(null);
-    setNewMeaning('');
-    setFeedback(null);
-  }
 
   useEffect(() => {
     startNewChain(pool);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  const chainHistoryRef = useRef(chainHistory);
-  chainHistoryRef.current = chainHistory;
 
   useEffect(() => {
     return () => {
@@ -186,7 +210,8 @@ export default function IdiomChainGame() {
     setTargetChar(entry.lastChar);
     setTargetZhuyin(entry.lastZhuyin);
     setInputValue('');
-    setHintEntries([]);
+    setHintPool([]);
+    setHintPage(0);
     setAddCandidate(null);
     setNewMeaning('');
     setFeedback({
@@ -203,7 +228,15 @@ export default function IdiomChainGame() {
       return;
     }
     setHintCount(count);
-    setHintEntries(pickHints(candidates, targetChar, targetZhuyin, count));
+    setHintPool(rankHintCandidates(candidates, targetChar, targetZhuyin));
+    setHintPage(0);
+  }
+
+  const totalHintPages = hintPool.length > 0 ? Math.ceil(hintPool.length / hintCount) : 0;
+  const hintEntries = hintPool.slice(hintPage * hintCount, hintPage * hintCount + hintCount);
+
+  function goToHintPage(page: number) {
+    setHintPage(Math.max(0, Math.min(page, totalHintPages - 1)));
   }
 
   function handleAddCustomIdiom() {
@@ -389,7 +422,7 @@ export default function IdiomChainGame() {
               type="button"
               onClick={() => handleHint(n)}
               className={`rounded-full px-3 py-1 text-xs font-medium ${
-                hintCount === n && hintEntries.length > 0
+                hintCount === n && hintPool.length > 0
                   ? 'bg-sky-500 text-white'
                   : 'bg-sky-50 text-sky-600 hover:bg-sky-100'
               }`}
@@ -407,15 +440,6 @@ export default function IdiomChainGame() {
           >
             💡 提示（{hintCount} 個）
           </button>
-          {hintEntries.length > 0 && (
-            <button
-              type="button"
-              onClick={() => handleHint()}
-              className="flex-1 bg-violet-100 text-violet-700 rounded-full py-2 text-sm font-medium hover:bg-violet-200"
-            >
-              🔀 換一批
-            </button>
-          )}
           <button
             type="button"
             onClick={handleReroll}
@@ -454,20 +478,55 @@ export default function IdiomChainGame() {
                     {entry.source === 'moe' && <p className="text-[11px] text-gray-400">{MOE_ATTRIBUTION}</p>}
                   </>
                 ) : (
-                  <div className="flex items-center justify-between gap-2 pt-1">
-                    <p className="text-xs text-gray-400">我們題庫裡還沒有這個成語的解釋</p>
-                    <a
-                      href={`https://www.google.com/search?q=${encodeURIComponent(`成語 ${entry.word} 意思`)}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="shrink-0 text-xs font-medium bg-sky-500 text-white rounded-full px-3 py-1.5 hover:bg-sky-600"
-                    >
-                      🔍 查意思
-                    </a>
-                  </div>
+                  <p className="text-xs text-gray-400">我們題庫裡還沒有這個成語的解釋</p>
                 )}
+                <div className="flex justify-end pt-1">
+                  <a
+                    href={googleSearchUrl(entry.word)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="shrink-0 text-xs font-medium bg-sky-500 text-white rounded-full px-3 py-1.5 hover:bg-sky-600"
+                  >
+                    🔍 查意思／典故
+                  </a>
+                </div>
               </div>
             ))}
+          </div>
+        )}
+
+        {totalHintPages > 1 && (
+          <div className="flex items-center justify-center flex-wrap gap-1.5 pt-1">
+            <button
+              type="button"
+              onClick={() => goToHintPage(hintPage - 1)}
+              disabled={hintPage === 0}
+              className="rounded-full px-2.5 py-1 text-xs font-medium bg-gray-100 text-gray-600 disabled:opacity-40 hover:bg-gray-200"
+            >
+              ⬅ 上一頁
+            </button>
+            {pageWindow(hintPage, totalHintPages).map((p, i, arr) => (
+              <Fragment key={p}>
+                {i > 0 && p - arr[i - 1] > 1 && <span className="text-gray-300 px-0.5">…</span>}
+                <button
+                  type="button"
+                  onClick={() => goToHintPage(p)}
+                  className={`rounded-full w-7 h-7 text-xs font-medium ${
+                    p === hintPage ? 'bg-sky-500 text-white' : 'bg-sky-50 text-sky-600 hover:bg-sky-100'
+                  }`}
+                >
+                  {p + 1}
+                </button>
+              </Fragment>
+            ))}
+            <button
+              type="button"
+              onClick={() => goToHintPage(hintPage + 1)}
+              disabled={hintPage >= totalHintPages - 1}
+              className="rounded-full px-2.5 py-1 text-xs font-medium bg-gray-100 text-gray-600 disabled:opacity-40 hover:bg-gray-200"
+            >
+              下一頁 ➡
+            </button>
           </div>
         )}
       </div>
