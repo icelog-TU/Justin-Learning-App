@@ -12,8 +12,10 @@ import {
   giveHeart as giveHeartMutation,
   recordChainLink,
   updateLongestChain,
+  addCustomIdiom as addCustomIdiomMutation,
 } from './storage';
 import type { GachaResult } from './rewards';
+import type { CustomChainEntry } from './chainGame';
 import type { CelebrationTrigger } from '../components/CelebrationOverlay';
 
 export function useAppData() {
@@ -67,5 +69,20 @@ export function useAppData() {
     setData((prev) => ({ ...updateLongestChain({ ...prev }, length) }));
   }, []);
 
-  return { data, answer, logSentence, reward, rollGacha, giveHeart, addChainLink, reportChainLength, celebration };
+  const addCustomIdiom = useCallback((entry: CustomChainEntry) => {
+    setData((prev) => ({ ...addCustomIdiomMutation({ ...prev, customIdioms: [...prev.customIdioms] }, entry) }));
+  }, []);
+
+  return {
+    data,
+    answer,
+    logSentence,
+    reward,
+    rollGacha,
+    giveHeart,
+    addChainLink,
+    reportChainLength,
+    celebration,
+    addCustomIdiom,
+  };
 }

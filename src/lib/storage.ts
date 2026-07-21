@@ -7,6 +7,7 @@ import {
   currentUnlockedBase,
   type GachaResult,
 } from './rewards';
+import type { CustomChainEntry } from './chainGame';
 
 const STORAGE_KEY = 'justin-chinese-app-v1';
 
@@ -40,6 +41,8 @@ export interface AppData {
   /** character id ("base^exponent") -> hearts given so far */
   characters: Record<string, number>;
   chainStats: ChainStats;
+  /** Idioms Justin's family added themselves when the built-in database was missing one. */
+  customIdioms: CustomChainEntry[];
 }
 
 function emptyData(): AppData {
@@ -52,6 +55,7 @@ function emptyData(): AppData {
     stars: 0,
     characters: {},
     chainStats: { totalLinks: 0, longestChain: 0 },
+    customIdioms: [],
   };
 }
 
@@ -165,5 +169,11 @@ export function updateLongestChain(data: AppData, chainLength: number): AppData 
   if (chainLength > data.chainStats.longestChain) {
     data.chainStats = { ...data.chainStats, longestChain: chainLength };
   }
+  return data;
+}
+
+export function addCustomIdiom(data: AppData, entry: CustomChainEntry): AppData {
+  if (data.customIdioms.some((e) => e.word === entry.word)) return data;
+  data.customIdioms = [...data.customIdioms, entry];
   return data;
 }
