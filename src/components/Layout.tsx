@@ -12,6 +12,7 @@ const NAV_ITEMS = [
   { to: '/confusables', label: '錯別字測驗', icon: '🔍' },
   { to: '/gacha', label: '轉蛋', icon: '🎁' },
   { to: '/characters', label: '角色收藏', icon: '🎴' },
+  { to: '/notebook', label: '成語筆記本', icon: '⭐' },
   { to: '/progress', label: '學習紀錄', icon: '🏆' },
 ];
 

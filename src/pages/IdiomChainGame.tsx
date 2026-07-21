@@ -50,7 +50,7 @@ interface Feedback {
 const MOE_ATTRIBUTION = '資料來源：教育部《成語典》（創用CC 姓名標示－禁止改作 3.0 台灣授權條款）';
 
 export default function IdiomChainGame() {
-  const { data, reward, addChainLink, reportChainLength, addCustomIdiom } = useAppDataContext();
+  const { data, reward, addChainLink, reportChainLength, addCustomIdiom, toggleBookmark } = useAppDataContext();
   const [pool, setPool] = useState<ChainEntry[]>(() => [
     ...buildCuratedPool(),
     ...buildCustomPool(data.customIdioms),
@@ -243,6 +243,19 @@ export default function IdiomChainGame() {
     setListening(false);
   }
 
+  function isBookmarked(word: string): boolean {
+    return data.bookmarkedIdioms.some((b) => b.word === word);
+  }
+
+  function handleToggleBookmark(entry: ChainEntry) {
+    toggleBookmark({
+      word: entry.word,
+      meaning: entry.meaning,
+      source: entry.source,
+      addedAt: new Date().toISOString(),
+    });
+  }
+
   return (
     <div className="space-y-4">
       <div>
@@ -364,7 +377,16 @@ export default function IdiomChainGame() {
         {hintEntries.length > 0 && (
           <div className="space-y-2">
             {hintEntries.map((entry) => (
-              <div key={entry.id} className="bg-sky-50 rounded-xl p-4 text-left space-y-1">
+              <div key={entry.id} className="bg-sky-50 rounded-xl p-4 text-left space-y-1 relative">
+                <button
+                  type="button"
+                  onClick={() => handleToggleBookmark(entry)}
+                  className="absolute top-2 right-2 text-xl leading-none"
+                  aria-label={isBookmarked(entry.word) ? '取消收藏' : '收藏到筆記本'}
+                  title={isBookmarked(entry.word) ? '取消收藏' : '收藏到筆記本'}
+                >
+                  {isBookmarked(entry.word) ? '⭐' : '☆'}
+                </button>
                 <p className="text-2xl font-bold text-sky-700 tracking-widest text-center">{maskHint(entry.word)}</p>
                 {entry.meaning ? (
                   <>
@@ -400,9 +422,18 @@ export default function IdiomChainGame() {
           </h3>
           <div className="flex flex-wrap items-center gap-2">
             {chainHistory.map((entry, i) => (
-              <div key={entry.id} className="flex items-center gap-2">
-                <span className="bg-teal-50 text-teal-700 font-semibold text-sm rounded-full px-3 py-1">
+              <div key={entry.id} className="flex items-center gap-1">
+                <span className="bg-teal-50 text-teal-700 font-semibold text-sm rounded-full pl-3 pr-1.5 py-1 flex items-center gap-1">
                   {entry.word}
+                  <button
+                    type="button"
+                    onClick={() => handleToggleBookmark(entry)}
+                    className="text-sm leading-none"
+                    aria-label={isBookmarked(entry.word) ? '取消收藏' : '收藏到筆記本'}
+                    title={isBookmarked(entry.word) ? '取消收藏' : '收藏到筆記本'}
+                  >
+                    {isBookmarked(entry.word) ? '⭐' : '☆'}
+                  </button>
                 </span>
                 {i < chainHistory.length - 1 && <span className="text-gray-300">→</span>}
               </div>

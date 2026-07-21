@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   type AppData,
   type SentenceLogEntry,
+  type BookmarkedIdiom,
   loadData,
   saveData,
   recordVisitToday,
@@ -13,6 +14,7 @@ import {
   recordChainLink,
   updateLongestChain,
   addCustomIdiom as addCustomIdiomMutation,
+  toggleBookmark as toggleBookmarkMutation,
 } from './storage';
 import type { GachaResult } from './rewards';
 import type { CustomChainEntry } from './chainGame';
@@ -73,6 +75,12 @@ export function useAppData() {
     setData((prev) => ({ ...addCustomIdiomMutation({ ...prev, customIdioms: [...prev.customIdioms] }, entry) }));
   }, []);
 
+  const toggleBookmark = useCallback((entry: BookmarkedIdiom) => {
+    setData((prev) => ({
+      ...toggleBookmarkMutation({ ...prev, bookmarkedIdioms: [...prev.bookmarkedIdioms] }, entry),
+    }));
+  }, []);
+
   return {
     data,
     answer,
@@ -84,5 +92,6 @@ export function useAppData() {
     reportChainLength,
     celebration,
     addCustomIdiom,
+    toggleBookmark,
   };
 }

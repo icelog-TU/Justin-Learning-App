@@ -31,6 +31,14 @@ export interface ChainStats {
   longestChain: number;
 }
 
+/** An idiom Justin starred while playing the chain game (often one he only learned via a hint), for later review. */
+export interface BookmarkedIdiom {
+  word: string;
+  meaning: string;
+  source: string;
+  addedAt: string;
+}
+
 export interface AppData {
   idiomStats: Record<string, ItemStat>;
   confusableStats: Record<string, ItemStat>;
@@ -43,6 +51,8 @@ export interface AppData {
   chainStats: ChainStats;
   /** Idioms Justin's family added themselves when the built-in database was missing one. */
   customIdioms: CustomChainEntry[];
+  /** Idioms Justin starred to review later — his "成語筆記本". */
+  bookmarkedIdioms: BookmarkedIdiom[];
 }
 
 function emptyData(): AppData {
@@ -56,6 +66,7 @@ function emptyData(): AppData {
     characters: {},
     chainStats: { totalLinks: 0, longestChain: 0 },
     customIdioms: [],
+    bookmarkedIdioms: [],
   };
 }
 
@@ -175,5 +186,14 @@ export function updateLongestChain(data: AppData, chainLength: number): AppData 
 export function addCustomIdiom(data: AppData, entry: CustomChainEntry): AppData {
   if (data.customIdioms.some((e) => e.word === entry.word)) return data;
   data.customIdioms = [...data.customIdioms, entry];
+  return data;
+}
+
+/** Toggles a bookmark on/off for the given word — adds it if not yet bookmarked, removes it otherwise. */
+export function toggleBookmark(data: AppData, entry: BookmarkedIdiom): AppData {
+  const exists = data.bookmarkedIdioms.some((b) => b.word === entry.word);
+  data.bookmarkedIdioms = exists
+    ? data.bookmarkedIdioms.filter((b) => b.word !== entry.word)
+    : [entry, ...data.bookmarkedIdioms];
   return data;
 }

@@ -9,6 +9,7 @@ import ConfusablesQuiz from './pages/ConfusablesQuiz';
 import ProgressPage from './pages/ProgressPage';
 import GachaPage from './pages/GachaPage';
 import CharactersPage from './pages/CharactersPage';
+import NotebookPage from './pages/NotebookPage';
 import { AppDataProvider } from './lib/AppDataContext';
 
 export default function App() {
@@ -25,6 +26,7 @@ export default function App() {
             <Route path="/confusables" element={<ConfusablesQuiz />} />
             <Route path="/gacha" element={<GachaPage />} />
             <Route path="/characters" element={<CharactersPage />} />
+            <Route path="/notebook" element={<NotebookPage />} />
             <Route path="/progress" element={<ProgressPage />} />
           </Route>
         </Routes>

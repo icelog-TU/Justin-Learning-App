@@ -52,6 +52,13 @@ const CARDS = [
     desc: '用星星給角色愛心，培養好感度',
     color: 'bg-amber-100 text-amber-700',
   },
+  {
+    to: '/notebook',
+    icon: '⭐',
+    title: '成語筆記本',
+    desc: '複習接龍時收藏的成語',
+    color: 'bg-yellow-100 text-yellow-700',
+  },
 ];
 
 export default function Home() {
