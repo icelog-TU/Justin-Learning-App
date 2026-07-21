@@ -46,6 +46,12 @@ export interface ChainRoundLog {
   completedAt: string;
 }
 
+/** How many coins/stars were earned on a given calendar date ("YYYY-MM-DD"). */
+export interface DailyEarning {
+  coins: number;
+  stars: number;
+}
+
 export interface AppData {
   idiomStats: Record<string, ItemStat>;
   confusableStats: Record<string, ItemStat>;
@@ -53,6 +59,11 @@ export interface AppData {
   visitDates: string[];
   coins: number;
   stars: number;
+  /** Lifetime coins/stars earned — never decreases, unlike the spendable coins/stars balance above. */
+  totalCoinsEarned: number;
+  totalStarsEarned: number;
+  /** date ("YYYY-MM-DD") -> coins/stars earned that day */
+  dailyEarnings: Record<string, DailyEarning>;
   /** character id ("base^exponent") -> hearts given so far */
   characters: Record<string, number>;
   chainStats: ChainStats;
@@ -72,6 +83,9 @@ function emptyData(): AppData {
     visitDates: [],
     coins: 0,
     stars: 0,
+    totalCoinsEarned: 0,
+    totalStarsEarned: 0,
+    dailyEarnings: {},
     characters: {},
     chainStats: { totalLinks: 0, longestChain: 0 },
     customIdioms: [],
@@ -143,9 +157,19 @@ export function recordSentence(data: AppData, entry: SentenceLogEntry): AppData 
   return data;
 }
 
+function logDailyEarning(data: AppData, coins: number, stars: number) {
+  if (coins <= 0 && stars <= 0) return;
+  const today = new Date().toISOString().slice(0, 10);
+  const prev = data.dailyEarnings[today] ?? { coins: 0, stars: 0 };
+  data.dailyEarnings = { ...data.dailyEarnings, [today]: { coins: prev.coins + coins, stars: prev.stars + stars } };
+}
+
 export function earnRewards(data: AppData, coins: number, stars: number): AppData {
   data.coins += coins;
   data.stars += stars;
+  data.totalCoinsEarned += coins;
+  data.totalStarsEarned += stars;
+  logDailyEarning(data, coins, stars);
   return data;
 }
 
@@ -161,6 +185,8 @@ export function rollGacha(data: AppData): { data: AppData; result: GachaResult |
 
   if (isDupe) {
     data.stars += DUPE_CONSOLATION_STARS;
+    data.totalStarsEarned += DUPE_CONSOLATION_STARS;
+    logDailyEarning(data, 0, DUPE_CONSOLATION_STARS);
   } else {
     data.characters[id] = 0;
   }

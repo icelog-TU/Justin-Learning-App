@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useAppDataContext } from '../lib/AppDataContext';
 import {
   GACHA_BASES,
@@ -18,7 +18,12 @@ import { playHeartSound } from '../lib/sound';
 export default function CharactersPage() {
   const { data, giveHeart } = useAppDataContext();
   const activeBase = currentUnlockedBase(data.characters);
-  const [selectedBase, setSelectedBase] = useState<number>(activeBase ?? GACHA_BASES[0]);
+  const [searchParams] = useSearchParams();
+  const baseFromUrl = Number(searchParams.get('base'));
+  const initialBase = GACHA_BASES.includes(baseFromUrl as (typeof GACHA_BASES)[number])
+    ? baseFromUrl
+    : (activeBase ?? GACHA_BASES[0]);
+  const [selectedBase, setSelectedBase] = useState<number>(initialBase);
 
   const exponents = Array.from({ length: MAX_EXPONENT }, (_, i) => i + 1);
 

@@ -1,23 +1,20 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { idioms } from '../data/idioms';
 import { confusableQuestions } from '../data/confusables';
 import { useAppDataContext } from '../lib/AppDataContext';
 import { getStreakDays } from '../lib/storage';
-import { GACHA_BASES, MAX_EXPONENT } from '../lib/rewards';
+import { GACHA_BASES, MAX_EXPONENT, currentLevel } from '../lib/rewards';
 
-function badgeFor(charactersOwned: number) {
-  if (charactersOwned >= GACHA_BASES.length * MAX_EXPONENT) return { label: '中文高手', icon: '👑' };
-  if (charactersOwned >= MAX_EXPONENT) return { label: '成語小達人', icon: '🥇' };
-  if (charactersOwned >= 5) return { label: '進步中的學習者', icon: '🌱' };
-  return { label: '初學者', icon: '🐣' };
-}
+const RECENT_ROUNDS_SHOWN = 5;
 
 export default function ProgressPage() {
   const { data } = useAppDataContext();
   const streak = getStreakDays(data.visitDates);
   const [expandedRound, setExpandedRound] = useState<number | null>(null);
+  const [showAllRounds, setShowAllRounds] = useState(false);
   const charactersOwned = Object.keys(data.characters).length;
-  const badge = badgeFor(charactersOwned);
+  const level = currentLevel(charactersOwned);
 
   const idiomAttempts = Object.values(data.idiomStats);
   const idiomAttemptedCount = idiomAttempts.length;
@@ -28,6 +25,7 @@ export default function ProgressPage() {
   const confusableCorrectCount = confusableAttempts.filter((s) => s.lastCorrect).length;
 
   const sentencePassed = data.sentenceLog.filter((s) => s.passed).length;
+  const visibleRounds = showAllRounds ? data.chainRoundHistory : data.chainRoundHistory.slice(0, RECENT_ROUNDS_SHOWN);
 
   return (
     <div className="space-y-4">
@@ -37,21 +35,25 @@ export default function ProgressPage() {
       </div>
 
       <div className="bg-white rounded-2xl shadow p-6 text-center space-y-2">
-        <p className="text-4xl">{badge.icon}</p>
-        <p className="font-bold text-lg text-gray-800">{badge.label}</p>
+        <Link to="/progress/level" className="block">
+          <p className="text-4xl">{level.icon}</p>
+          <p className="font-bold text-lg text-gray-800">
+            Lv.{level.level} {level.title}
+          </p>
+        </Link>
         <div className="flex justify-center gap-6 pt-2 text-sm">
-          <div>
+          <Link to="/progress/currency/coins" className="block">
             <p className="text-2xl font-bold text-orange-600">🪙 {data.coins}</p>
             <p className="text-gray-400">金幣</p>
-          </div>
-          <div>
+          </Link>
+          <Link to="/progress/currency/stars" className="block">
             <p className="text-2xl font-bold text-amber-500">⭐ {data.stars}</p>
             <p className="text-gray-400">星星</p>
-          </div>
-          <div>
+          </Link>
+          <Link to="/progress/streak" className="block">
             <p className="text-2xl font-bold text-red-500">{streak}</p>
             <p className="text-gray-400">連續天數</p>
-          </div>
+          </Link>
         </div>
       </div>
 
@@ -66,10 +68,10 @@ export default function ProgressPage() {
               (exp) => data.characters[`${base}^${exp}`] !== undefined,
             ).length;
             return (
-              <div key={base}>
+              <Link key={base} to={`/characters?base=${base}`} className="rounded-lg py-1 hover:bg-gray-50">
                 <p className="font-bold text-gray-700">{owned}/{MAX_EXPONENT}</p>
                 <p>{base} 的 n 次方</p>
-              </div>
+              </Link>
             );
           })}
         </div>
@@ -94,40 +96,51 @@ export default function ProgressPage() {
         {data.chainRoundHistory.length === 0 ? (
           <p className="text-sm text-gray-400">還沒有完整結束過一輪接龍，換一次新的開頭字後就會留下紀錄！</p>
         ) : (
-          <div className="space-y-2 max-h-96 overflow-y-auto">
-            {data.chainRoundHistory.map((round, i) => {
-              const isOpen = expandedRound === i;
-              return (
-                <div key={i} className="border border-gray-100 rounded-xl overflow-hidden">
-                  <button
-                    type="button"
-                    onClick={() => setExpandedRound(isOpen ? null : i)}
-                    className="w-full flex items-center justify-between gap-2 px-3 py-2 text-sm bg-gray-50 hover:bg-gray-100"
-                  >
-                    <span className="font-medium text-gray-700">
-                      第 {data.chainRoundHistory.length - i} 輪 · 接了 {round.length} 個成語
-                    </span>
-                    <span className="flex items-center gap-2 text-xs text-gray-400">
-                      {new Date(round.completedAt).toLocaleString('zh-TW')}
-                      <span>{isOpen ? '▲' : '▼'}</span>
-                    </span>
-                  </button>
-                  {isOpen && (
-                    <div className="flex flex-wrap items-center gap-2 px-3 py-3">
-                      {round.words.map((word, j) => (
-                        <div key={j} className="flex items-center gap-2">
-                          <span className="bg-teal-50 text-teal-700 font-semibold text-sm rounded-full px-3 py-1">
-                            {word}
-                          </span>
-                          {j < round.words.length - 1 && <span className="text-gray-300">→</span>}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+          <>
+            <div className="space-y-2">
+              {visibleRounds.map((round, i) => {
+                const isOpen = expandedRound === i;
+                return (
+                  <div key={i} className="border border-gray-100 rounded-xl overflow-hidden">
+                    <button
+                      type="button"
+                      onClick={() => setExpandedRound(isOpen ? null : i)}
+                      className="w-full flex items-center justify-between gap-2 px-3 py-2 text-sm bg-gray-50 hover:bg-gray-100"
+                    >
+                      <span className="font-medium text-gray-700">
+                        第 {data.chainRoundHistory.length - i} 輪 · 接了 {round.length} 個成語
+                      </span>
+                      <span className="flex items-center gap-2 text-xs text-gray-400">
+                        {new Date(round.completedAt).toLocaleString('zh-TW')}
+                        <span>{isOpen ? '▲' : '▼'}</span>
+                      </span>
+                    </button>
+                    {isOpen && (
+                      <div className="flex flex-wrap items-center gap-2 px-3 py-3">
+                        {round.words.map((word, j) => (
+                          <div key={j} className="flex items-center gap-2">
+                            <span className="bg-teal-50 text-teal-700 font-semibold text-sm rounded-full px-3 py-1">
+                              {word}
+                            </span>
+                            {j < round.words.length - 1 && <span className="text-gray-300">→</span>}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+            {data.chainRoundHistory.length > RECENT_ROUNDS_SHOWN && (
+              <button
+                type="button"
+                onClick={() => setShowAllRounds((v) => !v)}
+                className="w-full mt-3 text-sm font-medium text-teal-600 hover:text-teal-700 py-1"
+              >
+                {showAllRounds ? '▲ 收起，只看最近 5 輪' : `▼ 顯示全部 ${data.chainRoundHistory.length} 輪`}
+              </button>
+            )}
+          </>
         )}
       </div>
 

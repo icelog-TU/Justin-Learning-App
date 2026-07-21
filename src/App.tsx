@@ -11,6 +11,9 @@ import GachaPage from './pages/GachaPage';
 import CharactersPage from './pages/CharactersPage';
 import CharacterDetailPage from './pages/CharacterDetailPage';
 import NotebookPage from './pages/NotebookPage';
+import CurrencyDetailPage from './pages/CurrencyDetailPage';
+import StreakDetailPage from './pages/StreakDetailPage';
+import LevelDetailPage from './pages/LevelDetailPage';
 import { AppDataProvider } from './lib/AppDataContext';
 
 export default function App() {
@@ -30,6 +33,9 @@ export default function App() {
             <Route path="/characters/:id" element={<CharacterDetailPage />} />
             <Route path="/notebook" element={<NotebookPage />} />
             <Route path="/progress" element={<ProgressPage />} />
+            <Route path="/progress/currency/:type" element={<CurrencyDetailPage />} />
+            <Route path="/progress/streak" element={<StreakDetailPage />} />
+            <Route path="/progress/level" element={<LevelDetailPage />} />
           </Route>
         </Routes>
       </HashRouter>

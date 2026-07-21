@@ -83,3 +83,37 @@ export interface GachaResult {
   exponent: number;
   isDupe: boolean;
 }
+
+export interface LevelInfo {
+  level: number;
+  title: string;
+  icon: string;
+  /** How many characters owned in total (across every base) are needed to reach this level. */
+  threshold: number;
+}
+
+/** Ten levels tied to total characters collected (0 up to the full 165-character collection). */
+export const LEVELS: LevelInfo[] = [
+  { level: 1, title: '初心者', icon: '🥚', threshold: 0 },
+  { level: 2, title: '幼幼班', icon: '🐣', threshold: 5 },
+  { level: 3, title: '練習生', icon: '🌱', threshold: 15 },
+  { level: 4, title: '小學徒', icon: '📖', threshold: 30 },
+  { level: 5, title: '進步生', icon: '✏️', threshold: 50 },
+  { level: 6, title: '用功生', icon: '📚', threshold: 75 },
+  { level: 7, title: '小達人', icon: '🎯', threshold: 100 },
+  { level: 8, title: '高手', icon: '🥉', threshold: 125 },
+  { level: 9, title: '大師', icon: '🥈', threshold: 150 },
+  { level: 10, title: '中文高手', icon: '👑', threshold: 165 },
+];
+
+export function currentLevel(charactersOwned: number): LevelInfo {
+  let current = LEVELS[0];
+  for (const lvl of LEVELS) {
+    if (charactersOwned >= lvl.threshold) current = lvl;
+  }
+  return current;
+}
+
+export function nextLevel(charactersOwned: number): LevelInfo | null {
+  return LEVELS.find((lvl) => lvl.threshold > charactersOwned) ?? null;
+}
