@@ -77,8 +77,8 @@ const TEMPLATES: {
   {
     icon: '💬',
     label: '聊聊天',
-    message: (base, _exponent, requiredHearts) =>
-      `如果每次都變成 ${base} 倍，重複 ${requiredHearts} 次，會變成原來的 ${formatBigNumber(characterValue(base, requiredHearts))} 倍！`,
+    message: (base, exponent) =>
+      `如果每次都變成 ${base} 倍，重複 ${exponent} 次，會變成原來的 ${formatBigNumber(characterValue(base, exponent))} 倍！`,
   },
   { icon: '🍽️', label: '一起吃飯', message: (base, exponent) => `我們一起吃了${pick(FOODS, seedFor(base, exponent, 2))}，好好吃！` },
   { icon: '🎤', label: '一起唱歌', message: (base, exponent) => `我們一起唱了《${pick(SONGS, seedFor(base, exponent, 3))}》，唱得好開心！` },

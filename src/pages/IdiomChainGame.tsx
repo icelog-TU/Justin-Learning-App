@@ -519,6 +519,15 @@ export default function IdiomChainGame() {
                     <p className="text-sm text-gray-600">
                       <span className="font-semibold text-gray-500">意思：</span>
                       {entry.meaning}
+                      <button
+                        type="button"
+                        onClick={() => speak(entry.meaning)}
+                        className="ml-1 text-sky-500 hover:text-sky-600 align-middle"
+                        aria-label="唸出意思"
+                        title="唸出意思"
+                      >
+                        🔊
+                      </button>
                     </p>
                     {entry.source === 'moe' && <p className="text-[11px] text-gray-400">{MOE_ATTRIBUTION}</p>}
                   </>
