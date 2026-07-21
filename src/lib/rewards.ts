@@ -2,6 +2,8 @@ export const GACHA_BASES = [2, 3, 5, 6, 7] as const;
 export const MAX_EXPONENT = 33;
 export const GACHA_COST_COINS = 10;
 export const HEART_COST_STARS = 3;
+/** Pity system: a brand-new character is guaranteed at least once every this many rolls. */
+export const GACHA_PITY_LIMIT = 6;
 
 export const COIN_PER_CORRECT = 5;
 export const STAR_PER_CORRECT = 2;

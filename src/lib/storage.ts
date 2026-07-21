@@ -1,6 +1,7 @@
 import {
   MAX_EXPONENT,
   GACHA_COST_COINS,
+  GACHA_PITY_LIMIT,
   HEART_COST_STARS,
   DUPE_CONSOLATION_STARS,
   characterId,
@@ -66,6 +67,8 @@ export interface AppData {
   dailyEarnings: Record<string, DailyEarning>;
   /** character id ("base^exponent") -> hearts given so far */
   characters: Record<string, number>;
+  /** Consecutive gacha rolls since the last brand-new character — drives the pity guarantee. */
+  gachaPityCounter: number;
   chainStats: ChainStats;
   /** Idioms Justin's family added themselves when the built-in database was missing one. */
   customIdioms: CustomChainEntry[];
@@ -87,6 +90,7 @@ function emptyData(): AppData {
     totalStarsEarned: 0,
     dailyEarnings: {},
     characters: {},
+    gachaPityCounter: 0,
     chainStats: { totalLinks: 0, longestChain: 0 },
     customIdioms: [],
     bookmarkedIdioms: [],
@@ -179,7 +183,20 @@ export function rollGacha(data: AppData): { data: AppData; result: GachaResult |
   if (base === null) return { data, result: null };
 
   data.coins -= GACHA_COST_COINS;
-  const exponent = 1 + Math.floor(Math.random() * MAX_EXPONENT);
+
+  // Pity system: if the last GACHA_PITY_LIMIT - 1 rolls were all dupes, this roll is guaranteed new.
+  const forceNew = data.gachaPityCounter >= GACHA_PITY_LIMIT - 1;
+  let exponent: number;
+  if (forceNew) {
+    const unowned: number[] = [];
+    for (let exp = 1; exp <= MAX_EXPONENT; exp++) {
+      if (data.characters[characterId(base, exp)] === undefined) unowned.push(exp);
+    }
+    exponent = unowned[Math.floor(Math.random() * unowned.length)];
+  } else {
+    exponent = 1 + Math.floor(Math.random() * MAX_EXPONENT);
+  }
+
   const id = characterId(base, exponent);
   const isDupe = data.characters[id] !== undefined;
 
@@ -187,8 +204,10 @@ export function rollGacha(data: AppData): { data: AppData; result: GachaResult |
     data.stars += DUPE_CONSOLATION_STARS;
     data.totalStarsEarned += DUPE_CONSOLATION_STARS;
     logDailyEarning(data, 0, DUPE_CONSOLATION_STARS);
+    data.gachaPityCounter += 1;
   } else {
     data.characters[id] = 0;
+    data.gachaPityCounter = 0;
   }
 
   return { data, result: { id, base, exponent, isDupe } };

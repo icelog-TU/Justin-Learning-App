@@ -16,6 +16,7 @@ import {
 } from '../lib/rewards';
 import type { GachaResult } from '../lib/rewards';
 import { playGachaSpinSound, playGachaRevealSound } from '../lib/sound';
+import { speak } from '../lib/speech';
 
 export default function GachaPage() {
   const { data, rollGacha } = useAppDataContext();
@@ -34,7 +35,10 @@ export default function GachaPage() {
       const result = rollGacha();
       setLastResult(result);
       setRolling(false);
-      if (result) playGachaRevealSound(!result.isDupe);
+      if (result) {
+        playGachaRevealSound(!result.isDupe);
+        speak(result.isDupe ? '喔！你轉到已經有的角色了，再接再厲！' : '恭喜！轉到新角色了！');
+      }
     }, 500);
   }
 
