@@ -70,24 +70,24 @@ export default function Home() {
   return (
     <div className="space-y-6">
       <section className="bg-white rounded-2xl shadow p-5 grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
-        <div>
+        <Link to="/progress/currency/coins" className="block hover:bg-gray-50 rounded-xl py-1">
           <p className="text-2xl font-bold text-orange-600">🪙 {data.coins}</p>
           <p className="text-xs text-gray-500 mt-1">金幣</p>
-        </div>
-        <div>
+        </Link>
+        <Link to="/progress/currency/stars" className="block hover:bg-gray-50 rounded-xl py-1">
           <p className="text-2xl font-bold text-amber-500">⭐ {data.stars}</p>
           <p className="text-xs text-gray-500 mt-1">星星</p>
-        </div>
-        <div>
+        </Link>
+        <Link to="/characters" className="block hover:bg-gray-50 rounded-xl py-1">
           <p className="text-2xl font-bold text-pink-600">
             {totalCharacters}/{totalSlots}
           </p>
           <p className="text-xs text-gray-500 mt-1">角色收藏</p>
-        </div>
-        <div>
+        </Link>
+        <Link to="/progress" className="block hover:bg-gray-50 rounded-xl py-1">
           <p className="text-2xl font-bold text-emerald-600">{idiomsMastered}</p>
           <p className="text-xs text-gray-500 mt-1">已答對成語</p>
-        </div>
+        </Link>
       </section>
 
       <section className="grid sm:grid-cols-2 gap-4">

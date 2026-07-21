@@ -33,14 +33,20 @@ export default function Layout() {
     <div className="min-h-screen flex flex-col">
       <CelebrationOverlay trigger={celebration} />
       <header className="bg-orange-500 text-white shadow-md sticky top-0 z-20">
-        <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between gap-2">
-          <NavLink to="/" className="min-w-0">
-            <h1 className="text-lg sm:text-2xl font-bold tracking-wide whitespace-nowrap overflow-hidden text-ellipsis">
-              Justin 的中文練功房
+        <div className="max-w-4xl mx-auto px-4 py-4 flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => setMenuOpen(true)}
+            aria-label="開啟選單"
+            className="shrink-0 text-2xl leading-none hover:opacity-80"
+          >
+            ☰
+          </button>
+          <NavLink to="/" className="min-w-0 flex-1">
+            <h1 className="text-base sm:text-xl font-bold tracking-wide leading-tight">
+              Justin
+              <br /> 的中文練功房
             </h1>
-            <p className="text-orange-100 text-xs sm:text-sm whitespace-nowrap overflow-hidden text-ellipsis">
-              成語 × 錯別字，天天進步一點點！
-            </p>
           </NavLink>
           <div className="flex flex-wrap justify-end gap-1.5 text-xs sm:text-sm font-semibold shrink-0 max-w-[55%]">
             <div className="bg-white/20 rounded-full px-2.5 py-1 flex items-center gap-1 whitespace-nowrap">
@@ -62,20 +68,6 @@ export default function Layout() {
           </div>
         </div>
       </header>
-
-      <div className="bg-white border-b border-orange-100 shadow-sm">
-        <div className="max-w-4xl mx-auto px-2">
-          <button
-            type="button"
-            onClick={() => setMenuOpen(true)}
-            className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-gray-600 hover:bg-gray-50 hover:text-orange-600"
-            aria-label="開啟選單"
-          >
-            <span className="text-xl leading-none">☰</span>
-            <span className="text-sm font-medium">選單</span>
-          </button>
-        </div>
-      </div>
 
       {menuOpen && (
         <div
