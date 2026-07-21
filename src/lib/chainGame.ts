@@ -11,11 +11,20 @@ export interface MoeRawEntry {
   lastZhuyin: string;
 }
 
+/** No meaning field — these come from MOE's 30-reference-book editorial word list, word-only. */
+export interface EditorialRawEntry {
+  word: string;
+  firstChar: string;
+  firstZhuyin: string;
+  lastChar: string;
+  lastZhuyin: string;
+}
+
 export interface ChainEntry {
   id: string;
   word: string;
   meaning: string;
-  source: 'curated' | 'moe';
+  source: 'curated' | 'moe' | 'editorial';
   firstChar: string;
   /** toned zhuyin, e.g. "ㄇㄧㄢˋ" */
   firstZhuyin: string;
@@ -44,6 +53,27 @@ export function buildCuratedPool(): ChainEntry[] {
 /** MOE 成語典 entries, fetched at runtime from public/data/moe-idioms.json. */
 export function buildMoePool(raw: MoeRawEntry[]): ChainEntry[] {
   return raw.map((entry) => ({ ...entry, source: 'moe' as const }));
+}
+
+/**
+ * MOE's editorial word list (drawn from 30 reference books, no definitions).
+ * Only usable to validate/continue a chain — never eligible as a hint, since there's no meaning to show.
+ */
+export function buildEditorialPool(raw: EditorialRawEntry[]): ChainEntry[] {
+  return raw.map((entry) => ({
+    id: `ed-${entry.word}`,
+    word: entry.word,
+    meaning: '',
+    source: 'editorial' as const,
+    firstChar: entry.firstChar,
+    firstZhuyin: entry.firstZhuyin,
+    lastChar: entry.lastChar,
+    lastZhuyin: entry.lastZhuyin,
+  }));
+}
+
+export function isHintable(entry: ChainEntry): boolean {
+  return entry.source !== 'editorial';
 }
 
 export function matchesTarget(entry: ChainEntry, targetChar: string, targetZhuyin: string): boolean {

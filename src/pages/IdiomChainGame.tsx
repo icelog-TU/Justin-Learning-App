@@ -3,13 +3,16 @@ import { useAppDataContext } from '../lib/AppDataContext';
 import {
   buildCuratedPool,
   buildMoePool,
+  buildEditorialPool,
   findCandidates,
   findByWord,
+  isHintable,
   matchesTarget,
   maskHint,
   pickRandomStart,
   type ChainEntry,
   type MoeRawEntry,
+  type EditorialRawEntry,
 } from '../lib/chainGame';
 import {
   COIN_PER_CHAIN_LINK,
@@ -47,7 +50,7 @@ const MOE_ATTRIBUTION = '資料來源：教育部《成語典》（創用CC 姓�
 export default function IdiomChainGame() {
   const { data, reward, addChainLink, reportChainLength } = useAppDataContext();
   const [pool, setPool] = useState<ChainEntry[]>(() => buildCuratedPool());
-  const [moeLoaded, setMoeLoaded] = useState(false);
+  const [extraLoaded, setExtraLoaded] = useState(false);
   const [targetChar, setTargetChar] = useState('');
   const [targetZhuyin, setTargetZhuyin] = useState('');
   const [chainHistory, setChainHistory] = useState<ChainEntry[]>([]);
@@ -61,17 +64,26 @@ export default function IdiomChainGame() {
 
   useEffect(() => {
     let cancelled = false;
-    fetch(`${import.meta.env.BASE_URL}data/moe-idioms.json`)
-      .then((res) => (res.ok ? res.json() : Promise.reject(new Error('fetch failed'))))
-      .then((raw: MoeRawEntry[]) => {
-        if (cancelled) return;
-        setPool((prev) => [...prev, ...buildMoePool(raw)]);
-        setMoeLoaded(true);
-      })
-      .catch(() => {
-        // Offline or blocked: the game still works fine with just the curated 94.
-        setMoeLoaded(true);
-      });
+    const base = import.meta.env.BASE_URL;
+
+    const loadJson = <T,>(path: string): Promise<T | null> =>
+      fetch(`${base}${path}`)
+        .then((res) => (res.ok ? res.json() : Promise.reject(new Error('fetch failed'))))
+        .catch(() => null);
+
+    Promise.all([
+      loadJson<MoeRawEntry[]>('data/moe-idioms.json'),
+      loadJson<EditorialRawEntry[]>('data/editorial-idioms.json'),
+    ]).then(([moeRaw, editorialRaw]) => {
+      if (cancelled) return;
+      setPool((prev) => [
+        ...prev,
+        ...(moeRaw ? buildMoePool(moeRaw) : []),
+        ...(editorialRaw ? buildEditorialPool(editorialRaw) : []),
+      ]);
+      setExtraLoaded(true);
+    });
+
     return () => {
       cancelled = true;
     };
@@ -153,7 +165,15 @@ export default function IdiomChainGame() {
       setFeedback({ type: 'info', message: '這個字暫時接不下去了，換一個新的開頭字試試吧！' });
       return;
     }
-    const pick = candidates[Math.floor(Math.random() * candidates.length)];
+    const hintable = candidates.filter(isHintable);
+    if (hintable.length === 0) {
+      setFeedback({
+        type: 'info',
+        message: '這個字接得下去，但我們題庫裡還沒有它的解釋，你自己想想看吧！💪',
+      });
+      return;
+    }
+    const pick = hintable[Math.floor(Math.random() * hintable.length)];
     setHintEntry(pick);
   }
 
@@ -192,7 +212,7 @@ export default function IdiomChainGame() {
           接一個開頭是這個字、或是<span className="font-semibold text-teal-600">讀音相同</span>的成語，可以無限接下去！
         </p>
         <p className="text-xs text-gray-400 mt-1">
-          題庫共 {pool.length} 個成語{!moeLoaded && '（教育部成語典載入中…）'}
+          題庫共 {pool.length} 個成語{!extraLoaded && '（教育部成語資料載入中…）'}
         </p>
       </div>
 
@@ -311,7 +331,11 @@ export default function IdiomChainGame() {
         </div>
       </div>
 
-      <p className="text-center text-[11px] text-gray-400">{MOE_ATTRIBUTION}</p>
+      <p className="text-center text-[11px] text-gray-400">
+        {MOE_ATTRIBUTION}
+        <br />
+        部分成語詞目引用自教育部《成語典》編輯總資料庫（30 種成語工具書彙編，僅列詞目未含釋義）
+      </p>
     </div>
   );
 }
