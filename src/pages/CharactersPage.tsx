@@ -37,23 +37,29 @@ export default function CharactersPage() {
         </p>
       </div>
 
-      <div className="flex gap-2 overflow-x-auto pb-1">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
         {GACHA_BASES.map((base) => {
           const owned = ownedCountForBase(data.characters, base);
           const isLocked = base !== activeBase && owned === 0;
+          const isSelected = selectedBase === base;
           return (
             <button
               key={base}
               type="button"
               onClick={() => setSelectedBase(base)}
-              className={`whitespace-nowrap px-3 py-1.5 rounded-full text-sm font-medium border flex items-center gap-1 ${
-                selectedBase === base
+              className={`px-3 py-2 rounded-xl text-sm font-medium border flex items-center gap-2 ${
+                isSelected
                   ? 'bg-orange-500 text-white border-orange-500'
                   : 'bg-white text-gray-600 border-gray-200 hover:border-orange-300'
               }`}
             >
-              <span>{BASE_EMOJI[base]}</span>
-              <span>{base} 的 n 次方</span>
+              <span className="text-lg">{BASE_EMOJI[base]}</span>
+              <span className="flex-1 text-left leading-tight">
+                <span className="block">{base} 的 n 次方</span>
+                <span className={`block text-[11px] ${isSelected ? 'text-orange-100' : 'text-gray-400'}`}>
+                  {owned}/{MAX_EXPONENT}
+                </span>
+              </span>
               {isLocked && <span>🔒</span>}
             </button>
           );

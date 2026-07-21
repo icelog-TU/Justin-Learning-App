@@ -1,4 +1,4 @@
-export const GACHA_BASES = [2, 3, 4, 5, 6] as const;
+export const GACHA_BASES = [2, 3, 5, 6, 7] as const;
 export const MAX_EXPONENT = 33;
 export const GACHA_COST_COINS = 10;
 export const HEART_COST_STARS = 3;
@@ -20,9 +20,9 @@ export const CHAIN_MILESTONE_BONUS_STARS = 8;
 export const BASE_EMOJI: Record<number, string> = {
   2: '🔵',
   3: '🟢',
-  4: '🟡',
   5: '🟠',
   6: '🔴',
+  7: '🟣',
 };
 
 export interface CharacterInfo {
