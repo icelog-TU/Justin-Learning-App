@@ -580,6 +580,25 @@ export default function IdiomChainGame() {
                   {entry.word}
                   <button
                     type="button"
+                    onClick={() => speak(entry.word)}
+                    className="text-sm leading-none"
+                    aria-label="聽發音"
+                    title="聽發音"
+                  >
+                    🔊
+                  </button>
+                  <a
+                    href={buildIdiomSearchUrl(entry.word)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm leading-none"
+                    aria-label="查意思／典故"
+                    title="查意思／典故"
+                  >
+                    🔍
+                  </a>
+                  <button
+                    type="button"
                     onClick={() => handleToggleBookmark(entry)}
                     className="text-sm leading-none"
                     aria-label={isBookmarked(entry.word) ? '取消收藏' : '收藏到筆記本'}

@@ -40,13 +40,13 @@ interface Feedback {
 
 interface RowState {
   input: string;
-  solvedWord: string | null;
+  solvedEntry: ChainEntry | null;
   noAnswer: boolean;
   feedback: Feedback | null;
 }
 
 function emptyRow(): RowState {
-  return { input: '', solvedWord: null, noAnswer: false, feedback: null };
+  return { input: '', solvedEntry: null, noAnswer: false, feedback: null };
 }
 
 function emptyRows(): Record<IdiomPosition, RowState> {
@@ -72,7 +72,7 @@ function PositionDisplay({ position, char }: { position: IdiomPosition; char: st
 }
 
 export default function IdiomAssociationGame() {
-  const { reward } = useAppDataContext();
+  const { reward, data, toggleBookmark } = useAppDataContext();
   const [pool, setPool] = useState<ChainEntry[]>(() => [...buildCuratedPool(), ...buildCustomPool([])]);
   const [extraLoaded, setExtraLoaded] = useState(false);
 
@@ -162,7 +162,7 @@ export default function IdiomAssociationGame() {
     for (const position of POSITIONS) {
       const candidates = findCandidatesAtPosition(currentPool, position, char, zhuyin, new Set());
       if (candidates.length === 0) {
-        next[position] = { input: '', solvedWord: null, noAnswer: true, feedback: null };
+        next[position] = { input: '', solvedEntry: null, noAnswer: true, feedback: null };
       }
     }
     return next;
@@ -205,9 +205,9 @@ export default function IdiomAssociationGame() {
   }
 
   function checkRoundComplete(current: Record<IdiomPosition, RowState>) {
-    const done = POSITIONS.every((p) => current[p].solvedWord !== null || current[p].noAnswer);
+    const done = POSITIONS.every((p) => current[p].solvedEntry !== null || current[p].noAnswer);
     if (!done || roundComplete) return;
-    const solvedCount = POSITIONS.filter((p) => current[p].solvedWord !== null).length;
+    const solvedCount = POSITIONS.filter((p) => current[p].solvedEntry !== null).length;
     setRoundComplete(true);
     setShowCelebration(true);
     // Rewards were already paid out per solved row (handleSubmitRow) at the same rate as 成語接龍's
@@ -243,7 +243,7 @@ export default function IdiomAssociationGame() {
     setRows((prev) => {
       const next = {
         ...prev,
-        [position]: { input: entry.word, solvedWord: entry.word, noAnswer: false, feedback: { type: 'success' as const, message: `✅ 答對了！「${entry.word}」` } },
+        [position]: { input: entry.word, solvedEntry: entry, noAnswer: false, feedback: { type: 'success' as const, message: `✅ 答對了！「${entry.word}」` } },
       };
       checkRoundComplete(next);
       return next;
@@ -311,6 +311,14 @@ export default function IdiomAssociationGame() {
     setHintModal({ ...hintModal, hintPage: Math.max(0, Math.min(page, totalHintPages - 1)) });
   }
 
+  function isBookmarked(word: string): boolean {
+    return data.bookmarkedIdioms.some((b) => b.word === word);
+  }
+
+  function handleToggleBookmark(entry: ChainEntry) {
+    toggleBookmark({ word: entry.word, meaning: entry.meaning, source: entry.source, addedAt: new Date().toISOString() });
+  }
+
   return (
     <div className="space-y-4">
       <div>
@@ -362,10 +370,36 @@ export default function IdiomAssociationGame() {
                   <p className="text-sm text-amber-600 bg-amber-50 rounded-lg px-3 py-2 text-center">
                     這種情況沒有答案，太特別了！這一格可以跳過～
                   </p>
-                ) : row.solvedWord ? (
-                  <p className="text-sm text-emerald-700 bg-emerald-50 rounded-lg px-3 py-2 text-center font-semibold">
-                    ✅ {row.solvedWord}
-                  </p>
+                ) : row.solvedEntry ? (
+                  <div className="bg-emerald-50 rounded-xl px-3 py-2 space-y-2">
+                    <p className="text-sm text-emerald-700 text-center font-semibold">✅ {row.solvedEntry.word}</p>
+                    <div className="flex items-center justify-center gap-2 flex-wrap">
+                      <button
+                        type="button"
+                        onClick={() => speak(row.solvedEntry!.word)}
+                        className="flex items-center gap-1 text-xs font-medium text-emerald-700 bg-white border border-emerald-200 rounded-full px-3 py-1 hover:bg-emerald-100"
+                      >
+                        🔊 聽發音
+                      </button>
+                      <a
+                        href={buildIdiomSearchUrl(row.solvedEntry.word)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs font-medium bg-sky-500 text-white rounded-full px-3 py-1.5 hover:bg-sky-600"
+                      >
+                        🔍 查意思／典故
+                      </a>
+                      <button
+                        type="button"
+                        onClick={() => handleToggleBookmark(row.solvedEntry!)}
+                        className="text-xl leading-none"
+                        aria-label={isBookmarked(row.solvedEntry.word) ? '取消收藏' : '收藏到筆記本'}
+                        title={isBookmarked(row.solvedEntry.word) ? '取消收藏' : '收藏到筆記本'}
+                      >
+                        {isBookmarked(row.solvedEntry.word) ? '⭐' : '☆'}
+                      </button>
+                    </div>
+                  </div>
                 ) : (
                   <>
                     <div className="flex gap-2">
