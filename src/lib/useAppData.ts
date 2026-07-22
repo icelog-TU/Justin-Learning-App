@@ -21,15 +21,108 @@ import {
 import type { GachaResult } from './rewards';
 import type { CustomChainEntry } from './chainGame';
 import type { CelebrationTrigger } from '../components/CelebrationOverlay';
+import { getOrCreateSyncCode, setSyncCode as setSyncCodeStorage } from './syncCode';
+import { fetchCloudData, pushCloudData, subscribeCloudData } from './cloudSync';
+
+export type SyncStatus = 'idle' | 'syncing' | 'synced' | 'offline' | 'error';
+
+const PUSH_DEBOUNCE_MS = 1200;
 
 export function useAppData() {
   const [data, setData] = useState<AppData>(() => recordVisitToday(loadData()));
   const [celebration, setCelebration] = useState<CelebrationTrigger | null>(null);
   const celebrationCounter = useRef(0);
 
+  const [syncCode, setSyncCodeState] = useState(() => getOrCreateSyncCode());
+  const [syncStatus, setSyncStatus] = useState<SyncStatus>('idle');
+  // Tracks the logical "last modified" time for the whole AppData blob without touching every mutator above.
+  const lastModifiedRef = useRef(0);
+  // Set right before setData() is called with cloud-sourced data, so the save-effect below can tell a
+  // remote-originated change from a real local edit and skip re-pushing it (avoids sync ping-pong).
+  const applyingRemoteRef = useRef(false);
+  const pushTimerRef = useRef<number | null>(null);
+  // Skipped on the very first run of the save-effect (mount) — initial cloud reconciliation is the
+  // fetch/subscribe effect's job below, not this one's.
+  const didMountRef = useRef(false);
+  const dataRef = useRef(data);
+  dataRef.current = data;
+
   useEffect(() => {
     saveData(data);
-  }, [data]);
+
+    if (!didMountRef.current) {
+      didMountRef.current = true;
+      return;
+    }
+
+    if (applyingRemoteRef.current) {
+      applyingRemoteRef.current = false;
+      return;
+    }
+
+    lastModifiedRef.current = Date.now();
+    const stamp = lastModifiedRef.current;
+
+    if (pushTimerRef.current !== null) {
+      window.clearTimeout(pushTimerRef.current);
+    }
+    pushTimerRef.current = window.setTimeout(() => {
+      pushTimerRef.current = null;
+      setSyncStatus('syncing');
+      pushCloudData(syncCode, data, stamp)
+        .then(() => setSyncStatus('synced'))
+        .catch(() => setSyncStatus('error'));
+    }, PUSH_DEBOUNCE_MS);
+  }, [data, syncCode]);
+
+  // Initial cloud fetch + realtime subscription for whichever sync code is currently active.
+  useEffect(() => {
+    let cancelled = false;
+    setSyncStatus('syncing');
+
+    fetchCloudData(syncCode)
+      .then((cloud) => {
+        if (cancelled) return;
+        if (cloud && cloud.updatedAt > lastModifiedRef.current) {
+          applyingRemoteRef.current = true;
+          lastModifiedRef.current = cloud.updatedAt;
+          setData(cloud.data);
+        } else if (!cloud) {
+          const stamp = Date.now();
+          lastModifiedRef.current = stamp;
+          void pushCloudData(syncCode, dataRef.current, stamp);
+        }
+        setSyncStatus('synced');
+      })
+      .catch(() => {
+        if (!cancelled) setSyncStatus('offline');
+      });
+
+    const unsubscribe = subscribeCloudData(syncCode, (cloud) => {
+      if (cloud.updatedAt > lastModifiedRef.current) {
+        applyingRemoteRef.current = true;
+        lastModifiedRef.current = cloud.updatedAt;
+        setData(cloud.data);
+        setSyncStatus('synced');
+      }
+    });
+
+    return () => {
+      cancelled = true;
+      unsubscribe();
+      if (pushTimerRef.current !== null) {
+        window.clearTimeout(pushTimerRef.current);
+        pushTimerRef.current = null;
+      }
+    };
+  }, [syncCode]);
+
+  const linkSyncCode = useCallback((code: string) => {
+    const normalized = setSyncCodeStorage(code);
+    lastModifiedRef.current = 0;
+    didMountRef.current = false;
+    setSyncCodeState(normalized);
+  }, []);
 
   const answer = useCallback((kind: 'idiomStats' | 'confusableStats', id: string, correct: boolean) => {
     setData((prev) => ({ ...recordAnswer({ ...prev }, kind, id, correct) }));
@@ -116,5 +209,8 @@ export function useAppData() {
     toggleBookmark,
     recordChainRound,
     recordAssociationCrack,
+    syncCode,
+    syncStatus,
+    linkSyncCode,
   };
 }
