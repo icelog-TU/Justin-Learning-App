@@ -17,6 +17,7 @@ import StreakDetailPage from './pages/StreakDetailPage';
 import LevelDetailPage from './pages/LevelDetailPage';
 import ChainLinksDetailPage from './pages/ChainLinksDetailPage';
 import AssociationCharacterDetailPage from './pages/AssociationCharacterDetailPage';
+import SettingsPage from './pages/SettingsPage';
 import { AppDataProvider } from './lib/AppDataContext';
 
 export default function App() {
@@ -42,6 +43,7 @@ export default function App() {
             <Route path="/progress/level" element={<LevelDetailPage />} />
             <Route path="/progress/chain-links" element={<ChainLinksDetailPage />} />
             <Route path="/progress/association/:char" element={<AssociationCharacterDetailPage />} />
+            <Route path="/settings" element={<SettingsPage />} />
           </Route>
         </Routes>
       </HashRouter>

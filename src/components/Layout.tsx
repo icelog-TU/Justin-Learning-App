@@ -16,10 +16,19 @@ const NAV_ITEMS = [
   { to: '/characters', label: '角色收藏', icon: '🎴' },
   { to: '/notebook', label: '成語筆記本', icon: '⭐' },
   { to: '/progress', label: '學習紀錄', icon: '🏆' },
+  { to: '/settings', label: '設定', icon: '⚙️' },
 ];
 
+const SYNC_STATUS_ICON: Record<string, string> = {
+  idle: '⚪',
+  syncing: '🔄',
+  synced: '☁️',
+  offline: '📴',
+  error: '⚠️',
+};
+
 export default function Layout() {
-  const { data, celebration } = useAppDataContext();
+  const { data, celebration, syncStatus } = useAppDataContext();
   const streak = getStreakDays(data.visitDates);
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -50,6 +59,13 @@ export default function Layout() {
             </h1>
           </NavLink>
           <div className="flex flex-wrap justify-end gap-1.5 text-xs sm:text-sm font-semibold shrink-0 max-w-[55%]">
+            <NavLink
+              to="/settings"
+              aria-label="雲端同步狀態"
+              className="bg-white/20 rounded-full px-2.5 py-1 flex items-center gap-1 whitespace-nowrap"
+            >
+              <span>{SYNC_STATUS_ICON[syncStatus] ?? '⚪'}</span>
+            </NavLink>
             <div className="bg-white/20 rounded-full px-2.5 py-1 flex items-center gap-1 whitespace-nowrap">
               <span>🪙</span>
               <span key={data.coins} style={{ display: 'inline-block', animation: 'pill-pop 0.4s ease-out' }}>
