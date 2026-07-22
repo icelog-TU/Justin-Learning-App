@@ -358,3 +358,11 @@ export function recordGuwenTextCompleted(data: AppData, textId: string): AppData
   data.guwenProgress = { ...data.guwenProgress, [textId]: { ...prev, completedAt: new Date().toISOString() } };
   return data;
 }
+
+/** Clears all decoding progress for `textId` so it can be replayed from the intro screen. Coins/stars already earned are kept — only the decoded/completed tracking resets. */
+export function resetGuwenProgress(data: AppData, textId: string): AppData {
+  const next = { ...data.guwenProgress };
+  delete next[textId];
+  data.guwenProgress = next;
+  return data;
+}

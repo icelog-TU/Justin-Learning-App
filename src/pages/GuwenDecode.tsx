@@ -43,7 +43,7 @@ function highlightChar(sentence: string, char: string): ReactNode[] {
 export default function GuwenDecode() {
   const { textId } = useParams<{ textId: string }>();
   const text = textId ? findGuwenText(textId) : undefined;
-  const { data, reward, recordGuwenWord, completeGuwenText } = useAppDataContext();
+  const { data, reward, recordGuwenWord, completeGuwenText, resetGuwenText } = useAppDataContext();
 
   const progress = text ? data.guwenProgress[text.id] : undefined;
   const decodedIds = useMemo(() => new Set(progress?.decodedWordIds ?? []), [progress]);
@@ -65,6 +65,7 @@ export default function GuwenDecode() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [reviewWordId, setReviewWordId] = useState<string | null>(null);
+  const [confirmReset, setConfirmReset] = useState(false);
   const [completePlayingKind, setCompletePlayingKind] = useState<'full' | 'translation' | null>(null);
   const [completePaused, setCompletePaused] = useState(false);
 
@@ -334,6 +335,22 @@ export default function GuwenDecode() {
     } else {
       setWordIndex((i) => i + 1);
     }
+  }
+
+  function handleResetProgress() {
+    resetGuwenText(text!.id);
+    cancelSpeech();
+    setConfirmReset(false);
+    setFeedback(null);
+    setWrongIndex(null);
+    setRevealAnswer(false);
+    setReviewWordId(null);
+    setCompletePlayingKind(null);
+    setCompletePaused(false);
+    setIsPlaying(false);
+    setIsPaused(false);
+    setWordIndex(0);
+    setPhase('intro');
   }
 
   return (
@@ -672,12 +689,41 @@ export default function GuwenDecode() {
             )}
           </div>
 
-          <Link
-            to="/guwen"
-            className="inline-block bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-xl px-6 py-3"
-          >
-            回古文破譯家
-          </Link>
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            <Link
+              to="/guwen"
+              className="inline-block bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-xl px-6 py-3"
+            >
+              回古文破譯家
+            </Link>
+            {!confirmReset ? (
+              <button
+                type="button"
+                onClick={() => setConfirmReset(true)}
+                className="text-sm text-gray-400 hover:text-gray-600 underline"
+              >
+                🔄 重新開始這篇（清空重來）
+              </button>
+            ) : (
+              <div className="w-full flex items-center justify-center gap-3 text-sm">
+                <span className="text-gray-600">確定要清空重來嗎？已賺的金幣星星不會收回。</span>
+                <button
+                  type="button"
+                  onClick={handleResetProgress}
+                  className="bg-red-500 hover:bg-red-600 text-white font-semibold rounded-lg px-3 py-1.5"
+                >
+                  確定重來
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setConfirmReset(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  取消
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>

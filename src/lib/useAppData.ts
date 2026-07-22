@@ -20,6 +20,7 @@ import {
   recordAssociationCrack as recordAssociationCrackMutation,
   recordGuwenWordDecoded as recordGuwenWordDecodedMutation,
   recordGuwenTextCompleted as recordGuwenTextCompletedMutation,
+  resetGuwenProgress as resetGuwenProgressMutation,
 } from './storage';
 import type { GachaResult } from './rewards';
 import type { CustomChainEntry } from './chainGame';
@@ -210,6 +211,12 @@ export function useAppData() {
     }));
   }, []);
 
+  const resetGuwenText = useCallback((textId: string) => {
+    setData((prev) => ({
+      ...resetGuwenProgressMutation({ ...prev, guwenProgress: { ...prev.guwenProgress } }, textId),
+    }));
+  }, []);
+
   return {
     data,
     answer,
@@ -226,6 +233,7 @@ export function useAppData() {
     recordAssociationCrack,
     recordGuwenWord,
     completeGuwenText,
+    resetGuwenText,
     syncCode,
     syncStatus,
     linkSyncCode,
