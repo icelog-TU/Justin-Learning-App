@@ -16,6 +16,7 @@ import {
   addCustomIdiom as addCustomIdiomMutation,
   toggleBookmark as toggleBookmarkMutation,
   recordChainRound as recordChainRoundMutation,
+  recordAssociationCrack as recordAssociationCrackMutation,
 } from './storage';
 import type { GachaResult } from './rewards';
 import type { CustomChainEntry } from './chainGame';
@@ -88,6 +89,15 @@ export function useAppData() {
     }));
   }, []);
 
+  // Note: this only performs the write. React's setState updater callback is not guaranteed to run
+  // synchronously, so callers must decide isNewCharacter/milestone-crossing from the current `data`
+  // prop (read side) *before* calling this, rather than trying to read a result back out of it.
+  const recordAssociationCrack = useCallback((char: string) => {
+    setData((prev) => ({
+      ...recordAssociationCrackMutation({ ...prev, associationCracked: { ...prev.associationCracked } }, char).data,
+    }));
+  }, []);
+
   return {
     data,
     answer,
@@ -101,5 +111,6 @@ export function useAppData() {
     addCustomIdiom,
     toggleBookmark,
     recordChainRound,
+    recordAssociationCrack,
   };
 }

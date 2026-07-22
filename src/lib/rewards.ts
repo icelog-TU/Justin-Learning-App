@@ -16,8 +16,17 @@ export const DUPE_CONSOLATION_STARS = 5;
 export const COIN_PER_CHAIN_LINK = 8;
 export const STAR_PER_CHAIN_LINK = 4;
 export const CHAIN_MILESTONE_INTERVAL = 5;
+/** Per-milestone-level bonus base — multiplied by the milestone number, so the 10th-link bonus is bigger than the 5th's. */
 export const CHAIN_MILESTONE_BONUS_COINS = 15;
 export const CHAIN_MILESTONE_BONUS_STARS = 8;
+
+/** 一字成語王: extra bonus for solving all 4 positions of a character in one round (on top of each row's own reward). */
+export const ASSOCIATION_COMPLETE_BONUS_COINS = 20;
+export const ASSOCIATION_COMPLETE_BONUS_STARS = 10;
+/** 一字成語王: bonus for every N distinct characters fully cracked, scaled by milestone number like the chain game. */
+export const ASSOCIATION_CHAR_MILESTONE_INTERVAL = 5;
+export const ASSOCIATION_CHAR_MILESTONE_BONUS_COINS = 20;
+export const ASSOCIATION_CHAR_MILESTONE_BONUS_STARS = 10;
 
 export const BASE_EMOJI: Record<number, string> = {
   2: '🔵',

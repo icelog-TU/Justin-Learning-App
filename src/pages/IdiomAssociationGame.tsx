@@ -17,7 +17,15 @@ import {
   type EditorialRawEntry,
   type IdiomPosition,
 } from '../lib/chainGame';
-import { COIN_PER_CHAIN_LINK, STAR_PER_CHAIN_LINK } from '../lib/rewards';
+import {
+  COIN_PER_CHAIN_LINK,
+  STAR_PER_CHAIN_LINK,
+  ASSOCIATION_COMPLETE_BONUS_COINS,
+  ASSOCIATION_COMPLETE_BONUS_STARS,
+  ASSOCIATION_CHAR_MILESTONE_INTERVAL,
+  ASSOCIATION_CHAR_MILESTONE_BONUS_COINS,
+  ASSOCIATION_CHAR_MILESTONE_BONUS_STARS,
+} from '../lib/rewards';
 import { speak } from '../lib/speech';
 import { buildIdiomSearchUrl } from '../lib/googleSearch';
 import { getSpeechRecognitionCtor, type MinimalSpeechRecognition } from '../lib/speechRecognition';
@@ -72,7 +80,7 @@ function PositionDisplay({ position, char }: { position: IdiomPosition; char: st
 }
 
 export default function IdiomAssociationGame() {
-  const { reward, data, toggleBookmark } = useAppDataContext();
+  const { reward, data, toggleBookmark, recordAssociationCrack } = useAppDataContext();
   const [pool, setPool] = useState<ChainEntry[]>(() => [...buildCuratedPool(), ...buildCustomPool([])]);
   const [extraLoaded, setExtraLoaded] = useState(false);
 
@@ -210,12 +218,44 @@ export default function IdiomAssociationGame() {
     const solvedCount = POSITIONS.filter((p) => current[p].solvedEntry !== null).length;
     setRoundComplete(true);
     setShowCelebration(true);
-    // Rewards were already paid out per solved row (handleSubmitRow) at the same rate as 成語接龍's
-    // per-idiom reward — this just shows the round's total so it doesn't feel like less than chaining
-    // the same number of idioms. No extra bonus coins/stars are added here.
-    setCelebrationSummary({ coins: solvedCount * COIN_PER_CHAIN_LINK, stars: solvedCount * STAR_PER_CHAIN_LINK });
+
+    // Each row's own reward was already paid out in handleSubmitRow (same rate as 成語接龍's per-idiom
+    // reward). On top of that: solving all 4 positions earns an extra completion bonus, and — only the
+    // first time this exact character is fully cracked — it may also cross a new milestone in the
+    // 已破解的字 collection, which pays out its own escalating bonus.
+    let bonusCoins = 0;
+    let bonusStars = 0;
+    let speech = `恭喜，你完成了「${targetChar}」的一字成語王挑戰！`;
+
+    if (solvedCount === POSITIONS.length) {
+      bonusCoins += ASSOCIATION_COMPLETE_BONUS_COINS;
+      bonusStars += ASSOCIATION_COMPLETE_BONUS_STARS;
+
+      // Decide isNewCharacter/milestone-crossing from the currently-rendered `data` (read side) rather
+      // than from recordAssociationCrack's return value — its setData call is not guaranteed to run
+      // synchronously, so reading a result back out of it right after calling it isn't reliable.
+      const isNewCharacter = (data.associationCracked[targetChar] ?? 0) === 0;
+      recordAssociationCrack(targetChar);
+      if (isNewCharacter) {
+        const newDistinctCount = Object.keys(data.associationCracked).length + 1;
+        if (newDistinctCount % ASSOCIATION_CHAR_MILESTONE_INTERVAL === 0) {
+          const milestoneNumber = newDistinctCount / ASSOCIATION_CHAR_MILESTONE_INTERVAL;
+          bonusCoins += ASSOCIATION_CHAR_MILESTONE_BONUS_COINS * milestoneNumber;
+          bonusStars += ASSOCIATION_CHAR_MILESTONE_BONUS_STARS * milestoneNumber;
+          speech += `而且你已經破解了 ${newDistinctCount} 個字了，太厲害了！`;
+        }
+      }
+    }
+
+    if (bonusCoins > 0 || bonusStars > 0) {
+      reward(bonusCoins, bonusStars, { big: true });
+    }
+    setCelebrationSummary({
+      coins: solvedCount * COIN_PER_CHAIN_LINK + bonusCoins,
+      stars: solvedCount * STAR_PER_CHAIN_LINK + bonusStars,
+    });
     playAssociationCompleteFanfare();
-    window.setTimeout(() => speak(`恭喜，你完成了「${targetChar}」的一字成語王挑戰！`), 300);
+    window.setTimeout(() => speak(speech), 300);
     window.setTimeout(() => setShowCelebration(false), 2600);
   }
 
@@ -240,14 +280,14 @@ export default function IdiomAssociationGame() {
     }
 
     reward(COIN_PER_CHAIN_LINK, STAR_PER_CHAIN_LINK);
-    setRows((prev) => {
-      const next = {
-        ...prev,
-        [position]: { input: entry.word, solvedEntry: entry, noAnswer: false, feedback: { type: 'success' as const, message: `✅ 答對了！「${entry.word}」` } },
-      };
-      checkRoundComplete(next);
-      return next;
-    });
+    // Built from the current `rows` directly (not a setRows functional updater), so checkRoundComplete
+    // runs as a plain top-level call rather than nested inside another setState's updater.
+    const next = {
+      ...rows,
+      [position]: { input: entry.word, solvedEntry: entry, noAnswer: false, feedback: { type: 'success' as const, message: `✅ 答對了！「${entry.word}」` } },
+    };
+    setRows(next);
+    checkRoundComplete(next);
     closeHintModal();
   }
 
@@ -463,6 +503,36 @@ export default function IdiomAssociationGame() {
           })}
         </div>
       )}
+
+      <div className="bg-white rounded-2xl shadow p-5">
+        <h3 className="font-bold text-gray-800 text-sm">
+          🔓 已破解的字（{Object.keys(data.associationCracked).length} 個）
+        </h3>
+        <p className="text-xs text-gray-400 mt-1 mb-3">
+          每破解 {ASSOCIATION_CHAR_MILESTONE_INTERVAL} 個不同的字，就會有額外獎勵！
+        </p>
+        {Object.keys(data.associationCracked).length === 0 ? (
+          <p className="text-sm text-gray-400">還沒有破解任何字，快去挑戰看看！</p>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {Object.entries(data.associationCracked)
+              .reverse()
+              .map(([char, count]) => (
+                <button
+                  key={char}
+                  type="button"
+                  onClick={() => speak(char)}
+                  className="bg-violet-50 hover:bg-violet-100 text-violet-700 font-semibold text-sm rounded-full pl-3 pr-2.5 py-1 flex items-center gap-1"
+                  aria-label={`聽「${char}」的發音`}
+                  title={`聽「${char}」的發音`}
+                >
+                  {char}
+                  {count > 1 && <span className="text-[11px] text-violet-400 font-normal">x{count}</span>}
+                </button>
+              ))}
+          </div>
+        )}
+      </div>
 
       {hintModal && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 p-3" onClick={closeHintModal}>

@@ -188,8 +188,10 @@ export default function IdiomChainGame() {
     addChainLink();
 
     const isMilestone = nextHistory.length % CHAIN_MILESTONE_INTERVAL === 0;
-    const totalCoins = COIN_PER_CHAIN_LINK + (isMilestone ? CHAIN_MILESTONE_BONUS_COINS : 0);
-    const totalStars = STAR_PER_CHAIN_LINK + (isMilestone ? CHAIN_MILESTONE_BONUS_STARS : 0);
+    // Escalating bonus: the 10th-link milestone pays out more than the 5th's, the 15th more than the 10th's, etc.
+    const milestoneNumber = isMilestone ? nextHistory.length / CHAIN_MILESTONE_INTERVAL : 0;
+    const totalCoins = COIN_PER_CHAIN_LINK + (isMilestone ? CHAIN_MILESTONE_BONUS_COINS * milestoneNumber : 0);
+    const totalStars = STAR_PER_CHAIN_LINK + (isMilestone ? CHAIN_MILESTONE_BONUS_STARS * milestoneNumber : 0);
     reward(totalCoins, totalStars, { big: isMilestone });
 
     setChainHistory(nextHistory);

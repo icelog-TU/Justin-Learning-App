@@ -4,6 +4,7 @@ import {
   GACHA_PITY_LIMIT,
   HEART_COST_STARS,
   DUPE_CONSOLATION_STARS,
+  ASSOCIATION_CHAR_MILESTONE_INTERVAL,
   characterId,
   currentUnlockedBase,
   type GachaResult,
@@ -76,6 +77,8 @@ export interface AppData {
   bookmarkedIdioms: BookmarkedIdiom[];
   /** History of completed chain-game rounds, most recent first — for reviewing past chains. */
   chainRoundHistory: ChainRoundLog[];
+  /** 一字成語王: character -> how many times it's been fully cracked (all 4 positions solved in one round). */
+  associationCracked: Record<string, number>;
 }
 
 function emptyData(): AppData {
@@ -95,6 +98,7 @@ function emptyData(): AppData {
     customIdioms: [],
     bookmarkedIdioms: [],
     chainRoundHistory: [],
+    associationCracked: {},
   };
 }
 
@@ -259,4 +263,29 @@ export function toggleBookmark(data: AppData, entry: BookmarkedIdiom): AppData {
     ? data.bookmarkedIdioms.filter((b) => b.word !== entry.word)
     : [entry, ...data.bookmarkedIdioms];
   return data;
+}
+
+/**
+ * Records a 一字成語王 full clear (all 4 positions solved in one round) for `char`. Returns whether
+ * this was the character's first-ever crack, and — only on a first-ever crack — the milestone number
+ * (1, 2, 3, …) if the new distinct-cracked-character count just landed exactly on a new multiple of
+ * ASSOCIATION_CHAR_MILESTONE_INTERVAL, so the caller knows to pay out the escalating milestone bonus.
+ */
+export function recordAssociationCrack(
+  data: AppData,
+  char: string,
+): { data: AppData; isNewCharacter: boolean; milestoneNumber: number | null } {
+  const prevCount = data.associationCracked[char] ?? 0;
+  const isNewCharacter = prevCount === 0;
+  data.associationCracked = { ...data.associationCracked, [char]: prevCount + 1 };
+
+  let milestoneNumber: number | null = null;
+  if (isNewCharacter) {
+    const distinctCount = Object.keys(data.associationCracked).length;
+    if (distinctCount % ASSOCIATION_CHAR_MILESTONE_INTERVAL === 0) {
+      milestoneNumber = distinctCount / ASSOCIATION_CHAR_MILESTONE_INTERVAL;
+    }
+  }
+
+  return { data, isNewCharacter, milestoneNumber };
 }
