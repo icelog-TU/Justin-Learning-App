@@ -18,6 +18,8 @@ import {
   toggleBookmark as toggleBookmarkMutation,
   recordChainRound as recordChainRoundMutation,
   recordAssociationCrack as recordAssociationCrackMutation,
+  recordGuwenWordDecoded as recordGuwenWordDecodedMutation,
+  recordGuwenTextCompleted as recordGuwenTextCompletedMutation,
 } from './storage';
 import type { GachaResult } from './rewards';
 import type { CustomChainEntry } from './chainGame';
@@ -196,6 +198,18 @@ export function useAppData() {
     }));
   }, []);
 
+  const recordGuwenWord = useCallback((textId: string, wordId: string) => {
+    setData((prev) => ({
+      ...recordGuwenWordDecodedMutation({ ...prev, guwenProgress: { ...prev.guwenProgress } }, textId, wordId),
+    }));
+  }, []);
+
+  const completeGuwenText = useCallback((textId: string) => {
+    setData((prev) => ({
+      ...recordGuwenTextCompletedMutation({ ...prev, guwenProgress: { ...prev.guwenProgress } }, textId),
+    }));
+  }, []);
+
   return {
     data,
     answer,
@@ -210,6 +224,8 @@ export function useAppData() {
     toggleBookmark,
     recordChainRound,
     recordAssociationCrack,
+    recordGuwenWord,
+    completeGuwenText,
     syncCode,
     syncStatus,
     linkSyncCode,

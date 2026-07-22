@@ -172,3 +172,16 @@ body {
     opacity: 1;
   }
 }
+
+/** 古文破譯家: a soft pulsing text glow marking an undecoded classical character as "this is a lock". */
+@keyframes guwen-glow {
+  0%,
+  100% {
+    text-shadow: 0 0 4px rgba(129, 140, 248, 0.35);
+    opacity: 0.75;
+  }
+  50% {
+    text-shadow: 0 0 12px rgba(129, 140, 248, 0.85);
+    opacity: 1;
+  }
+}

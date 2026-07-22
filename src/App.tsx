@@ -17,6 +17,8 @@ import StreakDetailPage from './pages/StreakDetailPage';
 import LevelDetailPage from './pages/LevelDetailPage';
 import ChainLinksDetailPage from './pages/ChainLinksDetailPage';
 import AssociationCharacterDetailPage from './pages/AssociationCharacterDetailPage';
+import GuwenHome from './pages/GuwenHome';
+import GuwenDecode from './pages/GuwenDecode';
 import SettingsPage from './pages/SettingsPage';
 import { AppDataProvider } from './lib/AppDataContext';
 
@@ -32,6 +34,8 @@ export default function App() {
             <Route path="/idioms/sentence" element={<SentencePractice />} />
             <Route path="/idioms/chain" element={<IdiomChainGame />} />
             <Route path="/idioms/association" element={<IdiomAssociationGame />} />
+            <Route path="/guwen" element={<GuwenHome />} />
+            <Route path="/guwen/:textId" element={<GuwenDecode />} />
             <Route path="/confusables" element={<ConfusablesQuiz />} />
             <Route path="/gacha" element={<GachaPage />} />
             <Route path="/characters" element={<CharactersPage />} />

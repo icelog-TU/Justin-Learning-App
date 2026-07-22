@@ -41,6 +41,13 @@ export const ASSOCIATION_CHAR_MILESTONE_INTERVAL = 5;
 export const ASSOCIATION_CHAR_MILESTONE_BONUS_COINS = 20;
 export const ASSOCIATION_CHAR_MILESTONE_BONUS_STARS = 10;
 
+/** 古文破譯家: reward for decoding one古文字 puzzle. */
+export const COIN_PER_GUWEN_WORD = 6;
+export const STAR_PER_GUWEN_WORD = 3;
+/** 古文破譯家: extra bonus for fully decoding every word in a whole classical text. */
+export const GUWEN_TEXT_COMPLETE_BONUS_COINS = 30;
+export const GUWEN_TEXT_COMPLETE_BONUS_STARS = 15;
+
 export const BASE_EMOJI: Record<number, string> = {
   2: '🔵',
   3: '🟢',

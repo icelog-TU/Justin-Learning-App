@@ -60,6 +60,12 @@ export interface DailyEarning {
   stars: number;
 }
 
+/** 古文破譯家: progress on one classical text — which words have been decoded, and when it was fully cleared. */
+export interface GuwenProgress {
+  decodedWordIds: string[];
+  completedAt?: string;
+}
+
 export interface AppData {
   idiomStats: Record<string, ItemStat>;
   confusableStats: Record<string, ItemStat>;
@@ -87,6 +93,8 @@ export interface AppData {
   associationCracked: Record<string, number>;
   /** 一字成語王: character -> the detail (4 idioms + date) of every time it's been cracked, most recent first. */
   associationCrackLog: Record<string, AssociationCrackRecord[]>;
+  /** 古文破譯家: classical text id -> decoding progress on that text. */
+  guwenProgress: Record<string, GuwenProgress>;
 }
 
 function emptyData(): AppData {
@@ -108,6 +116,7 @@ function emptyData(): AppData {
     chainRoundHistory: [],
     associationCracked: {},
     associationCrackLog: {},
+    guwenProgress: {},
   };
 }
 
@@ -319,4 +328,23 @@ export function recordAssociationCrack(
   }
 
   return { data, isNewCharacter, milestoneNumber };
+}
+
+/** Records that `wordId` has been decoded within classical text `textId`. No-op if already decoded. */
+export function recordGuwenWordDecoded(data: AppData, textId: string, wordId: string): AppData {
+  const prev = data.guwenProgress[textId] ?? { decodedWordIds: [] };
+  if (prev.decodedWordIds.includes(wordId)) return data;
+  data.guwenProgress = {
+    ...data.guwenProgress,
+    [textId]: { ...prev, decodedWordIds: [...prev.decodedWordIds, wordId] },
+  };
+  return data;
+}
+
+/** Marks `textId` as fully decoded (all its words solved). No-op if already marked complete. */
+export function recordGuwenTextCompleted(data: AppData, textId: string): AppData {
+  const prev = data.guwenProgress[textId] ?? { decodedWordIds: [] };
+  if (prev.completedAt) return data;
+  data.guwenProgress = { ...data.guwenProgress, [textId]: { ...prev, completedAt: new Date().toISOString() } };
+  return data;
 }

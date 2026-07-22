@@ -18,6 +18,13 @@ const CARDS = [
     color: 'bg-violet-100 text-violet-700',
   },
   {
+    to: '/guwen',
+    icon: '🏺',
+    title: '古文破譯家',
+    desc: '像考古學家一樣，比對語料，自己破解古文字的意思',
+    color: 'bg-stone-100 text-stone-700',
+  },
+  {
     to: '/idioms',
     icon: '📖',
     title: '成語卡片',
