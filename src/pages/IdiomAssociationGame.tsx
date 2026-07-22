@@ -17,12 +17,7 @@ import {
   type EditorialRawEntry,
   type IdiomPosition,
 } from '../lib/chainGame';
-import {
-  COIN_PER_ASSOCIATION_ANSWER,
-  STAR_PER_ASSOCIATION_ANSWER,
-  ASSOCIATION_COMPLETE_BONUS_COINS,
-  ASSOCIATION_COMPLETE_BONUS_STARS,
-} from '../lib/rewards';
+import { COIN_PER_CHAIN_LINK, STAR_PER_CHAIN_LINK } from '../lib/rewards';
 import { speak } from '../lib/speech';
 import { buildIdiomSearchUrl } from '../lib/googleSearch';
 import { getSpeechRecognitionCtor, type MinimalSpeechRecognition } from '../lib/speechRecognition';
@@ -88,6 +83,7 @@ export default function IdiomAssociationGame() {
   const [rows, setRows] = useState<Record<IdiomPosition, RowState>>(emptyRows());
   const [roundComplete, setRoundComplete] = useState(false);
   const [showCelebration, setShowCelebration] = useState(false);
+  const [celebrationSummary, setCelebrationSummary] = useState({ coins: 0, stars: 0 });
 
   const [hintModal, setHintModal] = useState<{
     position: IdiomPosition;
@@ -179,9 +175,13 @@ export default function IdiomAssociationGame() {
   function checkRoundComplete(current: Record<IdiomPosition, RowState>) {
     const done = POSITIONS.every((p) => current[p].solvedWord !== null || current[p].noAnswer);
     if (!done || roundComplete) return;
+    const solvedCount = POSITIONS.filter((p) => current[p].solvedWord !== null).length;
     setRoundComplete(true);
     setShowCelebration(true);
-    reward(ASSOCIATION_COMPLETE_BONUS_COINS, ASSOCIATION_COMPLETE_BONUS_STARS, { big: true });
+    // Rewards were already paid out per solved row (handleSubmitRow) at the same rate as 成語接龍's
+    // per-idiom reward — this just shows the round's total so it doesn't feel like less than chaining
+    // the same number of idioms. No extra bonus coins/stars are added here.
+    setCelebrationSummary({ coins: solvedCount * COIN_PER_CHAIN_LINK, stars: solvedCount * STAR_PER_CHAIN_LINK });
     playAssociationCompleteFanfare();
     window.setTimeout(() => speak(`恭喜，你完成了「${targetChar}」的一字成語王挑戰！`), 300);
     window.setTimeout(() => setShowCelebration(false), 2600);
@@ -207,7 +207,7 @@ export default function IdiomAssociationGame() {
       return;
     }
 
-    reward(COIN_PER_ASSOCIATION_ANSWER, STAR_PER_ASSOCIATION_ANSWER);
+    reward(COIN_PER_CHAIN_LINK, STAR_PER_CHAIN_LINK);
     setRows((prev) => {
       const next = {
         ...prev,
@@ -554,7 +554,7 @@ export default function IdiomAssociationGame() {
             <p className="text-5xl">🎉👑🎉</p>
             <p className="text-xl font-extrabold text-violet-600">恭喜，你完成了「{targetChar}」的一字成語王挑戰！</p>
             <p className="text-sm text-gray-500">
-              🪙+{ASSOCIATION_COMPLETE_BONUS_COINS} ⭐+{ASSOCIATION_COMPLETE_BONUS_STARS}
+              🪙+{celebrationSummary.coins} ⭐+{celebrationSummary.stars}
             </p>
           </div>
         </div>
