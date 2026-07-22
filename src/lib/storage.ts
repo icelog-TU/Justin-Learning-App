@@ -133,12 +133,22 @@ export function reconcileLongestChain(data: AppData): AppData {
   return data;
 }
 
+/**
+ * Fills in any fields missing from `partial` with their empty-state default. Needed anywhere data can
+ * come from outside this running app version — localStorage from an older build, or a cloud snapshot
+ * pushed before a field like guwenProgress existed — since a field that's simply absent (not just empty)
+ * would otherwise crash any code that assumes every AppData key is always present.
+ */
+export function normalizeAppData(partial: Partial<AppData>): AppData {
+  return reconcileLongestChain({ ...emptyData(), ...partial });
+}
+
 export function loadData(): AppData {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return emptyData();
     const parsed = JSON.parse(raw);
-    return reconcileLongestChain({ ...emptyData(), ...parsed });
+    return normalizeAppData(parsed);
   } catch {
     return emptyData();
   }
