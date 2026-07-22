@@ -3,7 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import { useAppDataContext } from '../lib/AppDataContext';
 import { findGuwenText, type GuwenWord } from '../data/guwen';
 import { tokenizeGuwenText } from '../lib/guwenGame';
-import { speak } from '../lib/speech';
+import { speak, speakSequence, pauseSpeech, resumeSpeech, cancelSpeech } from '../lib/speech';
 import {
   COIN_PER_GUWEN_WORD,
   STAR_PER_GUWEN_WORD,
@@ -14,6 +14,7 @@ import {
 type Phase = 'intro' | 'listening' | 'decoding' | 'complete';
 
 const INTRO_LINE = '小學者，我們要一起破譯這些古文字！';
+const LISTEN_LEAD_IN = '首先，跟我們一起聽一遍全文。';
 const LISTEN_PROMPT =
   '你是不是完全聽不懂它在說什麼呢？沒關係，跟著我們一步一步破解，每一個字都破解完之後，你就會自然看懂這整篇文章了！';
 
@@ -57,15 +58,43 @@ export default function GuwenDecode() {
   const [feedback, setFeedback] = useState<'correct' | null>(null);
   const [wrongIndex, setWrongIndex] = useState<number | null>(null);
   const [revealAnswer, setRevealAnswer] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+
+  function playFullSequence(fullText: string) {
+    setIsPlaying(true);
+    setIsPaused(false);
+    speakSequence([LISTEN_LEAD_IN, fullText, LISTEN_PROMPT], () => setIsPlaying(false));
+  }
+
+  function toggleFullPlayback() {
+    if (!text) return;
+    if (!isPlaying) {
+      playFullSequence(text.fullText);
+    } else if (isPaused) {
+      resumeSpeech();
+      setIsPaused(false);
+    } else {
+      pauseSpeech();
+      setIsPaused(true);
+    }
+  }
+
+  function playOneSentence(sentence: string) {
+    setIsPlaying(false);
+    setIsPaused(false);
+    speak(sentence);
+  }
 
   useEffect(() => {
     if (phase !== 'listening' || !text) return;
-    speak(text.fullText);
-    const timer = window.setTimeout(
-      () => speak(LISTEN_PROMPT),
-      Math.min(9000, 1500 + text.fullText.length * 380),
-    );
-    return () => window.clearTimeout(timer);
+    playFullSequence(text.fullText);
+    return () => {
+      cancelSpeech();
+      setIsPlaying(false);
+      setIsPaused(false);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, text]);
 
   useEffect(() => {
@@ -189,11 +218,27 @@ export default function GuwenDecode() {
           <div className="py-2">{renderPassage(null)}</div>
           <button
             type="button"
-            onClick={() => speak(text.fullText)}
-            className="text-sm text-sky-600 flex items-center justify-center gap-1 mx-auto"
+            onClick={toggleFullPlayback}
+            className="bg-sky-600 hover:bg-sky-700 text-white font-bold rounded-xl px-5 py-2.5 flex items-center justify-center gap-2 mx-auto"
           >
-            🔊 再聽一次全文
+            {isPlaying ? (isPaused ? '▶️ 繼續播放全文' : '⏸ 暫停播放') : '🔊 播放全文'}
           </button>
+
+          <div className="text-left space-y-2">
+            <p className="text-xs text-gray-400 text-center">或者一句一句聽</p>
+            {text.sentences.map((sentence, i) => (
+              <button
+                key={i}
+                type="button"
+                onClick={() => playOneSentence(sentence)}
+                className="w-full flex items-center gap-2 bg-gray-50 hover:bg-sky-50 rounded-xl px-4 py-2.5"
+              >
+                <span className="text-sky-500 shrink-0">🔊</span>
+                <span className="text-gray-700 text-sm sm:text-base">{sentence}</span>
+              </button>
+            ))}
+          </div>
+
           <div className="bg-amber-50 rounded-xl p-4 text-sm text-amber-800">{LISTEN_PROMPT}</div>
           <button
             type="button"

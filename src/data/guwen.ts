@@ -22,6 +22,8 @@ export interface GuwenText {
   title: string;
   source: string;
   fullText: string;
+  /** fullText split into individually-readable sentences (concatenating these reproduces fullText exactly), so each one can get its own playback button. */
+  sentences: string[];
   modernTranslation: string;
   reflectionQuestion: string;
   reflectionAnswer: string;
@@ -34,6 +36,12 @@ export const wangRongText: GuwenText = {
   source: '世說新語．雅量',
   fullText:
     '王戎七歲，嘗與諸小兒遊。看道邊李樹多子折枝，諸兒競走取之，唯戎不動。人問之，答曰：「樹在道邊而多子，此必苦李。」取之，信然。',
+  sentences: [
+    '王戎七歲，嘗與諸小兒遊。',
+    '看道邊李樹多子折枝，諸兒競走取之，唯戎不動。',
+    '人問之，答曰：「樹在道邊而多子，此必苦李。」',
+    '取之，信然。',
+  ],
   modernTranslation:
     '王戎七歲的時候，曾經和很多小朋友一起出去玩。大家看到路邊的李子樹上結了好多果實，把樹枝都壓彎了，其他小朋友都爭先恐後地跑去摘，只有王戎沒有動。有人問他為什麼不去摘，他回答說：「這棵樹長在路邊，卻還有這麼多李子沒被摘走，這一定是苦李子。」摘下來一嚐，果然是這樣。',
   reflectionQuestion: '王戎明明沒有吃過那棵樹上的李子，為什麼可以一口斷定「這一定是苦李子」呢？',
