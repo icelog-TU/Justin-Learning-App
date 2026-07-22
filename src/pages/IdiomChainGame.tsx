@@ -138,6 +138,7 @@ export default function IdiomChainGame() {
   useEffect(() => {
     return () => {
       if (chainHistoryRef.current.length > 0) {
+        reportChainLength(chainHistoryRef.current.length);
         recordChainRound(chainHistoryRef.current.map((entry) => entry.word));
       }
     };

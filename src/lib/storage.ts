@@ -111,12 +111,25 @@ function emptyData(): AppData {
   };
 }
 
+/**
+ * Older versions only updated longestChain when a round ended via the reroll button, not when Justin
+ * simply navigated away mid-chain — so a long round already logged in chainRoundHistory could be missing
+ * from longestChain. Recompute it from history on every load so past rounds get credited retroactively.
+ */
+export function reconcileLongestChain(data: AppData): AppData {
+  const historyMax = data.chainRoundHistory.reduce((max, round) => Math.max(max, round.length), 0);
+  if (historyMax > data.chainStats.longestChain) {
+    return { ...data, chainStats: { ...data.chainStats, longestChain: historyMax } };
+  }
+  return data;
+}
+
 export function loadData(): AppData {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return emptyData();
     const parsed = JSON.parse(raw);
-    return { ...emptyData(), ...parsed };
+    return reconcileLongestChain({ ...emptyData(), ...parsed });
   } catch {
     return emptyData();
   }

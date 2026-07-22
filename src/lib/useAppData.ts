@@ -6,6 +6,7 @@ import {
   loadData,
   saveData,
   recordVisitToday,
+  reconcileLongestChain,
   recordAnswer,
   recordSentence,
   earnRewards,
@@ -86,7 +87,7 @@ export function useAppData() {
         if (cloud && cloud.updatedAt > lastModifiedRef.current) {
           applyingRemoteRef.current = true;
           lastModifiedRef.current = cloud.updatedAt;
-          setData(cloud.data);
+          setData(reconcileLongestChain(cloud.data));
         } else if (!cloud) {
           const stamp = Date.now();
           lastModifiedRef.current = stamp;
@@ -102,7 +103,7 @@ export function useAppData() {
       if (cloud.updatedAt > lastModifiedRef.current) {
         applyingRemoteRef.current = true;
         lastModifiedRef.current = cloud.updatedAt;
-        setData(cloud.data);
+        setData(reconcileLongestChain(cloud.data));
         setSyncStatus('synced');
       }
     });
