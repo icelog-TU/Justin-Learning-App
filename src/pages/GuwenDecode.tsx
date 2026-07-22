@@ -14,6 +14,7 @@ import {
 type Phase = 'intro' | 'listening' | 'decoding' | 'complete';
 
 const INTRO_LINE = '小學者，我們要一起破譯這些古文字！';
+const INTRO_HINT = '上面發光的字，就是等一下要破解的古文字。按下按鈕，開始破譯吧！';
 const LISTEN_LEAD_IN = '首先，跟我們一起聽一遍全文。';
 const LISTEN_PROMPT =
   '你是不是完全聽不懂它在說什麼呢？沒關係，跟著我們一步一步破解，每一個字都破解完之後，你就會自然看懂這整篇文章了！';
@@ -112,7 +113,7 @@ export default function GuwenDecode() {
 
   useEffect(() => {
     if (phase !== 'intro' || !text) return;
-    speakSequence([text.introSpokenLine, `標題是《${text.title}》。`, introParagraph(text)]);
+    speakSequence([text.introSpokenLine, `標題是《${text.title}》。`, introParagraph(text), INTRO_HINT]);
     return () => cancelSpeech();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, text]);
@@ -411,7 +412,17 @@ export default function GuwenDecode() {
             </button>
           </div>
           <div className="py-2">{renderPassage(null)}</div>
-          <p className="text-xs text-gray-400">上面發光的字，就是等一下要破解的古文字</p>
+          <div className="flex items-center justify-center gap-2">
+            <p className="text-xs text-gray-400">上面發光的字，就是等一下要破解的古文字。按下按鈕，開始破譯吧！</p>
+            <button
+              type="button"
+              onClick={() => speak(INTRO_HINT)}
+              aria-label="聽這段提示"
+              className="text-amber-500 shrink-0"
+            >
+              🔊
+            </button>
+          </div>
           <button
             type="button"
             onClick={() => {
