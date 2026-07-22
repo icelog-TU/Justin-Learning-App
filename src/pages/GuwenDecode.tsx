@@ -67,8 +67,10 @@ export default function GuwenDecode() {
   const [isPaused, setIsPaused] = useState(false);
   const [reviewWordId, setReviewWordId] = useState<string | null>(null);
   const [confirmReset, setConfirmReset] = useState(false);
-  const [completePlayingKind, setCompletePlayingKind] = useState<'full' | 'translation' | null>(null);
-  const [completePaused, setCompletePaused] = useState(false);
+  // Generic pause-capable playback for any longer piece of text (full-text/translation replays, per-word
+  // explanations) — `id` distinguishes which button is currently "owning" playback so its label can toggle.
+  const [playbackId, setPlaybackId] = useState<string | null>(null);
+  const [playbackPaused, setPlaybackPaused] = useState(false);
 
   function playFullSequence(fullText: string) {
     setIsPlaying(true);
@@ -95,20 +97,26 @@ export default function GuwenDecode() {
     speak(sentence);
   }
 
-  function toggleCompletePlayback(kind: 'full' | 'translation', content: string) {
-    if (completePlayingKind === kind) {
-      if (completePaused) {
+  function togglePlayback(id: string, content: string) {
+    if (playbackId === id) {
+      if (playbackPaused) {
         resumeSpeech();
-        setCompletePaused(false);
+        setPlaybackPaused(false);
       } else {
         pauseSpeech();
-        setCompletePaused(true);
+        setPlaybackPaused(true);
       }
     } else {
-      setCompletePlayingKind(kind);
-      setCompletePaused(false);
-      speak(content, () => setCompletePlayingKind((k) => (k === kind ? null : k)));
+      setPlaybackId(id);
+      setPlaybackPaused(false);
+      speak(content, () => setPlaybackId((cur) => (cur === id ? null : cur)));
     }
+  }
+
+  /** Label for a togglePlayback-controlled button: shows the pause/resume state only while it owns playback. */
+  function playbackLabel(id: string, idleLabel: string, playingLabel: string, pausedLabel: string): string {
+    if (playbackId !== id) return idleLabel;
+    return playbackPaused ? pausedLabel : playingLabel;
   }
 
   useEffect(() => {
@@ -132,15 +140,15 @@ export default function GuwenDecode() {
   useEffect(() => {
     if (phase !== 'complete' || !text) return;
     const timer = window.setTimeout(() => {
-      setCompletePlayingKind('full');
-      setCompletePaused(false);
-      speak(text.fullText, () => setCompletePlayingKind((k) => (k === 'full' ? null : k)));
+      setPlaybackId('full');
+      setPlaybackPaused(false);
+      speak(text.fullText, () => setPlaybackId((cur) => (cur === 'full' ? null : cur)));
     }, 400);
     return () => {
       window.clearTimeout(timer);
       cancelSpeech();
-      setCompletePlayingKind(null);
-      setCompletePaused(false);
+      setPlaybackId(null);
+      setPlaybackPaused(false);
     };
   }, [phase, text]);
 
@@ -250,9 +258,24 @@ export default function GuwenDecode() {
           })}
         </div>
         <div className="bg-emerald-50 rounded-xl p-4 space-y-2">
-          <p className="font-bold text-emerald-700">
-            「{reviewWord.char}」＝ {reviewWord.meaning}
-          </p>
+          <div className="flex items-start justify-between gap-2">
+            <p className="font-bold text-emerald-700">
+              「{reviewWord.char}」＝ {reviewWord.meaning}
+            </p>
+            <button
+              type="button"
+              onClick={() =>
+                togglePlayback(
+                  `review-${reviewWord.id}`,
+                  `「${reviewWord.char}」的意思是${reviewWord.meaning}。${reviewWord.explanation}`,
+                )
+              }
+              aria-label="聽這段說明"
+              className="text-emerald-600 shrink-0"
+            >
+              {playbackLabel(`review-${reviewWord.id}`, '🔊', '⏸', '▶️')}
+            </button>
+          </div>
           <p className="text-sm text-emerald-700">{reviewWord.explanation}</p>
         </div>
         {reviewWord.occurrences && reviewWord.occurrences.length > 0 && (
@@ -317,10 +340,14 @@ export default function GuwenDecode() {
       setFeedback('correct');
       recordGuwenWord(text!.id, currentWord.id);
       reward(COIN_PER_GUWEN_WORD, STAR_PER_GUWEN_WORD);
-      window.setTimeout(
-        () => speak(`「${currentWord.char}」的意思是${currentWord.meaning}。${currentWord.explanation}`),
-        250,
-      );
+      const id = `explain-${currentWord.id}`;
+      window.setTimeout(() => {
+        setPlaybackId(id);
+        setPlaybackPaused(false);
+        speak(`「${currentWord.char}」的意思是${currentWord.meaning}。${currentWord.explanation}`, () =>
+          setPlaybackId((cur) => (cur === id ? null : cur)),
+        );
+      }, 250);
     } else {
       setWrongIndex(index);
     }
@@ -346,8 +373,8 @@ export default function GuwenDecode() {
     setWrongIndex(null);
     setRevealAnswer(false);
     setReviewWordId(null);
-    setCompletePlayingKind(null);
-    setCompletePaused(false);
+    setPlaybackId(null);
+    setPlaybackPaused(false);
     setIsPlaying(false);
     setIsPaused(false);
     setWordIndex(0);
@@ -580,12 +607,15 @@ export default function GuwenDecode() {
                   <button
                     type="button"
                     onClick={() =>
-                      speak(`「${currentWord.char}」的意思是${currentWord.meaning}。${currentWord.explanation}`)
+                      togglePlayback(
+                        `explain-${currentWord.id}`,
+                        `「${currentWord.char}」的意思是${currentWord.meaning}。${currentWord.explanation}`,
+                      )
                     }
                     aria-label="聽這段說明"
                     className="text-emerald-600 shrink-0"
                   >
-                    🔊
+                    {playbackLabel(`explain-${currentWord.id}`, '🔊', '⏸', '▶️')}
                   </button>
                 </div>
                 <p className="text-sm text-emerald-700">{currentWord.explanation}</p>
@@ -655,14 +685,10 @@ export default function GuwenDecode() {
           <div className="py-2">{renderPassage(null)}</div>
           <button
             type="button"
-            onClick={() => toggleCompletePlayback('full', text.fullText)}
+            onClick={() => togglePlayback('full', text.fullText)}
             className="text-sm text-sky-600 flex items-center justify-center gap-1 mx-auto"
           >
-            {completePlayingKind === 'full'
-              ? completePaused
-                ? '▶️ 繼續播放全文'
-                : '⏸ 暫停播放'
-              : '🔊 再聽一次全文'}
+            {playbackLabel('full', '🔊 再聽一次全文', '⏸ 暫停播放', '▶️ 繼續播放全文')}
           </button>
 
           {renderWordChips(text, false)}
@@ -673,14 +699,10 @@ export default function GuwenDecode() {
             <p className="text-sm text-gray-700 leading-relaxed">{text.modernTranslation}</p>
             <button
               type="button"
-              onClick={() => toggleCompletePlayback('translation', text.modernTranslation)}
+              onClick={() => togglePlayback('translation', text.modernTranslation)}
               className="text-xs text-sky-600"
             >
-              {completePlayingKind === 'translation'
-                ? completePaused
-                  ? '▶️ 繼續播放'
-                  : '⏸ 暫停播放'
-                : '🔊 聽白話文'}
+              {playbackLabel('translation', '🔊 聽白話文', '⏸ 暫停播放', '▶️ 繼續播放')}
             </button>
           </div>
 
