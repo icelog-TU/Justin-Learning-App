@@ -64,6 +64,9 @@ export default function GuwenDecode() {
   const [revealAnswer, setRevealAnswer] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
+  const [reviewWordId, setReviewWordId] = useState<string | null>(null);
+  const [completePlayingKind, setCompletePlayingKind] = useState<'full' | 'translation' | null>(null);
+  const [completePaused, setCompletePaused] = useState(false);
 
   function playFullSequence(fullText: string) {
     setIsPlaying(true);
@@ -90,6 +93,22 @@ export default function GuwenDecode() {
     speak(sentence);
   }
 
+  function toggleCompletePlayback(kind: 'full' | 'translation', content: string) {
+    if (completePlayingKind === kind) {
+      if (completePaused) {
+        resumeSpeech();
+        setCompletePaused(false);
+      } else {
+        pauseSpeech();
+        setCompletePaused(true);
+      }
+    } else {
+      setCompletePlayingKind(kind);
+      setCompletePaused(false);
+      speak(content, () => setCompletePlayingKind((k) => (k === kind ? null : k)));
+    }
+  }
+
   useEffect(() => {
     if (phase !== 'intro' || !text) return;
     speakSequence([text.introSpokenLine, `標題是《${text.title}》。`, introParagraph(text)]);
@@ -110,8 +129,17 @@ export default function GuwenDecode() {
 
   useEffect(() => {
     if (phase !== 'complete' || !text) return;
-    const timer = window.setTimeout(() => speak(text.fullText), 400);
-    return () => window.clearTimeout(timer);
+    const timer = window.setTimeout(() => {
+      setCompletePlayingKind('full');
+      setCompletePaused(false);
+      speak(text.fullText, () => setCompletePlayingKind((k) => (k === 'full' ? null : k)));
+    }, 400);
+    return () => {
+      window.clearTimeout(timer);
+      cancelSpeech();
+      setCompletePlayingKind(null);
+      setCompletePaused(false);
+    };
   }, [phase, text]);
 
   if (!text) {
@@ -127,6 +155,130 @@ export default function GuwenDecode() {
 
   const tokens = tokenizeGuwenText(text.fullText, text.words);
   const currentWord: GuwenWord | undefined = text.words[wordIndex];
+  const reviewWord = reviewWordId ? text.words.find((w) => w.id === reviewWordId) : undefined;
+  const earnedCoins = decodedIds.size * COIN_PER_GUWEN_WORD + (alreadyComplete ? GUWEN_TEXT_COMPLETE_BONUS_COINS : 0);
+  const earnedStars = decodedIds.size * STAR_PER_GUWEN_WORD + (alreadyComplete ? GUWEN_TEXT_COMPLETE_BONUS_STARS : 0);
+
+  function renderWordChips(activeText: GuwenText, highlightCurrent: boolean) {
+    return (
+      <div className="flex flex-wrap justify-center gap-2">
+        {activeText.words.map((w, i) => {
+          const solved = decodedIds.has(w.id);
+          const isCurrent = highlightCurrent && i === wordIndex;
+          if (solved) {
+            return (
+              <button
+                key={w.id}
+                type="button"
+                onClick={() => setReviewWordId((cur) => (cur === w.id ? null : w.id))}
+                aria-label={`複習「${w.char}」`}
+                className={`w-9 h-9 flex items-center justify-center rounded-full font-bold text-sm border-2 ${
+                  reviewWordId === w.id
+                    ? 'bg-amber-400 border-amber-500 text-white'
+                    : 'bg-amber-100 border-amber-400 text-amber-700 hover:bg-amber-200'
+                }`}
+              >
+                {w.char[0]}
+              </button>
+            );
+          }
+          return (
+            <span
+              key={w.id}
+              className={`w-9 h-9 flex items-center justify-center rounded-full font-bold text-sm border-2 ${
+                isCurrent
+                  ? 'bg-indigo-100 border-indigo-500 text-indigo-700'
+                  : 'bg-gray-50 border-gray-200 text-gray-300'
+              }`}
+            >
+              {isCurrent ? w.char[0] : '🔒'}
+            </span>
+          );
+        })}
+      </div>
+    );
+  }
+
+  function renderReviewPanel() {
+    if (!reviewWord) return null;
+    return (
+      <div className="bg-white rounded-2xl shadow p-5 space-y-4 border-2 border-amber-300">
+        <div className="flex items-center justify-between">
+          <p className="text-xs font-semibold text-amber-600">複習：「{reviewWord.char}」當時是怎麼破解的</p>
+          <button
+            type="button"
+            onClick={() => setReviewWordId(null)}
+            aria-label="關閉複習"
+            className="text-gray-400 hover:text-gray-600 text-sm"
+          >
+            ✕ 關閉
+          </button>
+        </div>
+        <div className="text-center space-y-1">
+          <p className="text-xs text-gray-400">當時的目標句</p>
+          <p className="text-lg font-semibold text-gray-800 leading-relaxed">
+            {highlightChar(reviewWord.targetSentence, reviewWord.char)}
+          </p>
+          <button type="button" onClick={() => speak(reviewWord.targetSentence)} className="text-xs text-sky-600">
+            🔊 聽這句話
+          </button>
+        </div>
+        <div className="space-y-2">
+          {reviewWord.corpus.map((c, i) => {
+            const isAnswer = i === reviewWord.correctIndex;
+            return (
+              <div
+                key={i}
+                className={`w-full text-left rounded-xl border-2 px-4 py-3 flex items-start gap-2 ${
+                  isAnswer ? 'bg-emerald-50 border-emerald-400' : 'bg-gray-50 border-gray-200'
+                }`}
+              >
+                <button
+                  type="button"
+                  onClick={() => speak(c.sentence)}
+                  aria-label="聽這句語料"
+                  className="text-sky-500 shrink-0"
+                >
+                  🔊
+                </button>
+                <p className="text-gray-800 flex-1">{highlightChar(c.sentence, reviewWord.char)}</p>
+                {isAnswer && <span className="text-emerald-600 text-xs font-bold shrink-0">✓ 正解</span>}
+              </div>
+            );
+          })}
+        </div>
+        <div className="bg-emerald-50 rounded-xl p-4 space-y-2">
+          <p className="font-bold text-emerald-700">
+            「{reviewWord.char}」＝ {reviewWord.meaning}
+          </p>
+          <p className="text-sm text-emerald-700">{reviewWord.explanation}</p>
+        </div>
+        {reviewWord.occurrences && reviewWord.occurrences.length > 0 && (
+          <div className="bg-gray-50 rounded-lg p-3 space-y-2">
+            <p className="text-xs font-semibold text-gray-600">
+              這篇文章裡「{reviewWord.char}」出現了 {reviewWord.occurrences.length} 次：
+            </p>
+            {reviewWord.occurrences.map((occ, i) => (
+              <div key={i} className="flex items-start gap-2 text-sm">
+                <button
+                  type="button"
+                  onClick={() => speak(occ.sentence)}
+                  aria-label="聽這句話"
+                  className="text-sky-500 shrink-0"
+                >
+                  🔊
+                </button>
+                <div>
+                  <p className="text-gray-800">{highlightChar(occ.sentence, reviewWord.char)}</p>
+                  <p className="text-gray-500 text-xs mt-0.5">{occ.note}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
 
   function renderPassage(currentWordId: string | null) {
     return (
@@ -191,9 +343,13 @@ export default function GuwenDecode() {
           <Link to="/guwen" className="text-sm text-gray-400 hover:text-gray-600">
             ← 回古文破譯家
           </Link>
-          {phase === 'decoding' && (
-            <span className="text-sm font-semibold text-amber-600">
-              已破解 {decodedIds.size} / {text.words.length}
+          {(phase === 'decoding' || phase === 'complete') && (
+            <span className="text-sm font-semibold text-amber-600 flex items-center gap-2">
+              <span>
+                已破解 {decodedIds.size} / {text.words.length}
+              </span>
+              <span className="text-orange-600">🪙+{earnedCoins}</span>
+              <span className="text-amber-500">⭐+{earnedStars}</span>
             </span>
           )}
         </div>
@@ -294,26 +450,23 @@ export default function GuwenDecode() {
         <>
           <div className="bg-white rounded-2xl shadow p-5">{renderPassage(currentWord.id)}</div>
 
-          <div className="flex flex-wrap justify-center gap-2">
-            {text.words.map((w, i) => {
-              const solved = decodedIds.has(w.id);
-              const isCurrent = i === wordIndex;
-              return (
-                <span
-                  key={w.id}
-                  className={`w-9 h-9 flex items-center justify-center rounded-full font-bold text-sm border-2 ${
-                    solved
-                      ? 'bg-amber-100 border-amber-400 text-amber-700'
-                      : isCurrent
-                        ? 'bg-indigo-100 border-indigo-500 text-indigo-700'
-                        : 'bg-gray-50 border-gray-200 text-gray-300'
-                  }`}
-                >
-                  {solved || isCurrent ? w.char[0] : '🔒'}
-                </span>
-              );
-            })}
+          <div className="bg-white rounded-xl shadow-sm px-4 py-2.5 flex items-center justify-between text-sm">
+            <span className="font-semibold text-gray-600">
+              已破解 {decodedIds.size} / {text.words.length}
+            </span>
+            <span className="flex items-center gap-2 font-bold">
+              <span className="text-orange-600">🪙 +{earnedCoins}</span>
+              <span className="text-amber-500">⭐ +{earnedStars}</span>
+            </span>
           </div>
+          {!alreadyComplete && (
+            <p className="text-xs text-gray-400 text-center -mt-2">
+              全部破解完成再加碼 🪙+{GUWEN_TEXT_COMPLETE_BONUS_COINS} ⭐+{GUWEN_TEXT_COMPLETE_BONUS_STARS}
+            </p>
+          )}
+
+          {renderWordChips(text, true)}
+          {renderReviewPanel()}
 
           <div className="bg-white rounded-2xl shadow p-5 space-y-4">
             <div className="text-center space-y-1">
@@ -463,20 +616,43 @@ export default function GuwenDecode() {
         <div className="bg-white rounded-2xl shadow p-6 space-y-4 text-center">
           <p className="text-3xl">🏆</p>
           <h2 className="text-xl font-bold text-gray-800">恭喜！你破解了整篇《{text.title}》！</h2>
+          <p className="text-sm font-bold">
+            <span className="text-orange-600">🪙 共得 {earnedCoins} 金幣</span>
+            <span className="text-gray-400"> ・ </span>
+            <span className="text-amber-500">⭐ 共得 {earnedStars} 星星</span>
+          </p>
+          <p className="text-xs text-gray-400">
+            （含全部破解加碼 🪙+{GUWEN_TEXT_COMPLETE_BONUS_COINS} ⭐+{GUWEN_TEXT_COMPLETE_BONUS_STARS}）
+          </p>
           <div className="py-2">{renderPassage(null)}</div>
           <button
             type="button"
-            onClick={() => speak(text.fullText)}
+            onClick={() => toggleCompletePlayback('full', text.fullText)}
             className="text-sm text-sky-600 flex items-center justify-center gap-1 mx-auto"
           >
-            🔊 再聽一次全文
+            {completePlayingKind === 'full'
+              ? completePaused
+                ? '▶️ 繼續播放全文'
+                : '⏸ 暫停播放'
+              : '🔊 再聽一次全文'}
           </button>
+
+          {renderWordChips(text, false)}
+          {renderReviewPanel()}
 
           <div className="bg-amber-50 rounded-xl p-4 text-left space-y-2">
             <p className="text-xs font-semibold text-amber-600">白話文（破解成功的獎勵）</p>
             <p className="text-sm text-gray-700 leading-relaxed">{text.modernTranslation}</p>
-            <button type="button" onClick={() => speak(text.modernTranslation)} className="text-xs text-sky-600">
-              🔊 聽白話文
+            <button
+              type="button"
+              onClick={() => toggleCompletePlayback('translation', text.modernTranslation)}
+              className="text-xs text-sky-600"
+            >
+              {completePlayingKind === 'translation'
+                ? completePaused
+                  ? '▶️ 繼續播放'
+                  : '⏸ 暫停播放'
+                : '🔊 聽白話文'}
             </button>
           </div>
 
