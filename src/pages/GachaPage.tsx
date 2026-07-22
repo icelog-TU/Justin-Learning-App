@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAppDataContext } from '../lib/AppDataContext';
 import {
   GACHA_BASES,
-  MAX_EXPONENT,
+  maxExponentForBase,
   GACHA_COST_COINS,
   BASE_EMOJI,
   currentUnlockedBase,
@@ -62,7 +62,7 @@ export default function GachaPage() {
           <>
             <p className="text-sm text-gray-500">
               目前可以轉到 <span className="font-bold text-orange-600">{activeBase} 的 n 次方</span> 角色（
-              {ownedCountForBase(data.characters, activeBase)} / {MAX_EXPONENT}）
+              {ownedCountForBase(data.characters, activeBase)} / {maxExponentForBase(activeBase)}）
             </p>
 
             <button
@@ -84,7 +84,7 @@ export default function GachaPage() {
           >
             <div
               className="mx-auto w-20 h-20 rounded-full flex items-center justify-center text-white font-extrabold text-2xl"
-              style={{ backgroundColor: characterColor(lastResult.exponent) }}
+              style={{ backgroundColor: characterColor(lastResult.exponent, maxExponentForBase(lastResult.base)) }}
             >
               {lastResult.exponent}
             </div>
@@ -116,6 +116,7 @@ export default function GachaPage() {
         <div className="space-y-2">
           {GACHA_BASES.map((base) => {
             const owned = ownedCountForBase(data.characters, base);
+            const max = maxExponentForBase(base);
             const isActive = base === activeBase;
             const isLocked = activeBase !== null && base > activeBase;
             return (
@@ -125,11 +126,11 @@ export default function GachaPage() {
                 <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
                   <div
                     className={`h-full ${isActive ? 'bg-orange-500' : 'bg-emerald-500'}`}
-                    style={{ width: `${(owned / MAX_EXPONENT) * 100}%` }}
+                    style={{ width: `${(owned / max) * 100}%` }}
                   />
                 </div>
                 <span className="text-xs text-gray-400 w-14 text-right">
-                  {isLocked ? '🔒 未解鎖' : `${owned}/${MAX_EXPONENT}`}
+                  {isLocked ? '🔒 未解鎖' : `${owned}/${max}`}
                 </span>
               </div>
             );

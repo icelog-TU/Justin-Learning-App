@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useAppDataContext } from '../lib/AppDataContext';
-import { GACHA_BASES, MAX_EXPONENT } from '../lib/rewards';
+import { TOTAL_CHARACTER_SLOTS } from '../lib/rewards';
 
 const CARDS = [
   {
@@ -72,7 +72,7 @@ export default function Home() {
   const { data } = useAppDataContext();
   const idiomsMastered = Object.values(data.idiomStats).filter((s) => s.correct > 0 && s.lastCorrect).length;
   const totalCharacters = Object.keys(data.characters).length;
-  const totalSlots = GACHA_BASES.length * MAX_EXPONENT;
+  const totalSlots = TOTAL_CHARACTER_SLOTS;
 
   return (
     <div className="space-y-6">

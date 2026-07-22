@@ -3,7 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { useAppDataContext } from '../lib/AppDataContext';
 import {
   GACHA_BASES,
-  MAX_EXPONENT,
+  maxExponentForBase,
   HEART_COST_STARS,
   BASE_EMOJI,
   characterId,
@@ -26,7 +26,8 @@ export default function CharactersPage() {
     : (activeBase ?? GACHA_BASES[0]);
   const [selectedBase, setSelectedBase] = useState<number>(initialBase);
 
-  const exponents = Array.from({ length: MAX_EXPONENT }, (_, i) => i + 1);
+  const selectedBaseMaxExponent = maxExponentForBase(selectedBase);
+  const exponents = Array.from({ length: selectedBaseMaxExponent }, (_, i) => i + 1);
 
   return (
     <div className="space-y-4">
@@ -57,7 +58,7 @@ export default function CharactersPage() {
               <span className="flex-1 text-left leading-tight">
                 <span className="block">{base} 的 n 次方</span>
                 <span className={`block text-[11px] ${isSelected ? 'text-orange-100' : 'text-gray-400'}`}>
-                  {owned}/{MAX_EXPONENT}
+                  {owned}/{maxExponentForBase(base)}
                 </span>
               </span>
               {isLocked && <span>🔒</span>}
@@ -67,7 +68,7 @@ export default function CharactersPage() {
       </div>
 
       <p className="text-xs text-gray-400">
-        {ownedCountForBase(data.characters, selectedBase)} / {MAX_EXPONENT} 已收集
+        {ownedCountForBase(data.characters, selectedBase)} / {selectedBaseMaxExponent} 已收集
       </p>
 
       <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
@@ -90,7 +91,7 @@ export default function CharactersPage() {
                   <Link to={`/characters/${encodeURIComponent(id)}`} className="block">
                     <div
                       className="mx-auto w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm"
-                      style={{ backgroundColor: characterColor(exp) }}
+                      style={{ backgroundColor: characterColor(exp, selectedBaseMaxExponent) }}
                     >
                       {exp}
                     </div>

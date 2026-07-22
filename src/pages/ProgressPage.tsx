@@ -4,7 +4,7 @@ import { idioms } from '../data/idioms';
 import { confusableQuestions } from '../data/confusables';
 import { useAppDataContext } from '../lib/AppDataContext';
 import { getStreakDays } from '../lib/storage';
-import { GACHA_BASES, MAX_EXPONENT, currentLevel } from '../lib/rewards';
+import { GACHA_BASES, TOTAL_CHARACTER_SLOTS, maxExponentForBase, currentLevel } from '../lib/rewards';
 
 const RECENT_ROUNDS_SHOWN = 5;
 
@@ -60,16 +60,17 @@ export default function ProgressPage() {
       <div className="bg-white rounded-2xl shadow p-5">
         <h3 className="font-bold text-gray-800 mb-2">🎴 角色收藏</h3>
         <p className="text-sm text-gray-600 mb-2">
-          已收集 {charactersOwned} / {GACHA_BASES.length * MAX_EXPONENT} 個角色
+          已收集 {charactersOwned} / {TOTAL_CHARACTER_SLOTS} 個角色
         </p>
-        <div className="grid grid-cols-5 gap-2 text-center text-xs text-gray-500">
+        <div className="grid grid-cols-3 gap-2 text-center text-xs text-gray-500">
           {GACHA_BASES.map((base) => {
-            const owned = Array.from({ length: MAX_EXPONENT }, (_, i) => i + 1).filter(
+            const max = maxExponentForBase(base);
+            const owned = Array.from({ length: max }, (_, i) => i + 1).filter(
               (exp) => data.characters[`${base}^${exp}`] !== undefined,
             ).length;
             return (
               <Link key={base} to={`/characters?base=${base}`} className="rounded-lg py-1 hover:bg-gray-50">
-                <p className="font-bold text-gray-700">{owned}/{MAX_EXPONENT}</p>
+                <p className="font-bold text-gray-700">{owned}/{max}</p>
                 <p>{base} 的 n 次方</p>
               </Link>
             );

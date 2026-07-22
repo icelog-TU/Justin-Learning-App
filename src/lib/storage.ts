@@ -1,5 +1,5 @@
 import {
-  MAX_EXPONENT,
+  maxExponentForBase,
   GACHA_COST_COINS,
   GACHA_PITY_LIMIT,
   HEART_COST_STARS,
@@ -188,17 +188,19 @@ export function rollGacha(data: AppData): { data: AppData; result: GachaResult |
 
   data.coins -= GACHA_COST_COINS;
 
+  const maxExponent = maxExponentForBase(base);
+
   // Pity system: if the last GACHA_PITY_LIMIT - 1 rolls were all dupes, this roll is guaranteed new.
   const forceNew = data.gachaPityCounter >= GACHA_PITY_LIMIT - 1;
   let exponent: number;
   if (forceNew) {
     const unowned: number[] = [];
-    for (let exp = 1; exp <= MAX_EXPONENT; exp++) {
+    for (let exp = 1; exp <= maxExponent; exp++) {
       if (data.characters[characterId(base, exp)] === undefined) unowned.push(exp);
     }
     exponent = unowned[Math.floor(Math.random() * unowned.length)];
   } else {
-    exponent = 1 + Math.floor(Math.random() * MAX_EXPONENT);
+    exponent = 1 + Math.floor(Math.random() * maxExponent);
   }
 
   const id = characterId(base, exponent);

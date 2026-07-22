@@ -1,5 +1,18 @@
-export const GACHA_BASES = [2, 3, 5, 6, 7] as const;
-export const MAX_EXPONENT = 33;
+export const GACHA_BASES = [2, 3, 5, 6, 7, 11] as const;
+/** Per-base max exponent — base 2's collection runs deeper (46) than the others (33). */
+export const BASE_MAX_EXPONENT: Record<number, number> = {
+  2: 46,
+  3: 33,
+  5: 33,
+  6: 33,
+  7: 33,
+  11: 33,
+};
+export function maxExponentForBase(base: number): number {
+  return BASE_MAX_EXPONENT[base] ?? 33;
+}
+/** Total character slots across every base — used for overall collection totals/progress bars. */
+export const TOTAL_CHARACTER_SLOTS = GACHA_BASES.reduce((sum, base) => sum + maxExponentForBase(base), 0);
 export const GACHA_COST_COINS = 10;
 export const HEART_COST_STARS = 3;
 /** Pity system: a brand-new character is guaranteed at least once every this many rolls. */
@@ -34,6 +47,7 @@ export const BASE_EMOJI: Record<number, string> = {
   5: '🟠',
   6: '🔴',
   7: '🟣',
+  11: '🟡',
 };
 
 export interface CharacterInfo {
@@ -70,11 +84,11 @@ export function formatBigNumber(n: bigint): string {
 }
 
 /**
- * Rainbow hue for a specific exponent (1..MAX_EXPONENT), so every character in a 33-member
- * collection is its own distinct color instead of one flat base color repeated 33 times —
- * exponent 1 is red, exponent 33 is violet, sweeping smoothly through the spectrum between.
+ * Rainbow hue for a specific exponent (1..maxExponent), so every character in a base's collection
+ * is its own distinct color instead of one flat base color repeated throughout — exponent 1 is red,
+ * the base's highest exponent is violet, sweeping smoothly through the spectrum between.
  */
-export function characterColor(exponent: number, maxExponent: number = MAX_EXPONENT): string {
+export function characterColor(exponent: number, maxExponent: number = 33): string {
   const hue = maxExponent > 1 ? ((exponent - 1) / (maxExponent - 1)) * 300 : 0;
   return `hsl(${hue.toFixed(0)}, 70%, 50%)`;
 }
@@ -82,17 +96,18 @@ export function characterColor(exponent: number, maxExponent: number = MAX_EXPON
 /** Which base is currently open for gacha pulls: the first base in order that isn't fully collected yet. */
 export function currentUnlockedBase(characters: Record<string, number>): number | null {
   for (const base of GACHA_BASES) {
-    const ownedCount = Array.from({ length: MAX_EXPONENT }, (_, i) => i + 1).filter(
+    const max = maxExponentForBase(base);
+    const ownedCount = Array.from({ length: max }, (_, i) => i + 1).filter(
       (exp) => characters[characterId(base, exp)] !== undefined,
     ).length;
-    if (ownedCount < MAX_EXPONENT) return base;
+    if (ownedCount < max) return base;
   }
   return null; // fully collected everything
 }
 
 export function ownedCountForBase(characters: Record<string, number>, base: number): number {
   let count = 0;
-  for (let exp = 1; exp <= MAX_EXPONENT; exp++) {
+  for (let exp = 1; exp <= maxExponentForBase(base); exp++) {
     if (characters[characterId(base, exp)] !== undefined) count++;
   }
   return count;
@@ -113,18 +128,18 @@ export interface LevelInfo {
   threshold: number;
 }
 
-/** Ten levels tied to total characters collected (0 up to the full 165-character collection). */
+/** Ten levels tied to total characters collected (0 up to the full TOTAL_CHARACTER_SLOTS-character collection). */
 export const LEVELS: LevelInfo[] = [
   { level: 1, title: '初心者', icon: '🥚', threshold: 0 },
-  { level: 2, title: '幼幼班', icon: '🐣', threshold: 5 },
-  { level: 3, title: '練習生', icon: '🌱', threshold: 15 },
-  { level: 4, title: '小學徒', icon: '📖', threshold: 30 },
-  { level: 5, title: '進步生', icon: '✏️', threshold: 50 },
-  { level: 6, title: '用功生', icon: '📚', threshold: 75 },
-  { level: 7, title: '小達人', icon: '🎯', threshold: 100 },
-  { level: 8, title: '高手', icon: '🥉', threshold: 125 },
-  { level: 9, title: '大師', icon: '🥈', threshold: 150 },
-  { level: 10, title: '中文高手', icon: '👑', threshold: 165 },
+  { level: 2, title: '幼幼班', icon: '🐣', threshold: 6 },
+  { level: 3, title: '練習生', icon: '🌱', threshold: 19 },
+  { level: 4, title: '小學徒', icon: '📖', threshold: 38 },
+  { level: 5, title: '進步生', icon: '✏️', threshold: 64 },
+  { level: 6, title: '用功生', icon: '📚', threshold: 96 },
+  { level: 7, title: '小達人', icon: '🎯', threshold: 128 },
+  { level: 8, title: '高手', icon: '🥉', threshold: 160 },
+  { level: 9, title: '大師', icon: '🥈', threshold: 192 },
+  { level: 10, title: '中文高手', icon: '👑', threshold: 211 },
 ];
 
 export function currentLevel(charactersOwned: number): LevelInfo {
