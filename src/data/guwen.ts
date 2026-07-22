@@ -10,6 +10,17 @@ export interface GuwenOccurrence {
   note: string;
 }
 
+/**
+ * Not every classical word breaks down the same way:
+ * - 'context' (default): the word has genuinely distinct senses — the child compares 3 corpus sentences
+ *   and picks whichever usage matches the target sentence, ruling the others out.
+ * - 'pattern': the word doesn't have discrete senses to choose between (e.g. 諸 just marks "many/each" in
+ *   front of whatever follows) — forcing a 3-choice "which is closest" question is artificial since all
+ *   the examples would use it the same way. Instead the child reads several real examples and is asked
+ *   to notice the shared pattern themselves, then reveals whether they got it.
+ */
+export type GuwenPuzzleType = 'context' | 'pattern';
+
 /** One古文字 to decode: a classical-only usage the child must derive by comparing corpus sentences. */
 export interface GuwenWord {
   id: string;
@@ -17,8 +28,14 @@ export interface GuwenWord {
   char: string;
   /** The sentence from the classical text this word is introduced in (shown during its puzzle). */
   targetSentence: string;
-  corpus: GuwenCorpusOption[];
-  correctIndex: number;
+  /** Defaults to 'context' when omitted. */
+  puzzleType?: GuwenPuzzleType;
+  /** Used when puzzleType is 'context' (or omitted). */
+  corpus?: GuwenCorpusOption[];
+  correctIndex?: number;
+  /** Used when puzzleType is 'pattern': the open-ended question, and the example sentences to read. */
+  patternPrompt?: string;
+  patternExamples?: string[];
   meaning: string;
   explanation: string;
   /** Other places this word reappears in the same text, shown together once solved so the child can compare whether the meaning stays the same or shifts. */
@@ -91,15 +108,12 @@ export const wangRongText: GuwenText = {
       id: 'zhu',
       char: '諸',
       targetSentence: '王戎七歲，嘗與諸小兒遊。',
-      corpus: [
-        { sentence: '開會的時候，諸位老師都發表了意見。', meaning: '各位、眾多的' },
-        { sentence: '水果店裡有蘋果、香蕉、橘子諸如此類的水果。', meaning: '各種、許多（諸如＝像這一類）' },
-        { sentence: '弟弟做決定前，諸事都要先問過媽媽。', meaning: '所有的、一切的' },
-      ],
-      correctIndex: 0,
+      puzzleType: 'pattern',
+      patternPrompt: '請把下面幾句話唸一遍，你有沒有發現「諸」後面接的東西有什麼共同點？',
+      patternExamples: ['諸位老師都到了。', '諸國派使者前來。', '諸小兒一起玩耍。'],
       meaning: '眾多的、各個',
       explanation:
-        '「諸」其實常見有幾種意思：眾多的／各個（諸位）、各種／許多（諸如）、所有的／一切的（諸事）。這裡「諸」後面接著「小兒」這個具體的一群人，所以用「眾多的、各個」來解釋最合理——是在形容一群小朋友，不是在講一堆不同種類的東西，也不是在講抽象的「所有事情」。「諸小兒」就是「一群小朋友」，「諸兒」就是「所有的小朋友」。',
+        '很棒！「諸」常常放在一群人或一群東西前面，表示「很多個、各個」的意思——不管後面接的是「老師」「國家」還是「小孩」，「諸」本身沒有特別的意思，它只是讓後面的東西變成「不只一個」。「諸小兒」就是「一群小朋友」，「諸位老師」就是「各位老師」，「諸國」就是「各個國家」。',
     },
     {
       id: 'you',

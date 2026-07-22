@@ -233,30 +233,49 @@ export default function GuwenDecode() {
             🔊 聽這句話
           </button>
         </div>
-        <div className="space-y-2">
-          {reviewWord.corpus.map((c, i) => {
-            const isAnswer = i === reviewWord.correctIndex;
-            return (
-              <div
-                key={i}
-                className={`w-full text-left rounded-xl border-2 px-4 py-3 flex items-start gap-2 ${
-                  isAnswer ? 'bg-emerald-50 border-emerald-400' : 'bg-gray-50 border-gray-200'
-                }`}
-              >
+        {reviewWord.puzzleType === 'pattern' ? (
+          <div className="space-y-2">
+            <p className="text-sm text-gray-600">{reviewWord.patternPrompt}</p>
+            {reviewWord.patternExamples?.map((ex, i) => (
+              <div key={i} className="w-full rounded-xl border-2 border-gray-200 bg-gray-50 px-4 py-3 flex items-start gap-2">
                 <button
                   type="button"
-                  onClick={() => speak(c.sentence)}
-                  aria-label="聽這句語料"
+                  onClick={() => speak(ex)}
+                  aria-label="聽這句話"
                   className="text-sky-500 shrink-0"
                 >
                   🔊
                 </button>
-                <p className="text-gray-800 flex-1">{highlightChar(c.sentence, reviewWord.char)}</p>
-                {isAnswer && <span className="text-emerald-600 text-xs font-bold shrink-0">✓ 正解</span>}
+                <p className="text-gray-800 flex-1">{highlightChar(ex, reviewWord.char)}</p>
               </div>
-            );
-          })}
-        </div>
+            ))}
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {reviewWord.corpus?.map((c, i) => {
+              const isAnswer = i === reviewWord.correctIndex;
+              return (
+                <div
+                  key={i}
+                  className={`w-full text-left rounded-xl border-2 px-4 py-3 flex items-start gap-2 ${
+                    isAnswer ? 'bg-emerald-50 border-emerald-400' : 'bg-gray-50 border-gray-200'
+                  }`}
+                >
+                  <button
+                    type="button"
+                    onClick={() => speak(c.sentence)}
+                    aria-label="聽這句語料"
+                    className="text-sky-500 shrink-0"
+                  >
+                    🔊
+                  </button>
+                  <p className="text-gray-800 flex-1">{highlightChar(c.sentence, reviewWord.char)}</p>
+                  {isAnswer && <span className="text-emerald-600 text-xs font-bold shrink-0">✓ 正解</span>}
+                </div>
+              );
+            })}
+          </div>
+        )}
         <div className="bg-emerald-50 rounded-xl p-4 space-y-2">
           <div className="flex items-start justify-between gap-2">
             <p className="font-bold text-emerald-700">
@@ -333,24 +352,33 @@ export default function GuwenDecode() {
     );
   }
 
+  function markWordSolved(word: GuwenWord) {
+    setFeedback('correct');
+    recordGuwenWord(text!.id, word.id);
+    reward(COIN_PER_GUWEN_WORD, STAR_PER_GUWEN_WORD);
+    const id = `explain-${word.id}`;
+    window.setTimeout(() => {
+      setPlaybackId(id);
+      setPlaybackPaused(false);
+      speak(`「${word.char}」的意思是${word.meaning}。${word.explanation}`, () =>
+        setPlaybackId((cur) => (cur === id ? null : cur)),
+      );
+    }, 250);
+  }
+
   function handleSelect(index: number) {
     if (!currentWord || feedback === 'correct') return;
     setWrongIndex(null);
     if (index === currentWord.correctIndex) {
-      setFeedback('correct');
-      recordGuwenWord(text!.id, currentWord.id);
-      reward(COIN_PER_GUWEN_WORD, STAR_PER_GUWEN_WORD);
-      const id = `explain-${currentWord.id}`;
-      window.setTimeout(() => {
-        setPlaybackId(id);
-        setPlaybackPaused(false);
-        speak(`「${currentWord.char}」的意思是${currentWord.meaning}。${currentWord.explanation}`, () =>
-          setPlaybackId((cur) => (cur === id ? null : cur)),
-        );
-      }, 250);
+      markWordSolved(currentWord);
     } else {
       setWrongIndex(index);
     }
+  }
+
+  function handlePatternReveal() {
+    if (!currentWord || feedback === 'correct') return;
+    markWordSolved(currentWord);
   }
 
   function handleNextWord() {
@@ -538,65 +566,112 @@ export default function GuwenDecode() {
               </button>
             </div>
 
-            <div className="flex items-start justify-center gap-2">
-              <p className="text-sm text-center text-gray-600">
-                「<span className="font-bold text-indigo-600">{currentWord.char}</span>
-                」在這句話裡是什麼意思？比比看，下面哪一句「語料」的用法跟它最接近？
-              </p>
-              <button
-                type="button"
-                onClick={() =>
-                  speak(`「${currentWord.char}」在這句話裡是什麼意思？比比看，下面哪一句語料的用法跟它最接近？`)
-                }
-                aria-label="聽這段說明"
-                className="text-sky-500 shrink-0 mt-0.5"
-              >
-                🔊
-              </button>
-            </div>
-
-            <div className="space-y-2">
-              {currentWord.corpus.map((c, i) => {
-                const isWrong = wrongIndex === i;
-                const isCorrectPick = feedback === 'correct' && i === currentWord.correctIndex;
-                return (
-                  <div
-                    key={i}
-                    role="button"
-                    tabIndex={0}
-                    onClick={() => handleSelect(i)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        handleSelect(i);
-                      }
-                    }}
-                    className={`w-full text-left rounded-xl border-2 px-4 py-3 transition-colors flex items-start gap-2 ${
-                      feedback === 'correct' ? 'cursor-default' : 'cursor-pointer'
-                    } ${
-                      isCorrectPick
-                        ? 'bg-emerald-50 border-emerald-400'
-                        : isWrong
-                          ? 'bg-red-50 border-red-300'
-                          : 'bg-gray-50 border-gray-200 hover:border-indigo-300'
-                    }`}
+            {currentWord.puzzleType === 'pattern' ? (
+              <>
+                <div className="flex items-start justify-center gap-2">
+                  <p className="text-sm text-center text-gray-600">{currentWord.patternPrompt}</p>
+                  <button
+                    type="button"
+                    onClick={() => currentWord.patternPrompt && speak(currentWord.patternPrompt)}
+                    aria-label="聽這段說明"
+                    className="text-sky-500 shrink-0 mt-0.5"
                   >
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        speak(c.sentence);
-                      }}
-                      aria-label="聽這句語料"
-                      className="text-sky-500 shrink-0"
+                    🔊
+                  </button>
+                </div>
+
+                <div className="space-y-2">
+                  {currentWord.patternExamples?.map((ex, i) => (
+                    <div
+                      key={i}
+                      className="w-full rounded-xl border-2 border-gray-200 bg-gray-50 px-4 py-3 flex items-start gap-2"
                     >
-                      🔊
-                    </button>
-                    <p className="text-gray-800">{highlightChar(c.sentence, currentWord.char)}</p>
-                  </div>
-                );
-              })}
-            </div>
+                      <button
+                        type="button"
+                        onClick={() => speak(ex)}
+                        aria-label="聽這句話"
+                        className="text-sky-500 shrink-0"
+                      >
+                        🔊
+                      </button>
+                      <p className="text-gray-800">{highlightChar(ex, currentWord.char)}</p>
+                    </div>
+                  ))}
+                </div>
+
+                {feedback !== 'correct' && (
+                  <button
+                    type="button"
+                    onClick={handlePatternReveal}
+                    className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl py-2.5"
+                  >
+                    💡 我發現規律了，看看對不對 →
+                  </button>
+                )}
+              </>
+            ) : (
+              <>
+                <div className="flex items-start justify-center gap-2">
+                  <p className="text-sm text-center text-gray-600">
+                    「<span className="font-bold text-indigo-600">{currentWord.char}</span>
+                    」在這句話裡是什麼意思？比比看，下面哪一句「語料」的用法跟它最接近？
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      speak(`「${currentWord.char}」在這句話裡是什麼意思？比比看，下面哪一句語料的用法跟它最接近？`)
+                    }
+                    aria-label="聽這段說明"
+                    className="text-sky-500 shrink-0 mt-0.5"
+                  >
+                    🔊
+                  </button>
+                </div>
+
+                <div className="space-y-2">
+                  {currentWord.corpus?.map((c, i) => {
+                    const isWrong = wrongIndex === i;
+                    const isCorrectPick = feedback === 'correct' && i === currentWord.correctIndex;
+                    return (
+                      <div
+                        key={i}
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => handleSelect(i)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            handleSelect(i);
+                          }
+                        }}
+                        className={`w-full text-left rounded-xl border-2 px-4 py-3 transition-colors flex items-start gap-2 ${
+                          feedback === 'correct' ? 'cursor-default' : 'cursor-pointer'
+                        } ${
+                          isCorrectPick
+                            ? 'bg-emerald-50 border-emerald-400'
+                            : isWrong
+                              ? 'bg-red-50 border-red-300'
+                              : 'bg-gray-50 border-gray-200 hover:border-indigo-300'
+                        }`}
+                      >
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            speak(c.sentence);
+                          }}
+                          aria-label="聽這句語料"
+                          className="text-sky-500 shrink-0"
+                        >
+                          🔊
+                        </button>
+                        <p className="text-gray-800">{highlightChar(c.sentence, currentWord.char)}</p>
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            )}
 
             {feedback === 'correct' && (
               <div className="bg-emerald-50 rounded-xl p-4 space-y-2">
