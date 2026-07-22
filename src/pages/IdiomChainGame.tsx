@@ -26,24 +26,7 @@ import {
 } from '../lib/rewards';
 import { speak } from '../lib/speech';
 import { buildIdiomSearchUrl } from '../lib/googleSearch';
-
-interface MinimalSpeechRecognition {
-  lang: string;
-  interimResults: boolean;
-  maxAlternatives: number;
-  onresult: ((event: { results: { [i: number]: { [j: number]: { transcript: string } } } }) => void) | null;
-  onerror: (() => void) | null;
-  onend: (() => void) | null;
-  start: () => void;
-  stop: () => void;
-}
-
-type SpeechRecognitionCtor = new () => MinimalSpeechRecognition;
-
-function getSpeechRecognitionCtor(): SpeechRecognitionCtor | null {
-  const w = window as unknown as { SpeechRecognition?: SpeechRecognitionCtor; webkitSpeechRecognition?: SpeechRecognitionCtor };
-  return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null;
-}
+import { getSpeechRecognitionCtor, type MinimalSpeechRecognition } from '../lib/speechRecognition';
 
 interface Feedback {
   type: 'success' | 'error' | 'info';

@@ -19,6 +19,11 @@ export const CHAIN_MILESTONE_INTERVAL = 5;
 export const CHAIN_MILESTONE_BONUS_COINS = 15;
 export const CHAIN_MILESTONE_BONUS_STARS = 8;
 
+export const COIN_PER_ASSOCIATION_ANSWER = 6;
+export const STAR_PER_ASSOCIATION_ANSWER = 3;
+export const ASSOCIATION_COMPLETE_BONUS_COINS = 25;
+export const ASSOCIATION_COMPLETE_BONUS_STARS = 12;
+
 export const BASE_EMOJI: Record<number, string> = {
   2: '🔵',
   3: '🟢',

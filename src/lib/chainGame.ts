@@ -8,6 +8,10 @@ export interface MoeRawEntry {
   meaning: string;
   firstChar: string;
   firstZhuyin: string;
+  char2?: string;
+  char2Zhuyin?: string;
+  char3?: string;
+  char3Zhuyin?: string;
   lastChar: string;
   lastZhuyin: string;
 }
@@ -15,11 +19,17 @@ export interface MoeRawEntry {
 /**
  * No meaning field — these come from MOE's 30-reference-book editorial word list, word-only.
  * `frequency` is how many of the 30 reference books include the word (2–18 in our filtered set).
+ * `char2`/`char3` (2nd/3rd character) zhuyin is only present where resolvable from other sources —
+ * never guessed, so it's left out entirely rather than filled with a wrong reading.
  */
 export interface EditorialRawEntry {
   word: string;
   firstChar: string;
   firstZhuyin: string;
+  char2?: string;
+  char2Zhuyin?: string;
+  char3?: string;
+  char3Zhuyin?: string;
   lastChar: string;
   lastZhuyin: string;
   frequency: number;
@@ -36,6 +46,9 @@ export interface CustomChainEntry {
   addedAt: string;
 }
 
+/** 1 = first character of a 4-character idiom, 4 = last. */
+export type IdiomPosition = 1 | 2 | 3 | 4;
+
 export interface ChainEntry {
   id: string;
   word: string;
@@ -44,6 +57,11 @@ export interface ChainEntry {
   firstChar: string;
   /** toned zhuyin, e.g. "ㄇㄧㄢˋ" */
   firstZhuyin: string;
+  /** 2nd/3rd character + zhuyin — only known for some entries (see EditorialRawEntry doc). */
+  char2?: string;
+  char2Zhuyin?: string;
+  char3?: string;
+  char3Zhuyin?: string;
   lastChar: string;
   lastZhuyin: string;
   /** Only set for 'editorial' entries — how many of the 30 reference books include the word. */
@@ -52,6 +70,21 @@ export interface ChainEntry {
 
 export function toBaseZhuyin(zhuyin: string): string {
   return zhuyin.replace(/[ˊˇˋ˙]/g, '').trim();
+}
+
+/** Mid-position (2nd/3rd) char + zhuyin for a 4-character word, using the curated lookup table — omitted (never guessed) if unknown. */
+function midPositions(word: string): { char2?: string; char2Zhuyin?: string; char3?: string; char3Zhuyin?: string } {
+  if (word.length !== 4) return {};
+  const char2 = word[1];
+  const char3 = word[2];
+  const char2Zhuyin = getZhuyin(char2);
+  const char3Zhuyin = getZhuyin(char3);
+  return {
+    char2,
+    ...(char2Zhuyin ? { char2Zhuyin } : {}),
+    char3,
+    ...(char3Zhuyin ? { char3Zhuyin } : {}),
+  };
 }
 
 /** Our own 94 hand-written, story-backed idioms — converted to zhuyin via the curated char lookup table. */
@@ -63,6 +96,7 @@ export function buildCuratedPool(): ChainEntry[] {
     source: 'curated',
     firstChar: entry.firstChar,
     firstZhuyin: getZhuyin(entry.firstChar),
+    ...midPositions(entry.word),
     lastChar: entry.lastChar,
     lastZhuyin: getZhuyin(entry.lastChar),
   }));
@@ -85,6 +119,10 @@ export function buildEditorialPool(raw: EditorialRawEntry[]): ChainEntry[] {
     source: 'editorial' as const,
     firstChar: entry.firstChar,
     firstZhuyin: entry.firstZhuyin,
+    char2: entry.char2,
+    char2Zhuyin: entry.char2Zhuyin,
+    char3: entry.char3,
+    char3Zhuyin: entry.char3Zhuyin,
     lastChar: entry.lastChar,
     lastZhuyin: entry.lastZhuyin,
     frequency: entry.frequency,
@@ -100,6 +138,7 @@ export function buildCustomPool(entries: CustomChainEntry[]): ChainEntry[] {
     source: 'custom' as const,
     firstChar: entry.firstChar,
     firstZhuyin: entry.firstZhuyin,
+    ...midPositions(entry.word),
     lastChar: entry.lastChar,
     lastZhuyin: entry.lastZhuyin,
   }));
@@ -192,8 +231,108 @@ export function rankHintCandidates(
   return result;
 }
 
+/** The character at the given 1-based position of a 4-character idiom, or undefined if unknown. */
+export function charAt(entry: ChainEntry, position: IdiomPosition): string | undefined {
+  if (position === 1) return entry.firstChar;
+  if (position === 2) return entry.char2;
+  if (position === 3) return entry.char3;
+  return entry.lastChar;
+}
+
+/** The toned zhuyin at the given 1-based position, or undefined if unknown. */
+export function zhuyinAt(entry: ChainEntry, position: IdiomPosition): string | undefined {
+  if (position === 1) return entry.firstZhuyin;
+  if (position === 2) return entry.char2Zhuyin;
+  if (position === 3) return entry.char3Zhuyin;
+  return entry.lastZhuyin;
+}
+
+export function matchesTargetAtPosition(
+  entry: ChainEntry,
+  position: IdiomPosition,
+  targetChar: string,
+  targetZhuyin: string,
+): boolean {
+  const ch = charAt(entry, position);
+  if (ch === targetChar) return true;
+  const zy = zhuyinAt(entry, position);
+  return zy !== undefined && toBaseZhuyin(zy) === toBaseZhuyin(targetZhuyin);
+}
+
+/** Same tiering as matchTier (0 = exact char, 1 = exact reading, 2 = same reading ignoring tone), for one specific position. */
+export function matchTierAtPosition(
+  entry: ChainEntry,
+  position: IdiomPosition,
+  targetChar: string,
+  targetZhuyin: string,
+): number {
+  if (charAt(entry, position) === targetChar) return 0;
+  if (zhuyinAt(entry, position) === targetZhuyin) return 1;
+  return 2;
+}
+
+/** Every hintable, not-yet-used 4-character idiom containing targetChar (or a homophone) at the given position. */
+export function findCandidatesAtPosition(
+  pool: ChainEntry[],
+  position: IdiomPosition,
+  targetChar: string,
+  targetZhuyin: string,
+  usedIds: Set<string>,
+): ChainEntry[] {
+  return pool.filter(
+    (entry) =>
+      entry.word.length === 4 &&
+      !usedIds.has(entry.id) &&
+      matchesTargetAtPosition(entry, position, targetChar, targetZhuyin),
+  );
+}
+
+/** Position-aware counterpart of rankHintCandidates, same gold-priority/same-character-priority tiering. */
+export function rankCandidatesAtPosition(
+  candidates: ChainEntry[],
+  position: IdiomPosition,
+  targetChar: string,
+  targetZhuyin: string,
+  prioritizeQuality = false,
+): ChainEntry[] {
+  const buckets: ChainEntry[][][] = [[[], [], []], [[], [], []], [[], [], []]];
+  for (const entry of candidates) {
+    const tier = matchTierAtPosition(entry, position, targetChar, targetZhuyin);
+    const levelIdx = 3 - qualityLevel(entry);
+    const [primary, secondary] = prioritizeQuality ? [levelIdx, tier] : [tier, levelIdx];
+    buckets[primary][secondary].push(entry);
+  }
+  const ordered: ChainEntry[] = [];
+  for (const primaryBucket of buckets) {
+    for (const secondaryBucket of primaryBucket) {
+      ordered.push(...shuffle(secondaryBucket));
+    }
+  }
+  const result: ChainEntry[] = [];
+  const seenMasks = new Set<string>();
+  for (const entry of ordered) {
+    const mask = maskHint(entry.word);
+    if (seenMasks.has(mask)) continue;
+    seenMasks.add(mask);
+    result.push(entry);
+  }
+  return result;
+}
+
 export function pickRandomStart(pool: ChainEntry[]): ChainEntry {
   return pool[Math.floor(Math.random() * pool.length)];
+}
+
+/**
+ * Picks a random character (+ its toned zhuyin) for the 一字成語王 slot machine to land on — drawn
+ * from well-explained idioms' first characters only (curated/MOE/custom), so the landed character is
+ * always one a kid would recognize, even though editorial-only entries can still fill in the blanks.
+ */
+export function pickRandomCharacter(pool: ChainEntry[]): { char: string; zhuyin: string } | null {
+  const candidates = pool.filter((entry) => entry.source !== 'editorial');
+  if (candidates.length === 0) return null;
+  const entry = candidates[Math.floor(Math.random() * candidates.length)];
+  return { char: entry.firstChar, zhuyin: entry.firstZhuyin };
 }
 
 export function findByWord(pool: ChainEntry[], word: string): ChainEntry | undefined {
@@ -206,6 +345,8 @@ export function buildCharZhuyinMap(pool: ChainEntry[]): Record<string, string> {
   const map: Record<string, string> = {};
   for (const entry of pool) {
     if (entry.firstZhuyin && !map[entry.firstChar]) map[entry.firstChar] = entry.firstZhuyin;
+    if (entry.char2 && entry.char2Zhuyin && !map[entry.char2]) map[entry.char2] = entry.char2Zhuyin;
+    if (entry.char3 && entry.char3Zhuyin && !map[entry.char3]) map[entry.char3] = entry.char3Zhuyin;
     if (entry.lastZhuyin && !map[entry.lastChar]) map[entry.lastChar] = entry.lastZhuyin;
   }
   return map;

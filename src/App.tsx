@@ -5,6 +5,7 @@ import IdiomsBrowse from './pages/IdiomsBrowse';
 import IdiomsQuiz from './pages/IdiomsQuiz';
 import SentencePractice from './pages/SentencePractice';
 import IdiomChainGame from './pages/IdiomChainGame';
+import IdiomAssociationGame from './pages/IdiomAssociationGame';
 import ConfusablesQuiz from './pages/ConfusablesQuiz';
 import ProgressPage from './pages/ProgressPage';
 import GachaPage from './pages/GachaPage';
@@ -27,6 +28,7 @@ export default function App() {
             <Route path="/idioms/quiz" element={<IdiomsQuiz />} />
             <Route path="/idioms/sentence" element={<SentencePractice />} />
             <Route path="/idioms/chain" element={<IdiomChainGame />} />
+            <Route path="/idioms/association" element={<IdiomAssociationGame />} />
             <Route path="/confusables" element={<ConfusablesQuiz />} />
             <Route path="/gacha" element={<GachaPage />} />
             <Route path="/characters" element={<CharactersPage />} />

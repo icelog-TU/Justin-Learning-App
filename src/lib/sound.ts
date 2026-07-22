@@ -112,3 +112,30 @@ export function playUnlockFanfare() {
   const t = ctx.currentTime;
   [784, 988, 1175, 1568, 1976].forEach((f, i) => tone(ctx, f, t + i * 0.07, 0.25, 'triangle', 0.13));
 }
+
+/** Whirring clicks while the 一字成語王 slot machine spins — longer than the gacha spin since it runs a few seconds. */
+export function playSlotSpinSound() {
+  const ctx = getContext();
+  if (!ctx) return;
+  const t = ctx.currentTime;
+  for (let i = 0; i < 16; i++) {
+    tone(ctx, 260 + Math.sin(i * 0.9) * 40, t + i * 0.12, 0.08, 'square', 0.06);
+  }
+}
+
+/** The bright single "叮" when the slot machine lands on a character. */
+export function playSlotDingSound() {
+  const ctx = getContext();
+  if (!ctx) return;
+  const t = ctx.currentTime;
+  tone(ctx, 1760, t, 0.5, 'sine', 0.14);
+  tone(ctx, 2637, t, 0.4, 'sine', 0.07);
+}
+
+/** Grand fanfare for finishing all four positions of a 一字成語王 round. */
+export function playAssociationCompleteFanfare() {
+  const ctx = getContext();
+  if (!ctx) return;
+  const t = ctx.currentTime;
+  [523, 659, 784, 1047, 1319, 1568, 2093].forEach((f, i) => tone(ctx, f, t + i * 0.09, 0.35, 'triangle', 0.14));
+}

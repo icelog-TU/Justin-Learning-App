@@ -11,6 +11,13 @@ const CARDS = [
     color: 'bg-teal-100 text-teal-700',
   },
   {
+    to: '/idioms/association',
+    icon: '🎰',
+    title: '一字成語王',
+    desc: '拉霸機轉出一個字，找出它在成語四個位置的成語',
+    color: 'bg-violet-100 text-violet-700',
+  },
+  {
     to: '/idioms',
     icon: '📖',
     title: '成語卡片',
