@@ -98,6 +98,37 @@ export default function IdiomAssociationGame() {
   const speechSupported = getSpeechRecognitionCtor() !== null;
   const spinTimerRef = useRef<number | null>(null);
 
+  // Opening the hint modal pushes a throwaway history entry, so a mobile swipe-back gesture only
+  // pops that entry (closing the modal) instead of navigating off this page — which used to unmount
+  // the whole game and wipe every row's typed-but-unsubmitted answer.
+  const hintHistoryActiveRef = useRef(false);
+
+  useEffect(() => {
+    if (hintModal && !hintHistoryActiveRef.current) {
+      hintHistoryActiveRef.current = true;
+      window.history.pushState({ assocHintModal: true }, '');
+    }
+  }, [hintModal]);
+
+  useEffect(() => {
+    function onPopState() {
+      if (hintHistoryActiveRef.current) {
+        hintHistoryActiveRef.current = false;
+        setHintModal(null);
+      }
+    }
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, []);
+
+  function closeHintModal() {
+    if (hintHistoryActiveRef.current) {
+      window.history.back();
+    } else {
+      setHintModal(null);
+    }
+  }
+
   useEffect(() => {
     let cancelled = false;
     const base = import.meta.env.BASE_URL;
@@ -142,6 +173,7 @@ export default function IdiomAssociationGame() {
     setSpinning(true);
     setRoundComplete(false);
     setShowCelebration(false);
+    hintHistoryActiveRef.current = false;
     setHintModal(null);
     setTargetChar('');
     setRows(emptyRows());
@@ -216,7 +248,7 @@ export default function IdiomAssociationGame() {
       checkRoundComplete(next);
       return next;
     });
-    setHintModal(null);
+    closeHintModal();
   }
 
   function openHint(position: IdiomPosition, quality = true) {
@@ -399,7 +431,7 @@ export default function IdiomAssociationGame() {
       )}
 
       {hintModal && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 p-3" onClick={() => setHintModal(null)}>
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 p-3" onClick={closeHintModal}>
           <div
             className="bg-white rounded-2xl shadow-xl max-w-lg w-full max-h-[85vh] overflow-y-auto p-5 space-y-3"
             onClick={(e) => e.stopPropagation()}
@@ -408,7 +440,7 @@ export default function IdiomAssociationGame() {
               <h3 className="font-bold text-gray-800">
                 💡 {ROW_LABEL[hintModal.position]}是「{targetChar}」的成語提示
               </h3>
-              <button type="button" onClick={() => setHintModal(null)} className="text-2xl leading-none text-gray-400 hover:text-gray-600 px-1" aria-label="關閉">
+              <button type="button" onClick={closeHintModal} className="text-2xl leading-none text-gray-400 hover:text-gray-600 px-1" aria-label="關閉">
                 ×
               </button>
             </div>
