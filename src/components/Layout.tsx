@@ -66,22 +66,31 @@ export default function Layout() {
             >
               <span>{SYNC_STATUS_ICON[syncStatus] ?? '⚪'}</span>
             </NavLink>
-            <div className="bg-white/20 rounded-full px-2.5 py-1 flex items-center gap-1 whitespace-nowrap">
+            <NavLink
+              to="/progress/currency/coins"
+              className="bg-white/20 rounded-full px-2.5 py-1 flex items-center gap-1 whitespace-nowrap hover:bg-white/30"
+            >
               <span>🪙</span>
               <span key={data.coins} style={{ display: 'inline-block', animation: 'pill-pop 0.4s ease-out' }}>
                 {data.coins}
               </span>
-            </div>
-            <div className="bg-white/20 rounded-full px-2.5 py-1 flex items-center gap-1 whitespace-nowrap">
+            </NavLink>
+            <NavLink
+              to="/progress/currency/stars"
+              className="bg-white/20 rounded-full px-2.5 py-1 flex items-center gap-1 whitespace-nowrap hover:bg-white/30"
+            >
               <span>⭐</span>
               <span key={data.stars} style={{ display: 'inline-block', animation: 'pill-pop 0.4s ease-out' }}>
                 {data.stars}
               </span>
-            </div>
-            <div className="bg-white/20 rounded-full px-2.5 py-1 flex items-center gap-1 whitespace-nowrap">
+            </NavLink>
+            <NavLink
+              to="/progress/streak"
+              className="bg-white/20 rounded-full px-2.5 py-1 flex items-center gap-1 whitespace-nowrap hover:bg-white/30"
+            >
               <span>🔥</span>
               <span>{streak} 天</span>
-            </div>
+            </NavLink>
           </div>
         </div>
       </header>
