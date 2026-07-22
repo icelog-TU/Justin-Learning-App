@@ -4,6 +4,12 @@ export interface GuwenCorpusOption {
   meaning: string;
 }
 
+/** Another spot in the same text where this word reappears, so all its occurrences can be compared side by side. */
+export interface GuwenOccurrence {
+  sentence: string;
+  note: string;
+}
+
 /** One古文字 to decode: a classical-only usage the child must derive by comparing corpus sentences. */
 export interface GuwenWord {
   id: string;
@@ -15,6 +21,8 @@ export interface GuwenWord {
   correctIndex: number;
   meaning: string;
   explanation: string;
+  /** Other places this word reappears in the same text, shown together once solved so the child can compare whether the meaning stays the same or shifts. */
+  occurrences?: GuwenOccurrence[];
 }
 
 export interface GuwenText {
@@ -62,7 +70,8 @@ export const wangRongText: GuwenText = {
       ],
       correctIndex: 1,
       meaning: '曾經',
-      explanation: '「嘗」在這裡不是「嘗味道」，而是「曾經」的意思。「嘗與諸小兒遊」就是「曾經和很多小朋友一起玩」。',
+      explanation:
+        '「嘗」其實常見有三種意思：品嚐味道、曾經、嘗試（努力去做）。這裡「嘗」是用來修飾「與諸小兒遊」這整件事，表示這件事發生在過去，所以用「曾經」來解釋最合理，這樣才符合邏輯——不是在嚐味道，也不是在嘗試做什麼。「嘗與諸小兒遊」就是「曾經和很多小朋友一起玩」。',
     },
     {
       id: 'yu',
@@ -75,7 +84,8 @@ export const wangRongText: GuwenText = {
       ],
       correctIndex: 0,
       meaning: '跟、和',
-      explanation: '「與」在這裡是「跟」的意思。「嘗與諸小兒遊」就是「曾經跟很多小朋友一起玩」。',
+      explanation:
+        '「與」其實常見有三種意思：跟／和、給／給予、參加／加入。這裡「與」後面接著「諸小兒」，是在說跟誰一起做某件事，所以用「跟、和」來解釋最合理——不是「給誰東西」，也不是在講「參加」什麼活動。「嘗與諸小兒遊」就是「曾經跟很多小朋友一起玩」。',
     },
     {
       id: 'zhu',
@@ -88,7 +98,8 @@ export const wangRongText: GuwenText = {
       ],
       correctIndex: 0,
       meaning: '眾多的、各個',
-      explanation: '「諸」在這裡是「眾多的、各個」的意思。「諸小兒」就是「一群小朋友」，「諸兒」就是「所有的小朋友」。',
+      explanation:
+        '「諸」其實常見有幾種意思：眾多的／各個（諸位）、各種／許多（諸如）、所有的／一切的（諸事）。這裡「諸」後面接著「小兒」這個具體的一群人，所以用「眾多的、各個」來解釋最合理——是在形容一群小朋友，不是在講一堆不同種類的東西，也不是在講抽象的「所有事情」。「諸小兒」就是「一群小朋友」，「諸兒」就是「所有的小朋友」。',
     },
     {
       id: 'you',
@@ -101,7 +112,8 @@ export const wangRongText: GuwenText = {
       ],
       correctIndex: 1,
       meaning: '玩耍',
-      explanation: '「遊」在這裡是「玩耍」的意思，不是「旅遊」。「嘗與諸小兒遊」就是「曾經和很多小朋友一起玩耍」。',
+      explanation:
+        '「遊」其實常見有三種意思：旅遊／觀光、玩耍、游動／游泳。這裡的主角是七歲的王戎和一群小朋友，不太可能是去做正式、長途的「旅遊」，也不是在水裡「游泳」，所以用「玩耍」來解釋最合理。「嘗與諸小兒遊」就是「曾經和很多小朋友一起玩耍」。',
     },
     {
       id: 'jing',
@@ -114,7 +126,8 @@ export const wangRongText: GuwenText = {
       ],
       correctIndex: 1,
       meaning: '爭著、搶著',
-      explanation: '「競」在這裡是「爭著、搶著」的意思。「諸兒競走取之」就是「所有小朋友都爭先恐後地跑去摘李子」。',
+      explanation:
+        '「競」其實常見有三種意思：比賽、爭著／搶著、爭取勝利。這裡的情境是大家看到李子同時衝過去摘，並沒有規則或名次，所以不是正式的「比賽」，用「爭著、搶著」來解釋最合理。「諸兒競走取之」就是「所有小朋友都爭先恐後地跑去摘李子」。',
     },
     {
       id: 'zou',
@@ -128,7 +141,7 @@ export const wangRongText: GuwenText = {
       correctIndex: 1,
       meaning: '跑',
       explanation:
-        '「走」在古時候是「跑」的意思，跟現在說的「用走的」不一樣！「飛禽走獸」的「走獸」就保留了這個古代的意思。所以「諸兒競走取之」是說所有小朋友都用跑的去搶李子，不是慢慢走過去喔。',
+        '「走」其實常見有三種意思：走路（慢慢移動）、跑、離開。這裡是說一群小孩子看到滿樹的李子，爭先恐後地衝過去摘，這個畫面應該是用跑的，而不是慢慢走過去，也不是要「離開」，所以用「跑」來解釋最合理，跟現在說的「用走的」不一樣！「飛禽走獸」的「走獸」就保留了這個古代的意思。所以「諸兒競走取之」是說所有小朋友都用跑的去搶李子。',
     },
     {
       id: 'zhi',
@@ -142,7 +155,15 @@ export const wangRongText: GuwenText = {
       correctIndex: 1,
       meaning: '它、他（代替前面提到的人事物）',
       explanation:
-        '「之」是用來代替前面講過的東西，不用再說一次名字。「取之」的「之」指的是「李子」，「人問之」的「之」指的是「王戎」，就像「一笑置之」的「之」指的是被嘲笑這件事一樣。',
+        '「之」最常見的用法是當代名詞，代替前面講過的人事物，不用再說一次名字（也可以當「的」用，像「之一」）。這裡的「之」出現在「取之」這個動作後面，取的對象應該是前面提到的「李子」，所以用「它（代替李子）」來解釋最合理，不是「的」的意思。就像「一笑置之」的「之」指的是被嘲笑這件事一樣。這篇文章裡「之」總共出現了三次，你可以比較看看每一次它代替的是誰。',
+      occurrences: [
+        { sentence: '諸兒競走取之，唯戎不動。', note: '這裡的「之」指的是「李子」——大家爭著跑去摘的東西。' },
+        {
+          sentence: '人問之，答曰：「樹在道邊而多子，此必苦李。」',
+          note: '這裡的「之」指的是「王戎」——有人問他為什麼不去摘。',
+        },
+        { sentence: '取之，信然。', note: '這裡的「之」又指回「李子」——摘下來一嚐，果然是苦的。' },
+      ],
     },
     {
       id: 'wei',
@@ -155,7 +176,8 @@ export const wangRongText: GuwenText = {
       ],
       correctIndex: 0,
       meaning: '只有',
-      explanation: '「唯」在這裡是「只有」的意思。「唯戎不動」就是「只有王戎沒有動」，其他小朋友都跑去搶李子了。',
+      explanation:
+        '「唯」其實常見有幾種意思：只有、只有一個／獨一無二（唯一）、只／完全聽從（唯命是從）。這裡「唯」後面接著「戎不動」，是在講一群人裡面只有王戎一個人沒有動，所以用「只有」來解釋最合理。「唯戎不動」就是「只有王戎沒有動」，其他小朋友都跑去搶李子了。',
     },
     {
       id: 'yue',
@@ -168,7 +190,8 @@ export const wangRongText: GuwenText = {
       ],
       correctIndex: 0,
       meaning: '說',
-      explanation: '「曰」就是「說」的意思，現在很少單獨用了，但在「子曰」這種說法裡還看得到。「答曰」就是「回答說」。',
+      explanation:
+        '「曰」其實常見有兩種意思：說（像「子曰」）、稱作／叫做（像「美其名曰」）。這裡「答曰」後面直接接著王戎說的完整內容，所以用「說」來解釋最合理，不是「稱作、叫做」這種替東西取名字的用法。「答曰」就是「回答說」。',
     },
     {
       id: 'er',
@@ -182,7 +205,7 @@ export const wangRongText: GuwenText = {
       correctIndex: 0,
       meaning: '但是、卻',
       explanation:
-        '「而」在這裡是「但是、卻」的意思，表示轉折。「樹在道邊而多子」就是「這棵樹長在路邊，照理說很容易被摘，卻還有這麼多果實沒被拿走」——這正是王戎判斷「一定是苦李子」的關鍵線索！',
+        '「而」其實常見有兩種主要意思：表示轉折的「但是、卻」、表示並列的「而且」。這裡「樹在道邊而多子」是在講一個不合常理的對比——長在路邊照理說很容易被摘光，「卻」還有這麼多果實，所以用「但是、卻」來解釋最合理，不是單純並列的「而且」。這正是王戎判斷「一定是苦李子」的關鍵線索！',
     },
     {
       id: 'xinran',
@@ -195,7 +218,8 @@ export const wangRongText: GuwenText = {
       ],
       correctIndex: 2,
       meaning: '果然如此',
-      explanation: '「信然」是「果然如此」的意思——把李子摘下來一嚐，證實了王戎猜的沒錯，真的是苦李子！',
+      explanation:
+        '「信」其實常見有幾種意思：書信（名詞）、誠信／值得信任、果然／確實（信然）。這裡「取之，信然」是在講把李子摘下來一嚐，結果證實了王戎猜的沒錯，所以用「果然如此」來解釋最合理，不是在講書信，也不是在講一個人講不講信用！',
     },
   ],
 };

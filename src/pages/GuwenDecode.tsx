@@ -158,15 +158,17 @@ export default function GuwenDecode() {
 
   function handleSelect(index: number) {
     if (!currentWord || feedback === 'correct') return;
+    setWrongIndex(null);
     if (index === currentWord.correctIndex) {
       setFeedback('correct');
-      setWrongIndex(null);
       recordGuwenWord(text!.id, currentWord.id);
       reward(COIN_PER_GUWEN_WORD, STAR_PER_GUWEN_WORD);
-      window.setTimeout(() => speak(`「${currentWord.char}」的意思是${currentWord.meaning}`), 250);
+      window.setTimeout(
+        () => speak(`「${currentWord.char}」的意思是${currentWord.meaning}。${currentWord.explanation}`),
+        250,
+      );
     } else {
       setWrongIndex(index);
-      window.setTimeout(() => setWrongIndex((prev) => (prev === index ? null : prev)), 700);
     }
   }
 
@@ -328,22 +330,42 @@ export default function GuwenDecode() {
               </button>
             </div>
 
-            <p className="text-sm text-center text-gray-600">
-              「<span className="font-bold text-indigo-600">{currentWord.char}</span>
-              」在這句話裡是什麼意思？比比看，下面哪一句「語料」的用法跟它最接近？
-            </p>
+            <div className="flex items-start justify-center gap-2">
+              <p className="text-sm text-center text-gray-600">
+                「<span className="font-bold text-indigo-600">{currentWord.char}</span>
+                」在這句話裡是什麼意思？比比看，下面哪一句「語料」的用法跟它最接近？
+              </p>
+              <button
+                type="button"
+                onClick={() =>
+                  speak(`「${currentWord.char}」在這句話裡是什麼意思？比比看，下面哪一句語料的用法跟它最接近？`)
+                }
+                aria-label="聽這段說明"
+                className="text-sky-500 shrink-0 mt-0.5"
+              >
+                🔊
+              </button>
+            </div>
 
             <div className="space-y-2">
               {currentWord.corpus.map((c, i) => {
                 const isWrong = wrongIndex === i;
                 const isCorrectPick = feedback === 'correct' && i === currentWord.correctIndex;
                 return (
-                  <button
+                  <div
                     key={i}
-                    type="button"
+                    role="button"
+                    tabIndex={0}
                     onClick={() => handleSelect(i)}
-                    disabled={feedback === 'correct'}
-                    className={`w-full text-left rounded-xl border-2 px-4 py-3 transition-colors ${
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        handleSelect(i);
+                      }
+                    }}
+                    className={`w-full text-left rounded-xl border-2 px-4 py-3 transition-colors flex items-start gap-2 ${
+                      feedback === 'correct' ? 'cursor-default' : 'cursor-pointer'
+                    } ${
                       isCorrectPick
                         ? 'bg-emerald-50 border-emerald-400'
                         : isWrong
@@ -351,18 +373,66 @@ export default function GuwenDecode() {
                           : 'bg-gray-50 border-gray-200 hover:border-indigo-300'
                     }`}
                   >
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        speak(c.sentence);
+                      }}
+                      aria-label="聽這句語料"
+                      className="text-sky-500 shrink-0"
+                    >
+                      🔊
+                    </button>
                     <p className="text-gray-800">{highlightChar(c.sentence, currentWord.char)}</p>
-                  </button>
+                  </div>
                 );
               })}
             </div>
 
             {feedback === 'correct' && (
               <div className="bg-emerald-50 rounded-xl p-4 space-y-2">
-                <p className="font-bold text-emerald-700">
-                  ✅ 破解成功！「{currentWord.char}」＝ {currentWord.meaning}
-                </p>
+                <div className="flex items-start justify-between gap-2">
+                  <p className="font-bold text-emerald-700">
+                    ✅ 破解成功！「{currentWord.char}」＝ {currentWord.meaning}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      speak(`「${currentWord.char}」的意思是${currentWord.meaning}。${currentWord.explanation}`)
+                    }
+                    aria-label="聽這段說明"
+                    className="text-emerald-600 shrink-0"
+                  >
+                    🔊
+                  </button>
+                </div>
                 <p className="text-sm text-emerald-700">{currentWord.explanation}</p>
+
+                {currentWord.occurrences && currentWord.occurrences.length > 0 && (
+                  <div className="bg-white/70 rounded-lg p-3 space-y-2">
+                    <p className="text-xs font-semibold text-emerald-700">
+                      這篇文章裡「{currentWord.char}」出現了 {currentWord.occurrences.length} 次，來比較看看：
+                    </p>
+                    {currentWord.occurrences.map((occ, i) => (
+                      <div key={i} className="flex items-start gap-2 text-sm">
+                        <button
+                          type="button"
+                          onClick={() => speak(occ.sentence)}
+                          aria-label="聽這句話"
+                          className="text-sky-500 shrink-0"
+                        >
+                          🔊
+                        </button>
+                        <div>
+                          <p className="text-gray-800">{highlightChar(occ.sentence, currentWord.char)}</p>
+                          <p className="text-gray-500 text-xs mt-0.5">{occ.note}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
                 <button
                   type="button"
                   onClick={handleNextWord}
@@ -373,7 +443,17 @@ export default function GuwenDecode() {
               </div>
             )}
             {wrongIndex !== null && feedback !== 'correct' && (
-              <p className="text-center text-sm text-red-500">再想想看，比一比上下文的意思～</p>
+              <div className="flex items-center justify-center gap-2">
+                <p className="text-center text-sm text-red-500">再想想看，比一比上下文的意思～</p>
+                <button
+                  type="button"
+                  onClick={() => speak('再想想看，比一比上下文的意思。')}
+                  aria-label="聽這段提示"
+                  className="text-red-400 shrink-0"
+                >
+                  🔊
+                </button>
+              </div>
             )}
           </div>
         </>
