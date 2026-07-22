@@ -21,6 +21,8 @@ export interface GuwenText {
   id: string;
   title: string;
   source: string;
+  /** Spoken aloud automatically when the intro page loads, before the title and explanation. */
+  introSpokenLine: string;
   fullText: string;
   /** fullText split into individually-readable sentences (concatenating these reproduces fullText exactly), so each one can get its own playback button. */
   sentences: string[];
@@ -34,6 +36,7 @@ export const wangRongText: GuwenText = {
   id: 'wang-rong-li',
   title: '王戎不取道旁李',
   source: '世說新語．雅量',
+  introSpokenLine: '我們來破解古文吧。這篇古文來自世說新語．雅量篇。',
   fullText:
     '王戎七歲，嘗與諸小兒遊。看道邊李樹多子折枝，諸兒競走取之，唯戎不動。人問之，答曰：「樹在道邊而多子，此必苦李。」取之，信然。',
   sentences: [

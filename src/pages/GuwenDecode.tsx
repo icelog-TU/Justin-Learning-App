@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useAppDataContext } from '../lib/AppDataContext';
-import { findGuwenText, type GuwenWord } from '../data/guwen';
+import { findGuwenText, type GuwenText, type GuwenWord } from '../data/guwen';
 import { tokenizeGuwenText } from '../lib/guwenGame';
 import { speak, speakSequence, pauseSpeech, resumeSpeech, cancelSpeech } from '../lib/speech';
 import {
@@ -17,6 +17,10 @@ const INTRO_LINE = '小學者，我們要一起破譯這些古文字！';
 const LISTEN_LEAD_IN = '首先，跟我們一起聽一遍全文。';
 const LISTEN_PROMPT =
   '你是不是完全聽不懂它在說什麼呢？沒關係，跟著我們一步一步破解，每一個字都破解完之後，你就會自然看懂這整篇文章了！';
+
+function introParagraph(text: GuwenText): string {
+  return `這篇文章裡，很多字看起來像你平常認識的漢字，對不對？但其實裡面藏了 ${text.words.length} 個「古文字」——它們的意思，跟現在完全不一樣！`;
+}
 
 /** Splits `sentence` on every occurrence of `char`, highlighting each match — used for both the target
  * sentence and the corpus example sentences, so the character under study always stands out the same way. */
@@ -85,6 +89,13 @@ export default function GuwenDecode() {
     setIsPaused(false);
     speak(sentence);
   }
+
+  useEffect(() => {
+    if (phase !== 'intro' || !text) return;
+    speakSequence([text.introSpokenLine, `標題是《${text.title}》。`, introParagraph(text)]);
+    return () => cancelSpeech();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, text]);
 
   useEffect(() => {
     if (phase !== 'listening' || !text) return;
@@ -191,12 +202,39 @@ export default function GuwenDecode() {
           <Link to="/guwen" className="block text-left text-sm text-gray-400 hover:text-gray-600">
             ← 回古文破譯家
           </Link>
-          <p className="text-xs text-amber-600 font-semibold">{text.source}</p>
-          <h2 className="text-2xl font-bold text-gray-800">{text.title}</h2>
-          <p className="text-sm text-gray-500">
-            這篇文章裡，很多字看起來像你平常認識的漢字，對不對？但其實裡面藏了 {text.words.length}{' '}
-            個「古文字」——它們的意思，跟現在完全不一樣！
-          </p>
+          <div className="flex items-center justify-center gap-1.5">
+            <p className="text-xs text-amber-600 font-semibold">{text.source}</p>
+            <button
+              type="button"
+              onClick={() => speak(text.introSpokenLine)}
+              aria-label="聽這段介紹"
+              className="text-amber-500"
+            >
+              🔊
+            </button>
+          </div>
+          <div className="flex items-center justify-center gap-2">
+            <h2 className="text-2xl font-bold text-gray-800">{text.title}</h2>
+            <button
+              type="button"
+              onClick={() => speak(`標題是《${text.title}》。`)}
+              aria-label="聽標題"
+              className="text-amber-500 text-lg"
+            >
+              🔊
+            </button>
+          </div>
+          <div className="flex items-start justify-center gap-2">
+            <p className="text-sm text-gray-500">{introParagraph(text)}</p>
+            <button
+              type="button"
+              onClick={() => speak(introParagraph(text))}
+              aria-label="聽這段說明"
+              className="text-amber-500 shrink-0 mt-0.5"
+            >
+              🔊
+            </button>
+          </div>
           <div className="py-2">{renderPassage(null)}</div>
           <p className="text-xs text-gray-400">上面發光的字，就是等一下要破解的古文字</p>
           <button
