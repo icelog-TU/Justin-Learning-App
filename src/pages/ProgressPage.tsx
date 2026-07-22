@@ -78,7 +78,10 @@ export default function ProgressPage() {
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl shadow p-5 grid grid-cols-2 gap-4 text-center">
+      <Link
+        to="/progress/chain-links"
+        className="block bg-white rounded-2xl shadow hover:shadow-md transition-shadow p-5 grid grid-cols-2 gap-4 text-center"
+      >
         <div>
           <h3 className="font-bold text-gray-800 mb-2 text-sm">🔗 累計接龍次數</h3>
           <p className="text-2xl font-bold text-teal-600">{data.chainStats.totalLinks}</p>
@@ -87,6 +90,29 @@ export default function ProgressPage() {
           <h3 className="font-bold text-gray-800 mb-2 text-sm">🔗 最長連續紀錄</h3>
           <p className="text-2xl font-bold text-teal-600">{data.chainStats.longestChain}</p>
         </div>
+      </Link>
+
+      <div className="bg-white rounded-2xl shadow p-5">
+        <h3 className="font-bold text-gray-800 mb-1">🔓 一字成語王：已破解的字</h3>
+        <p className="text-xs text-gray-500 mb-3">已破解 {Object.keys(data.associationCracked).length} 個字，點一個字可以看破解紀錄</p>
+        {Object.keys(data.associationCracked).length === 0 ? (
+          <p className="text-sm text-gray-400">還沒有破解任何字，去「一字成語王」挑戰看看！</p>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {Object.entries(data.associationCracked)
+              .reverse()
+              .map(([char, count]) => (
+                <Link
+                  key={char}
+                  to={`/progress/association/${encodeURIComponent(char)}`}
+                  className="bg-violet-50 hover:bg-violet-100 text-violet-700 font-semibold text-sm rounded-full pl-3 pr-2.5 py-1 flex items-center gap-1"
+                >
+                  {char}
+                  {count > 1 && <span className="text-[11px] text-violet-400 font-normal">x{count}</span>}
+                </Link>
+              ))}
+          </div>
+        )}
       </div>
 
       <div className="bg-white rounded-2xl shadow p-5">

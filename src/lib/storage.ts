@@ -48,6 +48,12 @@ export interface ChainRoundLog {
   completedAt: string;
 }
 
+/** One 一字成語王 full clear of a character — the 4 idioms solved (position 1..4) and when. */
+export interface AssociationCrackRecord {
+  words: [string, string, string, string];
+  crackedAt: string;
+}
+
 /** How many coins/stars were earned on a given calendar date ("YYYY-MM-DD"). */
 export interface DailyEarning {
   coins: number;
@@ -79,6 +85,8 @@ export interface AppData {
   chainRoundHistory: ChainRoundLog[];
   /** 一字成語王: character -> how many times it's been fully cracked (all 4 positions solved in one round). */
   associationCracked: Record<string, number>;
+  /** 一字成語王: character -> the detail (4 idioms + date) of every time it's been cracked, most recent first. */
+  associationCrackLog: Record<string, AssociationCrackRecord[]>;
 }
 
 function emptyData(): AppData {
@@ -99,6 +107,7 @@ function emptyData(): AppData {
     bookmarkedIdioms: [],
     chainRoundHistory: [],
     associationCracked: {},
+    associationCrackLog: {},
   };
 }
 
@@ -268,18 +277,25 @@ export function toggleBookmark(data: AppData, entry: BookmarkedIdiom): AppData {
 }
 
 /**
- * Records a 一字成語王 full clear (all 4 positions solved in one round) for `char`. Returns whether
- * this was the character's first-ever crack, and — only on a first-ever crack — the milestone number
- * (1, 2, 3, …) if the new distinct-cracked-character count just landed exactly on a new multiple of
- * ASSOCIATION_CHAR_MILESTONE_INTERVAL, so the caller knows to pay out the escalating milestone bonus.
+ * Records a 一字成語王 full clear (all 4 positions solved in one round) for `char`, including which
+ * 4 idioms were solved and when — kept so Justin can look back at exactly what he solved and on what
+ * day. Returns whether this was the character's first-ever crack, and — only on a first-ever crack —
+ * the milestone number (1, 2, 3, …) if the new distinct-cracked-character count just landed exactly on
+ * a new multiple of ASSOCIATION_CHAR_MILESTONE_INTERVAL, so the caller knows to pay out the escalating
+ * milestone bonus.
  */
 export function recordAssociationCrack(
   data: AppData,
   char: string,
+  words: [string, string, string, string],
 ): { data: AppData; isNewCharacter: boolean; milestoneNumber: number | null } {
   const prevCount = data.associationCracked[char] ?? 0;
   const isNewCharacter = prevCount === 0;
   data.associationCracked = { ...data.associationCracked, [char]: prevCount + 1 };
+
+  const record: AssociationCrackRecord = { words, crackedAt: new Date().toISOString() };
+  const prevLog = data.associationCrackLog[char] ?? [];
+  data.associationCrackLog = { ...data.associationCrackLog, [char]: [record, ...prevLog].slice(0, 50) };
 
   let milestoneNumber: number | null = null;
   if (isNewCharacter) {

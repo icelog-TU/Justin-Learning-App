@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useAppDataContext } from '../lib/AppDataContext';
 import {
   buildCuratedPool,
@@ -616,7 +617,10 @@ export default function IdiomChainGame() {
         </div>
       )}
 
-      <div className="bg-white rounded-2xl shadow p-5 text-center grid grid-cols-2 gap-4">
+      <Link
+        to="/progress/chain-links"
+        className="block bg-white rounded-2xl shadow hover:shadow-md transition-shadow p-5 text-center grid grid-cols-2 gap-4"
+      >
         <div>
           <p className="text-2xl font-bold text-teal-600">{data.chainStats.totalLinks}</p>
           <p className="text-xs text-gray-500 mt-1">累計接龍次數</p>
@@ -625,7 +629,7 @@ export default function IdiomChainGame() {
           <p className="text-2xl font-bold text-amber-500">{Math.max(data.chainStats.longestChain, chainHistory.length)}</p>
           <p className="text-xs text-gray-500 mt-1">最長連續紀錄</p>
         </div>
-      </div>
+      </Link>
 
       <p className="text-center text-[11px] text-gray-400">
         {MOE_ATTRIBUTION}

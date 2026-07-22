@@ -92,9 +92,13 @@ export function useAppData() {
   // Note: this only performs the write. React's setState updater callback is not guaranteed to run
   // synchronously, so callers must decide isNewCharacter/milestone-crossing from the current `data`
   // prop (read side) *before* calling this, rather than trying to read a result back out of it.
-  const recordAssociationCrack = useCallback((char: string) => {
+  const recordAssociationCrack = useCallback((char: string, words: [string, string, string, string]) => {
     setData((prev) => ({
-      ...recordAssociationCrackMutation({ ...prev, associationCracked: { ...prev.associationCracked } }, char).data,
+      ...recordAssociationCrackMutation(
+        { ...prev, associationCracked: { ...prev.associationCracked }, associationCrackLog: { ...prev.associationCrackLog } },
+        char,
+        words,
+      ).data,
     }));
   }, []);
 

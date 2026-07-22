@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useAppDataContext } from '../lib/AppDataContext';
 import {
   buildCuratedPool,
@@ -235,7 +236,8 @@ export default function IdiomAssociationGame() {
       // than from recordAssociationCrack's return value — its setData call is not guaranteed to run
       // synchronously, so reading a result back out of it right after calling it isn't reliable.
       const isNewCharacter = (data.associationCracked[targetChar] ?? 0) === 0;
-      recordAssociationCrack(targetChar);
+      const crackedWords = POSITIONS.map((p) => current[p].solvedEntry!.word) as [string, string, string, string];
+      recordAssociationCrack(targetChar, crackedWords);
       if (isNewCharacter) {
         const newDistinctCount = Object.keys(data.associationCracked).length + 1;
         if (newDistinctCount % ASSOCIATION_CHAR_MILESTONE_INTERVAL === 0) {
@@ -518,17 +520,15 @@ export default function IdiomAssociationGame() {
             {Object.entries(data.associationCracked)
               .reverse()
               .map(([char, count]) => (
-                <button
+                <Link
                   key={char}
-                  type="button"
-                  onClick={() => speak(char)}
+                  to={`/progress/association/${encodeURIComponent(char)}`}
                   className="bg-violet-50 hover:bg-violet-100 text-violet-700 font-semibold text-sm rounded-full pl-3 pr-2.5 py-1 flex items-center gap-1"
-                  aria-label={`聽「${char}」的發音`}
-                  title={`聽「${char}」的發音`}
+                  title={`查看「${char}」的破解紀錄`}
                 >
                   {char}
                   {count > 1 && <span className="text-[11px] text-violet-400 font-normal">x{count}</span>}
-                </button>
+                </Link>
               ))}
           </div>
         )}

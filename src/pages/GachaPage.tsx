@@ -120,7 +120,11 @@ export default function GachaPage() {
             const isActive = base === activeBase;
             const isLocked = activeBase !== null && base > activeBase;
             return (
-              <div key={base} className="flex items-center gap-3">
+              <Link
+                key={base}
+                to={`/characters?base=${base}`}
+                className="flex items-center gap-3 rounded-lg hover:bg-gray-50 -mx-1 px-1 py-0.5"
+              >
                 <span className="text-xl w-7">{BASE_EMOJI[base]}</span>
                 <span className="w-16 text-sm font-semibold text-gray-700">{base} 的 n 次方</span>
                 <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
@@ -132,7 +136,7 @@ export default function GachaPage() {
                 <span className="text-xs text-gray-400 w-14 text-right">
                   {isLocked ? '🔒 未解鎖' : `${owned}/${max}`}
                 </span>
-              </div>
+              </Link>
             );
           })}
         </div>
