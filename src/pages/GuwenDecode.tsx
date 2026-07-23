@@ -10,6 +10,7 @@ import {
   STAR_PER_GUWEN_WORD,
   GUWEN_TEXT_COMPLETE_BONUS_COINS,
   GUWEN_TEXT_COMPLETE_BONUS_STARS,
+  GUWEN_REDO_REWARD_MULTIPLIER,
 } from '../lib/rewards';
 
 type Phase = 'intro' | 'listening' | 'decoding' | 'complete';
@@ -111,9 +112,31 @@ export default function GuwenDecode() {
   const progress = text ? data.guwenProgress[text.id] : undefined;
   const decodedIds = useMemo(() => new Set(progress?.decodedWordIds ?? []), [progress]);
   const alreadyComplete = Boolean(progress?.completedAt);
+  // A redo (this text has been fully completed at least once before, surviving any resets) still pays out,
+  // just at a reduced rate — the very first clear stays the biggest payday, but replaying isn't worthless.
+  // Captured once per run (mount, or an explicit reset — see handleResetProgress), NOT derived fresh every
+  // render: `progress.timesCompleted` gets bumped by *this* run's own completeGuwenText call, so a reactive
+  // check would flip true the instant a first-ever completion lands, wrongly discounting that same
+  // completion's own summary screen.
+  const [isRedo, setIsRedo] = useState(() => (progress?.timesCompleted ?? 0) > 0);
+  const guwenCoinAmount = isRedo ? Math.round(COIN_PER_GUWEN_WORD * GUWEN_REDO_REWARD_MULTIPLIER) : COIN_PER_GUWEN_WORD;
+  const guwenStarAmount = isRedo ? Math.round(STAR_PER_GUWEN_WORD * GUWEN_REDO_REWARD_MULTIPLIER) : STAR_PER_GUWEN_WORD;
+  const completionCoinBonus = isRedo
+    ? Math.round(GUWEN_TEXT_COMPLETE_BONUS_COINS * GUWEN_REDO_REWARD_MULTIPLIER)
+    : GUWEN_TEXT_COMPLETE_BONUS_COINS;
+  const completionStarBonus = isRedo
+    ? Math.round(GUWEN_TEXT_COMPLETE_BONUS_STARS * GUWEN_REDO_REWARD_MULTIPLIER)
+    : GUWEN_TEXT_COMPLETE_BONUS_STARS;
+  // Every word can be solved without `completedAt` ever being recorded — that only happens when the child
+  // clicks the final "🎉 完成" button, so leaving right after the last correct answer skips it. Unlike the
+  // lesson format's findCurrentStep (which returns undefined with nothing left, blanking the page), wordIndex
+  // here falls back to 0 when every word is solved — so re-opening a text in this state would silently show
+  // the *first* word's puzzle again, still answerable, and re-award coins/stars for a word already solved.
+  // Treat "nothing left to solve" the same as "explicitly completed" to avoid both problems.
+  const allWordsSolved = Boolean(text) && text!.words.length > 0 && decodedIds.size >= text!.words.length;
 
   const [phase, setPhase] = useState<Phase>(() => {
-    if (alreadyComplete) return 'complete';
+    if (alreadyComplete || allWordsSolved) return 'complete';
     if (decodedIds.size > 0) return 'decoding';
     return 'intro';
   });
@@ -235,6 +258,19 @@ export default function GuwenDecode() {
     };
   }, [phase, text]);
 
+  // Grants the completion bonus the child would have gotten from clicking "🎉 完成", for the case where every
+  // word is already solved but that button was never clicked (see the `allWordsSolved` comment above). The
+  // ref guards against re-firing on every render once `completeGuwenText` lands and `alreadyComplete` flips.
+  const missedCompletionAwardedRef = useRef(false);
+  useEffect(() => {
+    if (missedCompletionAwardedRef.current) return;
+    if (!text || alreadyComplete || !allWordsSolved) return;
+    missedCompletionAwardedRef.current = true;
+    completeGuwenText(text.id);
+    reward(completionCoinBonus, completionStarBonus, { big: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [text, alreadyComplete, allWordsSolved]);
+
   // Auto-plays the target sentence + question every time a new puzzle comes up, so reading isn't required —
   // but it's fully pause-able (via the shared playbackId/playbackPaused toggle) for a child who wants to
   // read it themselves instead, or just needs a moment.
@@ -307,8 +343,8 @@ export default function GuwenDecode() {
   const tokens = tokenizeGuwenText(text.fullText, text.words);
   const currentWord: GuwenWord | undefined = text.words[wordIndex];
   const reviewWord = reviewWordId ? text.words.find((w) => w.id === reviewWordId) : undefined;
-  const earnedCoins = decodedIds.size * COIN_PER_GUWEN_WORD + (alreadyComplete ? GUWEN_TEXT_COMPLETE_BONUS_COINS : 0);
-  const earnedStars = decodedIds.size * STAR_PER_GUWEN_WORD + (alreadyComplete ? GUWEN_TEXT_COMPLETE_BONUS_STARS : 0);
+  const earnedCoins = decodedIds.size * guwenCoinAmount + (alreadyComplete ? completionCoinBonus : 0);
+  const earnedStars = decodedIds.size * guwenStarAmount + (alreadyComplete ? completionStarBonus : 0);
 
   function renderWordChips(activeText: GuwenText, highlightCurrent: boolean) {
     return (
@@ -553,7 +589,7 @@ export default function GuwenDecode() {
   function markWordSolved(word: GuwenWord) {
     setFeedback('correct');
     recordGuwenWord(text!.id, word.id);
-    reward(COIN_PER_GUWEN_WORD, STAR_PER_GUWEN_WORD);
+    reward(guwenCoinAmount, guwenStarAmount);
     playSuccessChime();
     const praiseLine = PRAISE_LINES[Math.floor(Math.random() * PRAISE_LINES.length)];
     setCelebrationPaused(false);
@@ -654,7 +690,7 @@ export default function GuwenDecode() {
     setWrongIndex(null);
     if (wordIndex + 1 >= text!.words.length) {
       completeGuwenText(text!.id);
-      reward(GUWEN_TEXT_COMPLETE_BONUS_COINS, GUWEN_TEXT_COMPLETE_BONUS_STARS, { big: true });
+      reward(completionCoinBonus, completionStarBonus, { big: true });
       setPhase('complete');
     } else {
       setWordIndex((i) => i + 1);
@@ -663,6 +699,9 @@ export default function GuwenDecode() {
 
   function handleResetProgress() {
     resetGuwenText(text!.id);
+    // resetGuwenText doesn't touch timesCompleted (that's the point — it's meant to survive resets), so
+    // re-reading it here is exactly "how many times was this cleared before *this* fresh attempt begins."
+    setIsRedo((progress?.timesCompleted ?? 0) > 0);
     stopPuzzleSpeech();
     setConfirmReset(false);
     setFeedback(null);
@@ -810,7 +849,7 @@ export default function GuwenDecode() {
           </div>
           {!alreadyComplete && (
             <p className="text-xs text-gray-400 text-center -mt-2">
-              全部破解完成再加碼 🪙+{GUWEN_TEXT_COMPLETE_BONUS_COINS} ⭐+{GUWEN_TEXT_COMPLETE_BONUS_STARS}
+              全部破解完成再加碼 🪙+{completionCoinBonus} ⭐+{completionStarBonus}
             </p>
           )}
 
@@ -989,15 +1028,15 @@ export default function GuwenDecode() {
                 </p>
                 <div className="flex items-center justify-center gap-6 text-2xl font-extrabold tabular-nums">
                   <span className="text-orange-600">
-                    🪙 {Math.round((celebration.tick / CELEBRATION_TICKS) * COIN_PER_GUWEN_WORD)}
+                    🪙 {Math.round((celebration.tick / CELEBRATION_TICKS) * guwenCoinAmount)}
                   </span>
                   <span className="text-amber-500">
-                    ⭐ {Math.round((celebration.tick / CELEBRATION_TICKS) * STAR_PER_GUWEN_WORD)}
+                    ⭐ {Math.round((celebration.tick / CELEBRATION_TICKS) * guwenStarAmount)}
                   </span>
                 </div>
                 {celebration.stage === 'settled' && (
                   <p className="text-sm text-orange-600 font-semibold">
-                    哇，得到 {COIN_PER_GUWEN_WORD} 金幣、{STAR_PER_GUWEN_WORD} 星星！
+                    哇，得到 {guwenCoinAmount} 金幣、{guwenStarAmount} 星星！
                   </p>
                 )}
                 <button type="button" onClick={toggleCelebrationPause} className="text-sm text-orange-500 underline">
@@ -1098,7 +1137,7 @@ export default function GuwenDecode() {
             <span className="text-amber-500">⭐ 共得 {earnedStars} 星星</span>
           </p>
           <p className="text-xs text-gray-400">
-            （含全部破解加碼 🪙+{GUWEN_TEXT_COMPLETE_BONUS_COINS} ⭐+{GUWEN_TEXT_COMPLETE_BONUS_STARS}）
+            （含全部破解加碼 🪙+{completionCoinBonus} ⭐+{completionStarBonus}）
           </p>
           <div className="py-2">{renderPassage(null)}</div>
           <button
@@ -1157,7 +1196,7 @@ export default function GuwenDecode() {
               </button>
             ) : (
               <div className="w-full flex items-center justify-center gap-3 text-sm">
-                <span className="text-gray-600">確定要清空重來嗎？已賺的金幣星星不會收回。</span>
+                <span className="text-gray-600">確定要清空重來嗎？已賺的金幣星星不會收回，重來一樣有獎勵，約原本的六成。</span>
                 <button
                   type="button"
                   onClick={handleResetProgress}

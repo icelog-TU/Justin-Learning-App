@@ -41,12 +41,21 @@ export const ASSOCIATION_CHAR_MILESTONE_INTERVAL = 5;
 export const ASSOCIATION_CHAR_MILESTONE_BONUS_COINS = 20;
 export const ASSOCIATION_CHAR_MILESTONE_BONUS_STARS = 10;
 
-/** 古文破譯家: reward for decoding one古文字 puzzle. */
-export const COIN_PER_GUWEN_WORD = 6;
-export const STAR_PER_GUWEN_WORD = 3;
-/** 古文破譯家: extra bonus for fully decoding every word in a whole classical text. */
-export const GUWEN_TEXT_COMPLETE_BONUS_COINS = 30;
-export const GUWEN_TEXT_COMPLETE_BONUS_STARS = 15;
+/** 古文破譯家: reward for decoding one古文字/密碼 puzzle — deliberately well above COIN_PER_CORRECT/STAR_PER_CORRECT
+ * (a single idiom question), since one of these requires reading and comparing real classical clues, not just
+ * recognizing one modern sentence. */
+export const COIN_PER_GUWEN_WORD = 12;
+export const STAR_PER_GUWEN_WORD = 6;
+/** 古文破譯家: extra bonus for fully decoding every word/step in a whole classical text — deliberately the
+ * single biggest bonus anywhere in the app (bigger than QUIZ_PERFECT_BONUS, CHAIN_MILESTONE_BONUS, or
+ * ASSOCIATION_COMPLETE_BONUS), since finishing an entire classical text is a much larger, standalone
+ * accomplishment than a single quiz round. */
+export const GUWEN_TEXT_COMPLETE_BONUS_COINS = 80;
+export const GUWEN_TEXT_COMPLETE_BONUS_STARS = 40;
+/** 古文破譯家: replaying a text/lesson that's already been fully completed at least once before still pays
+ * out — reset progress is not a punishment — but at a reduced rate, so the very first clear stays the
+ * biggest payday. Applies to both COIN/STAR_PER_GUWEN_WORD and the completion bonus during any redo run. */
+export const GUWEN_REDO_REWARD_MULTIPLIER = 0.6;
 
 export const BASE_EMOJI: Record<number, string> = {
   2: '🔵',

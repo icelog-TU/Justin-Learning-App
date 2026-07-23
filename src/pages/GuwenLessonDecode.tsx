@@ -9,6 +9,7 @@ import {
   STAR_PER_GUWEN_WORD,
   GUWEN_TEXT_COMPLETE_BONUS_COINS,
   GUWEN_TEXT_COMPLETE_BONUS_STARS,
+  GUWEN_REDO_REWARD_MULTIPLIER,
 } from '../lib/rewards';
 
 type Phase = 'intro' | 'listening' | 'steps' | 'complete';
@@ -101,6 +102,21 @@ export default function GuwenLessonDecode() {
   // otherwise re-opening the lesson lands on phase 'steps' with no current step (findCurrentStep finds none
   // left) — none of the four phase branches match, and the page renders nothing but the back link.
   const allStepsSolved = Boolean(lesson) && lesson!.steps.length > 0 && solvedIds.size >= lesson!.steps.length;
+  // A redo (this text has been fully completed at least once before, surviving any resets) still pays out,
+  // just at a reduced rate — the very first clear stays the biggest payday, but replaying isn't worthless.
+  // This is captured once per run (mount, or an explicit reset — see handleResetProgress), NOT derived fresh
+  // every render: `progress.timesCompleted` itself gets bumped by *this* run's own completeGuwenText call,
+  // so a reactive `(progress?.timesCompleted ?? 0) > 0` would flip true the instant a first-ever completion
+  // lands, wrongly showing that same completion's own summary screen at the discounted redo rate.
+  const [isRedo, setIsRedo] = useState(() => (progress?.timesCompleted ?? 0) > 0);
+  const guwenCoinAmount = isRedo ? Math.round(COIN_PER_GUWEN_WORD * GUWEN_REDO_REWARD_MULTIPLIER) : COIN_PER_GUWEN_WORD;
+  const guwenStarAmount = isRedo ? Math.round(STAR_PER_GUWEN_WORD * GUWEN_REDO_REWARD_MULTIPLIER) : STAR_PER_GUWEN_WORD;
+  const completionCoinBonus = isRedo
+    ? Math.round(GUWEN_TEXT_COMPLETE_BONUS_COINS * GUWEN_REDO_REWARD_MULTIPLIER)
+    : GUWEN_TEXT_COMPLETE_BONUS_COINS;
+  const completionStarBonus = isRedo
+    ? Math.round(GUWEN_TEXT_COMPLETE_BONUS_STARS * GUWEN_REDO_REWARD_MULTIPLIER)
+    : GUWEN_TEXT_COMPLETE_BONUS_STARS;
 
   const [phase, setPhase] = useState<Phase>(() => {
     if (alreadyComplete || allStepsSolved) return 'complete';
@@ -212,7 +228,7 @@ export default function GuwenLessonDecode() {
     if (!lesson || alreadyComplete || !allStepsSolved) return;
     missedCompletionAwardedRef.current = true;
     completeGuwenText(lesson.id);
-    reward(GUWEN_TEXT_COMPLETE_BONUS_COINS, GUWEN_TEXT_COMPLETE_BONUS_STARS, { big: true });
+    reward(completionCoinBonus, completionStarBonus, { big: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lesson, alreadyComplete, allStepsSolved]);
 
@@ -292,8 +308,8 @@ export default function GuwenLessonDecode() {
   }
 
   const totalSteps = lesson.steps.length;
-  const earnedCoins = solvedIds.size * COIN_PER_GUWEN_WORD + (alreadyComplete ? GUWEN_TEXT_COMPLETE_BONUS_COINS : 0);
-  const earnedStars = solvedIds.size * STAR_PER_GUWEN_WORD + (alreadyComplete ? GUWEN_TEXT_COMPLETE_BONUS_STARS : 0);
+  const earnedCoins = solvedIds.size * guwenCoinAmount + (alreadyComplete ? completionCoinBonus : 0);
+  const earnedStars = solvedIds.size * guwenStarAmount + (alreadyComplete ? completionStarBonus : 0);
   const reviewStep = reviewStepId ? lesson.steps.find((s) => s.id === reviewStepId) : undefined;
 
   function renderStepChips() {
@@ -393,7 +409,7 @@ export default function GuwenLessonDecode() {
   function markStepSolved(step: LessonStep) {
     setFeedback('correct');
     recordGuwenWord(lesson!.id, step.id);
-    reward(COIN_PER_GUWEN_WORD, STAR_PER_GUWEN_WORD);
+    reward(guwenCoinAmount, guwenStarAmount);
     playSuccessChime();
     const praiseLine = PRAISE_LINES[Math.floor(Math.random() * PRAISE_LINES.length)];
     setCelebrationPaused(false);
@@ -469,7 +485,7 @@ export default function GuwenLessonDecode() {
     const next = lesson ? findCurrentStep(lesson, solvedIds) : undefined;
     if (!next) {
       completeGuwenText(lesson!.id);
-      reward(GUWEN_TEXT_COMPLETE_BONUS_COINS, GUWEN_TEXT_COMPLETE_BONUS_STARS, { big: true });
+      reward(completionCoinBonus, completionStarBonus, { big: true });
       setVerificationOpen(false);
       setPhase('complete');
     } else {
@@ -479,6 +495,9 @@ export default function GuwenLessonDecode() {
 
   function handleResetProgress() {
     resetGuwenText(lesson!.id);
+    // resetGuwenText doesn't touch timesCompleted (that's the point — it's meant to survive resets), so
+    // re-reading it here is exactly "how many times was this cleared before *this* fresh attempt begins."
+    setIsRedo((progress?.timesCompleted ?? 0) > 0);
     stopStepSpeech();
     setConfirmReset(false);
     setFeedback(null);
@@ -728,15 +747,15 @@ export default function GuwenLessonDecode() {
                 </p>
                 <div className="flex items-center justify-center gap-6 text-2xl font-extrabold tabular-nums">
                   <span className="text-orange-600">
-                    🪙 {Math.round((celebration.tick / CELEBRATION_TICKS) * COIN_PER_GUWEN_WORD)}
+                    🪙 {Math.round((celebration.tick / CELEBRATION_TICKS) * guwenCoinAmount)}
                   </span>
                   <span className="text-amber-500">
-                    ⭐ {Math.round((celebration.tick / CELEBRATION_TICKS) * STAR_PER_GUWEN_WORD)}
+                    ⭐ {Math.round((celebration.tick / CELEBRATION_TICKS) * guwenStarAmount)}
                   </span>
                 </div>
                 {celebration.stage === 'settled' && (
                   <p className="text-sm text-orange-600 font-semibold">
-                    哇，得到 {COIN_PER_GUWEN_WORD} 金幣、{STAR_PER_GUWEN_WORD} 星星！
+                    哇，得到 {guwenCoinAmount} 金幣、{guwenStarAmount} 星星！
                   </p>
                 )}
                 <button type="button" onClick={toggleCelebrationPause} className="text-sm text-orange-500 underline">
@@ -858,7 +877,7 @@ export default function GuwenLessonDecode() {
             </Link>
             {confirmReset ? (
               <div className="flex items-center gap-2 text-sm">
-                <span className="text-gray-500">確定重來？</span>
+                <span className="text-gray-500">確定重來？（重來一樣有獎勵，約原本的六成）</span>
                 <button
                   type="button"
                   onClick={handleResetProgress}

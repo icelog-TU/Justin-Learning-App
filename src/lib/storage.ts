@@ -64,6 +64,10 @@ export interface DailyEarning {
 export interface GuwenProgress {
   decodedWordIds: string[];
   completedAt?: string;
+  /** How many times this text has ever been fully completed, across resets — survives resetGuwenProgress
+   * (unlike decodedWordIds/completedAt) so a redo run can tell it isn't the first clear and pay out at
+   * GUWEN_REDO_REWARD_MULTIPLIER instead of full reward. */
+  timesCompleted?: number;
 }
 
 export interface AppData {
@@ -351,18 +355,25 @@ export function recordGuwenWordDecoded(data: AppData, textId: string, wordId: st
   return data;
 }
 
-/** Marks `textId` as fully decoded (all its words solved). No-op if already marked complete. */
+/** Marks `textId` as fully decoded (all its words solved) and bumps its lifetime completion count. No-op if already marked complete this run. */
 export function recordGuwenTextCompleted(data: AppData, textId: string): AppData {
   const prev = data.guwenProgress[textId] ?? { decodedWordIds: [] };
   if (prev.completedAt) return data;
-  data.guwenProgress = { ...data.guwenProgress, [textId]: { ...prev, completedAt: new Date().toISOString() } };
+  data.guwenProgress = {
+    ...data.guwenProgress,
+    [textId]: { ...prev, completedAt: new Date().toISOString(), timesCompleted: (prev.timesCompleted ?? 0) + 1 },
+  };
   return data;
 }
 
-/** Clears all decoding progress for `textId` so it can be replayed from the intro screen. Coins/stars already earned are kept — only the decoded/completed tracking resets. */
+/** Clears decoding progress for `textId` so it can be replayed from the intro screen. Coins/stars already
+ * earned are kept, and so is `timesCompleted` — that count is exactly what a redo needs to remember it isn't
+ * the first clear, so it must survive the reset it's tracking around. */
 export function resetGuwenProgress(data: AppData, textId: string): AppData {
-  const next = { ...data.guwenProgress };
-  delete next[textId];
-  data.guwenProgress = next;
+  const prev = data.guwenProgress[textId];
+  data.guwenProgress = {
+    ...data.guwenProgress,
+    [textId]: { decodedWordIds: [], timesCompleted: prev?.timesCompleted ?? 0 },
+  };
   return data;
 }
