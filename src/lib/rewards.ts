@@ -53,9 +53,20 @@ export const STAR_PER_GUWEN_WORD = 6;
 export const GUWEN_TEXT_COMPLETE_BONUS_COINS = 80;
 export const GUWEN_TEXT_COMPLETE_BONUS_STARS = 40;
 /** 古文破譯家: replaying a text/lesson that's already been fully completed at least once before still pays
- * out — reset progress is not a punishment — but at a reduced rate, so the very first clear stays the
- * biggest payday. Applies to both COIN/STAR_PER_GUWEN_WORD and the completion bonus during any redo run. */
-export const GUWEN_REDO_REWARD_MULTIPLIER = 0.6;
+ * out — reset progress is not a punishment, and redoing is always allowed with no cap on attempts — but at
+ * a stepped-down rate per attempt number, so the very first clear stays the biggest payday and grinding the
+ * same text over and over eventually stops paying out at all. Index 0 = the very first attempt (100%),
+ * index 1 = the first redo (2nd attempt, 60%), and so on; any attempt past the end of this list (5th+) earns
+ * zero coins/stars — still lets the child replay for fun/practice, just without farming currency from it.
+ * Applies to both COIN/STAR_PER_GUWEN_WORD and the completion bonus alike. */
+export const GUWEN_REDO_REWARD_TIERS = [1, 0.6, 0.3, 0.1];
+
+/** `timesCompleted` is how many times this text was already fully finished *before* the attempt in
+ * progress — 0 for a first-ever attempt, 1 once it's been redone once, etc. — so it doubles directly as an
+ * index into GUWEN_REDO_REWARD_TIERS. */
+export function guwenRedoMultiplier(timesCompleted: number): number {
+  return GUWEN_REDO_REWARD_TIERS[timesCompleted] ?? 0;
+}
 
 export const BASE_EMOJI: Record<number, string> = {
   2: '🔵',

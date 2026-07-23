@@ -65,8 +65,8 @@ export interface GuwenProgress {
   decodedWordIds: string[];
   completedAt?: string;
   /** How many times this text has ever been fully completed, across resets — survives resetGuwenProgress
-   * (unlike decodedWordIds/completedAt) so a redo run can tell it isn't the first clear and pay out at
-   * GUWEN_REDO_REWARD_MULTIPLIER instead of full reward. */
+   * (unlike decodedWordIds/completedAt) so a redo run can tell which attempt number it's on and pay out at
+   * the matching GUWEN_REDO_REWARD_TIERS rate instead of full reward. */
   timesCompleted?: number;
 }
 
