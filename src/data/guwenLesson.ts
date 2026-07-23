@@ -237,7 +237,7 @@ export const simaGuangLesson: GuwenLesson = {
       type: 'evidence',
       prerequisiteIds: ['weng_size_inference'],
       targetSentence: '足跌沒水中',
-      intro: '孩子爬上甕後，接著發生了「足跌」。這表示他已經整個摔倒了嗎？我們找其他古文比對看看。',
+      intro: '孩子爬上甕後，接著發生了「足跌」。這是甚麼意思呢？我們找其他古文比對看看。',
       clues: [
         {
           text: '危梁慮足跌。',

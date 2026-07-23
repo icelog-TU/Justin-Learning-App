@@ -154,6 +154,7 @@ Do not prepare implementation code while core educational content is still await
 - Let difficulty come from reasoning, not from long instructions or obscure clue sentences.
 - Never claim the AI already knows the answer while role-playing uncertainty. Say that it found clues and needs the child to compare them.
 - Keep punctuation and segmentation analysis out of the App-facing content unless explicitly requested.
+- Keep the intro question neutral — ask what a word/phrase means, don't phrase it as a yes/no check against one specific hypothesis. A real example the user caught and corrected: 足跌's intro asked "這表示他已經整個摔倒了嗎？" (does this mean he's already fully fallen down?), which is essentially distractor option 1 read aloud as a yes/no question — it turns the task into "confirm or deny this one guess" instead of "compare the evidence yourself." Fixed to the neutral "這是甚麼意思呢？" (what does this mean?). When drafting or reviewing an intro line, check it doesn't echo the wording of any specific option (correct or distractor); if it does, generalize it.
 
 ## Source integrity
 
