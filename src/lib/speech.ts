@@ -14,12 +14,28 @@
  *   reading used elsewhere in classical Chinese for 裳 as "a skirt/lower garment" on its own, e.g. 裳裳者華) —
  *   scoped to right after 褰/衣 specifically, not a blanket substitution, since a future lesson quoting 裳 in
  *   a genuine cháng context would need the opposite fix.
+ * - 好 in 好上高 (as in 柳宗元〈蝜蝂傳〉「又好上高」, "loves to climb high") should read ㄏㄠˋ (hào, "to be fond
+ *   of") — voices default to the far more common ㄏㄠˇ (hǎo, "good") reading instead. Scoped tightly to
+ *   right before 上高 specifically — 好 as hǎo is one of the single most common characters in this app's
+ *   modern-Chinese glosses/explanations, so a blanket swap would break far more than it fixes.
+ * - 曾子 (the disciple 曾參, as in the 韓非子 clue「曾子之妻之市」) should read ㄗㄥ (Zēng, the surname) — voices
+ *   default to the far more common ㄘㄥˊ (céng, "already/once", as in 曾經) reading instead. Scoped to right
+ *   before 子 specifically, since 曾經 appears constantly across this app's explanations/hints and a blanket
+ *   swap would break all of it.
+ * - 市 right after 徐 (as in 《史記．秦始皇本紀》「徐市入海求神藥」) is a scribal variant of 徐福 and should read
+ *   ㄈㄨˊ (fú), not ㄕˋ (shì, "market") — confirmed via search that 徐市/徐巿/徐福 are the same historical
+ *   figure. Scoped to right after 徐 specifically — 市 genuinely means "market" elsewhere in this app (e.g.
+ *   the 其 clue "曾子之妻之市" two lines above, or 王戎's original guwen.ts corpus), so a blanket swap would be
+ *   wrong there.
  */
 function ttsSafe(text: string): string {
   return text
     .replace(/沒(?=[水入])/g, '末')
     .replace(/溱/g, '真')
-    .replace(/(?<=[褰衣])裳/g, '傷');
+    .replace(/(?<=[褰衣])裳/g, '傷')
+    .replace(/好(?=上高)/g, '耗')
+    .replace(/曾(?=子)/g, '增')
+    .replace(/(?<=徐)市/g, '福');
 }
 
 /** Reads text aloud using the browser's built-in text-to-speech (no API cost, works offline once voices are installed). */
