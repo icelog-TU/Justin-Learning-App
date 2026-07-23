@@ -1,6 +1,6 @@
 ---
 name: guwen-decoder
-description: Design spec and content-authoring guide for the "古文破譯家" (Ancient Text Decoder) feature in this repo (src/data/guwen.ts, src/pages/GuwenHome.tsx, src/pages/GuwenDecode.tsx). Use this whenever adding a new classical Chinese text to decode, adding/editing a word puzzle, changing the intro/listening/decoding/complete page behavior, or touching audio playback in this feature. This feature is meant to scale to hundreds of texts — always check this spec before improvising a new pattern, and update this file whenever the user establishes a new rule so future sessions don't have to re-derive it from scratch.
+description: Design spec and content-authoring guide for the "古文破譯家" (Ancient Text Decoder) feature in this repo — both the original word-puzzle format (src/data/guwen.ts, src/pages/GuwenDecode.tsx) and the newer evidence-clue lesson format (src/data/guwenLesson.ts, src/pages/GuwenLessonDecode.tsx). Use this whenever adding a new classical Chinese text, adding/editing a puzzle or lesson step, changing phase/screen behavior, or touching audio playback in this feature. This feature is meant to scale to hundreds of texts — always check this spec before improvising a new pattern, and update this file whenever the user establishes a new rule so future sessions don't have to re-derive it from scratch. For new-lesson *content design* specifically (choosing clues, writing hypotheses, the required curriculum-design workflow), also load the `design-guwen-decoding` skill — that one owns the pedagogical methodology, this one owns how it's implemented in this app's code.
 ---
 
 # 古文破譯家 (Ancient Text Decoder) — Design Spec
@@ -8,6 +8,26 @@ description: Design spec and content-authoring guide for the "古文破譯家" (
 ## Standing instruction: keep this file current
 
 The user has explicitly asked that every future requirement, fix, or rule they raise about this feature gets folded into this file **without being asked each time** — they don't want to have to judge what's "worth" documenting themselves. So: after resolving any guwen-decoder request (bug fix, new UX rule, content-authoring decision), update this file in the same session, before considering the task done. Err toward adding — a rule that turns out to be obvious in hindsight costs nothing sitting here; a rule that's missing gets silently violated by a future session with no memory of why it mattered. Keep entries concrete (what broke / what was asked, and the fix), not just abstract principles.
+
+## Two coexisting content formats — know which one you're touching
+
+This feature now has two structurally different implementations, both live in production simultaneously:
+
+1. **Word-puzzle format** (`src/data/guwen.ts` + `src/pages/GuwenDecode.tsx`) — the original model. One text = a flat array of `GuwenWord` puzzles (`context` or `pattern` type), corpus evidence is often modern-Chinese sentences the app itself invents, and progress is a simple linear `wordIndex`. Currently powers `wangRongText` (王戎不取道旁李) only.
+2. **Evidence-lesson format** (`src/data/guwenLesson.ts` + `src/pages/GuwenLessonDecode.tsx`) — a stricter, later methodology (see "Why this format exists" below). One text = a `GuwenLesson` with a `steps: LessonStep[]` prerequisite graph, cross-text clues must be **real classical excerpts** (never modern-Chinese sentences), and multi-part phrases get explicitly reconstructed from separately-decoded "decoding keys" before the full translation is ever revealed. Currently powers `simaGuangLesson` (司馬光破甕救友) only.
+
+**Do not retrofit one format's content into the other's file/component without being asked.** They're kept as two parallel systems on purpose — the user introduced format 2 specifically to "重新打磨我們的做法" (re-refine the whole approach) starting from the second text, not to silently rewrite the first. If asked to add a *third* text, ask which format it should use rather than assuming; if unspecified, default to the evidence-lesson format since it's the more rigorous, currently-preferred one going forward.
+
+Both formats share: `AppData.guwenProgress` (the same `{decodedWordIds, completedAt}` shape covers both — for a lesson, `decodedWordIds` just holds solved *step* ids instead of *word* ids, no schema change was needed), the same reward constants (`COIN_PER_GUWEN_WORD`/`STAR_PER_GUWEN_WORD`/`GUWEN_TEXT_COMPLETE_BONUS_*`), and — deliberately, so the feature feels like one app — the exact same pause-capable playback pattern and post-correct celebration sequence (praise line + coin/star roll-up), copied into `GuwenLessonDecode.tsx` rather than shared via a hook, since only one lesson-format text exists so far and factoring out the "right" shared abstraction before a second one exists would be guessing.
+
+### Why the evidence-lesson format exists
+
+The user reviewed the first text after building it and judged several things insufficiently rigorous: corpus "evidence" was often modern Chinese the app made up rather than real classical parallels, and there was no explicit mechanism for reconstructing a multi-word phrase from its solved parts before revealing what it means. They then collaborated with ChatGPT on a full design-and-implementation contract (delivered as a handoff zip: `CLAUDE-TASK.md` + a `design-guwen-decoding` skill package + a complete lesson markdown for 司馬光破甕救友) and had it implemented starting with the *second* text, explicitly as a refinement exercise rather than a retrofit of the first. That handoff package is now installed as the `design-guwen-decoding` skill (`.claude/skills/design-guwen-decoding/`) — **read that skill (and especially its `references/app-implementation-contract.md`) before writing a new evidence-lesson text**, not just this file. Key rules from it, condensed for this app's implementation:
+- Cross-text clues must be **real, sourced classical excerpts** — never modern-Chinese sentences, never invented pseudo-classical text. Every `ClassicalClue` needs a traceable `source`.
+- Classical text (the lesson's `fullText`, every clue's `text`) is **immutable once approved** — an implementing session must never modernize, paraphrase, reorder, or "improve" it. Modern-Chinese copy (intros, explanations, hints) may be improved, but only via an explicit before/after/reason proposal the user approves — never silently.
+- Editorial-only content (segmentation/punctuation analysis for the curriculum designer) must **never** reach child-facing data or screens — keep it in the source markdown/skill files, not in `guwenLesson.ts`.
+- A step only becomes available once every id in its `prerequisiteIds` is solved — real dependency resolution (`findCurrentStep` in `GuwenLessonDecode.tsx`), not just "the previous array index," so a lesson with genuine branching would still resolve correctly even though the one text built so far happens to be fully linear.
+- The full vernacular translation stays locked (`finalVerification`) until every graded step is solved, and even then requires an explicit "打開白話驗證卷軸" tap — it's a verification scroll the child requests, not something that auto-reveals.
 
 ## North Star
 
@@ -24,13 +44,16 @@ Concretely this means:
 
 | File | Responsibility |
 |---|---|
-| `src/data/guwen.ts` | All content: `GuwenText`, `GuwenWord`, `GuwenCorpusOption`, `GuwenOccurrence` interfaces + the actual text data (`wangRongText`, `guwenTexts` array) |
-| `src/lib/guwenGame.ts` | `tokenizeGuwenText` — splits `fullText` into tokens tagged with which `GuwenWord` (if any) they belong to, greedy-matching multi-char words like `信然` first |
-| `src/lib/speech.ts` | `speak`, `speakSequence`, `pauseSpeech`, `resumeSpeech`, `cancelSpeech` — shared TTS wrapper, not guwen-specific but heavily used here |
-| `src/pages/GuwenHome.tsx` | List of texts, each with a progress bar and a "reset this text" control |
-| `src/pages/GuwenDecode.tsx` | The whole 4-phase flow (intro → listening → decoding → complete) for one text |
-| `src/lib/storage.ts` | `AppData.guwenProgress`, `recordGuwenWordDecoded`, `recordGuwenTextCompleted`, `resetGuwenProgress` |
-| `src/lib/rewards.ts` | `COIN_PER_GUWEN_WORD`, `STAR_PER_GUWEN_WORD`, `GUWEN_TEXT_COMPLETE_BONUS_COINS/STARS` |
+| `src/data/guwen.ts` | **Word-puzzle format.** `GuwenText`, `GuwenWord`, `GuwenCorpusOption`, `GuwenOccurrence` interfaces + the actual text data (`wangRongText`, `guwenTexts` array) |
+| `src/lib/guwenGame.ts` | `tokenizeGuwenText` — splits `fullText` into tokens tagged with which `GuwenWord` (if any) they belong to, greedy-matching multi-char words like `信然` first. Word-puzzle format only. |
+| `src/pages/GuwenDecode.tsx` | **Word-puzzle format** page: the 4-phase flow (intro → listening → decoding → complete) for one `GuwenText` |
+| `src/data/guwenLesson.ts` | **Evidence-lesson format.** `GuwenLesson`, `LessonStep` (discriminated union: `evidence`/`reconstruction`/`local_inference`/`story_reasoning`), `ClassicalClue`, `DecodingKey`, `FinalVerification` interfaces + the actual lesson data (`simaGuangLesson`, `guwenLessons` array) |
+| `src/pages/GuwenLessonDecode.tsx` | **Evidence-lesson format** page: intro → listening → steps (prerequisite-gated loop) → complete, for one `GuwenLesson`. Route `/guwen-lesson/:lessonId` (distinct from the word-puzzle format's `/guwen/:textId`) |
+| `src/lib/speech.ts` | `speak`, `speakSequence`, `pauseSpeech`, `resumeSpeech`, `cancelSpeech` — shared TTS wrapper, not guwen-specific but heavily used by both formats |
+| `src/pages/GuwenHome.tsx` | Lists **both** formats' texts as cards (`guwenTexts.map` then `guwenLessons.map`), each with its own progress bar and reset control, linking to the right route per format |
+| `src/lib/storage.ts` | `AppData.guwenProgress`, `recordGuwenWordDecoded`, `recordGuwenTextCompleted`, `resetGuwenProgress` — fully generic over opaque `textId`/`wordId` strings, so both formats reuse it unchanged (a lesson's "wordId" is just a step id) |
+| `src/lib/rewards.ts` | `COIN_PER_GUWEN_WORD`, `STAR_PER_GUWEN_WORD`, `GUWEN_TEXT_COMPLETE_BONUS_COINS/STARS` — shared by both formats |
+| `.claude/skills/design-guwen-decoding/` | The curriculum-design methodology + implementation contract this evidence-lesson format follows, delivered as a user/ChatGPT handoff. Load it before authoring new evidence-lesson content. |
 
 ## The 4 phases (GuwenDecode.tsx)
 
@@ -197,6 +220,12 @@ For queueing multiple *separate* lines back-to-back where each must fully finish
 
 The fix, and the general rule: **any `window.setTimeout` that leads to a `speak()` call must have its ID stored in a ref and explicitly cleared by every path that navigates away**, not just have `cancelSpeech()` called on the *already-started* utterance. Here that's `explainTimeoutRef`, cleared by a shared `stopPuzzleSpeech()` helper called from both `handleNextWord` and `handleResetProgress` (both places that change `wordIndex` or otherwise leave the current word behind). The celebration's own roll-up timer (`celebrationTimeoutRef`) follows the identical pattern and is cleared by the same `stopPuzzleSpeech()`. If a future puzzle type or feature adds another delayed-then-speak (or delayed-then-anything) call, route it through the same ref-and-clear pattern rather than trusting `cancelSpeech()` to cover it.
 
+### Known pitfall (evidence-lesson format): never derive "the current step" fresh from solvedIds every render
+
+`GuwenLessonDecode.tsx`'s first draft computed `currentStep` directly as `findCurrentStep(lesson, solvedIds)` on every render, with no separate state. This looked reasonable but broke the instant the *last* step in a lesson was answered correctly: `recordGuwenWord` adds it to `solvedIds` immediately, so on the very next render `findCurrentStep` finds no unsolved step left and returns `undefined` — which made the entire steps-phase UI (celebration, explanation, and the "🎉 完成" button needed to advance) disappear before the child ever saw it, since it was all gated behind `currentStep &&`. This only surfaces on the *last* step, which made it easy to miss in a quick manual check but was caught immediately by a full Playwright run through all 18 steps.
+
+The fix, and the rule for this format: **the on-screen step is its own piece of state (`activeStepId`), not a live derivation from `solvedIds`** — exactly like `wordIndex` in the older `GuwenDecode.tsx`, which is also independent state rather than computed from `decodedIds`. `activeStepId` only changes when `handleNextStep` explicitly advances it (by calling `findCurrentStep` itself, once, at the moment of navigating away — not on every render). A related off-by-one from the same first draft: the "is this the last step" check was `solvedIds.size + 1 >= totalSteps`, which is wrong because `solvedIds` **already includes** the step just answered by the time that code runs — the correct check is `solvedIds.size >= totalSteps`, with no `+ 1`. Watch for this exact mistake in any future step/word-index-like counter in this feature: always ask "does this collection already include the thing I just did, or not yet?" before writing a boundary condition against it.
+
 ## Rewards
 
 `COIN_PER_GUWEN_WORD` / `STAR_PER_GUWEN_WORD` per solved word (context or pattern, same rate), `GUWEN_TEXT_COMPLETE_BONUS_COINS/STARS` once on full completion — both live in `rewards.ts`, both flow through the existing app-wide `reward()` call, which still fires the standard `CelebrationOverlay` burst + credits the ledger exactly like every other feature. **Never hand-roll a second source of truth for the coin/star numbers themselves** — always call `reward()` to actually credit them.
@@ -238,7 +267,13 @@ Known Playwright gotcha in this feature specifically: `page.click('text=開始�
 
 ## Open / pending decisions (check with the user before assuming)
 
-As of this writing, for `wangRongText`:
+As of this writing, for `simaGuangLesson` (司馬光破甕救友, evidence-lesson format):
+- Full 18-step lesson implemented and verified end-to-end (all 4 step types, prerequisite gating, celebration, gated final verification) — done.
+- Whether `wangRongText` should eventually be migrated/rewritten into the evidence-lesson format, or left permanently on the word-puzzle format — **not decided; don't touch it without asking.** The user's own framing was "用第二篇文章來重新打磨我們的做法" (use the second text to refine our approach), which reads as starting fresh going forward, not as a mandate to retrofit the first text.
+- Whether a third text should default to the evidence-lesson format — this file's current guidance (see "Two coexisting content formats" above) is to default to it unless told otherwise, but that's this session's inference, not an explicit user decision — confirm if it matters.
+- The `local_inference`/`story_reasoning` step types were implemented with the exact same visual/interaction shape as `evidence` (just without a clues/keys panel) — the design-guwen-decoding contract doesn't specify a *different* look for these, so this was a reasonable default rather than a confirmed choice; revisit if the user wants them visually distinguished.
+
+As of this writing, for `wangRongText` (王戎不取道旁李, word-puzzle format):
 - 諸 → converted to `pattern` type, real 3-choice question (done)
 - 多子折枝 → added as a new 4-character phrase-level `GuwenWord` (`id: 'duozizhezhi'`), `pattern` type with 2 examples/2 options (done)
 - 嘗, 與, 遊, 走, 之, 唯, 曰, 而, 信然 → revised to the "scene comparison" explanation style (done)

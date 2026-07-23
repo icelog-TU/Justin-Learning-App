@@ -19,6 +19,7 @@ import ChainLinksDetailPage from './pages/ChainLinksDetailPage';
 import AssociationCharacterDetailPage from './pages/AssociationCharacterDetailPage';
 import GuwenHome from './pages/GuwenHome';
 import GuwenDecode from './pages/GuwenDecode';
+import GuwenLessonDecode from './pages/GuwenLessonDecode';
 import SettingsPage from './pages/SettingsPage';
 import { AppDataProvider } from './lib/AppDataContext';
 
@@ -36,6 +37,7 @@ export default function App() {
             <Route path="/idioms/association" element={<IdiomAssociationGame />} />
             <Route path="/guwen" element={<GuwenHome />} />
             <Route path="/guwen/:textId" element={<GuwenDecode />} />
+            <Route path="/guwen-lesson/:lessonId" element={<GuwenLessonDecode />} />
             <Route path="/confusables" element={<ConfusablesQuiz />} />
             <Route path="/gacha" element={<GachaPage />} />
             <Route path="/characters" element={<CharactersPage />} />
