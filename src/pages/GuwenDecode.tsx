@@ -232,26 +232,26 @@ export default function GuwenDecode() {
                 type="button"
                 onClick={() => setReviewWordId((cur) => (cur === w.id ? null : w.id))}
                 aria-label={`複習「${w.char}」`}
-                className={`w-9 h-9 flex items-center justify-center rounded-full font-bold text-sm border-2 ${
+                className={`min-w-9 h-9 px-2 flex items-center justify-center rounded-full font-bold text-sm border-2 ${
                   reviewWordId === w.id
                     ? 'bg-amber-400 border-amber-500 text-white'
                     : 'bg-amber-100 border-amber-400 text-amber-700 hover:bg-amber-200'
                 }`}
               >
-                {w.char[0]}
+                {w.char}
               </button>
             );
           }
           return (
             <span
               key={w.id}
-              className={`w-9 h-9 flex items-center justify-center rounded-full font-bold text-sm border-2 ${
+              className={`min-w-9 h-9 px-2 flex items-center justify-center rounded-full font-bold text-sm border-2 ${
                 isCurrent
                   ? 'bg-indigo-100 border-indigo-500 text-indigo-700'
                   : 'bg-gray-50 border-gray-200 text-gray-300'
               }`}
             >
-              {isCurrent ? w.char[0] : '🔒'}
+              {isCurrent ? w.char : '🔒'}
             </span>
           );
         })}
