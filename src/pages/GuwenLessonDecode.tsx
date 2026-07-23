@@ -16,6 +16,8 @@ import {
 } from '../lib/rewards';
 
 type Phase = 'intro' | 'listening' | 'steps' | 'complete';
+/** Which closing screen is showing. Not every lesson has all three (see closingStepsList below). */
+type ClosingStageKind = 'ordering' | 'causal' | 'multiselect';
 
 const INTRO_LINE = '小學者，我們要一起破譯這些古文字！';
 const INTRO_HINT = '上面發光的字，就是等一下要破解的古文句。按下按鈕，開始破譯吧！';
@@ -109,13 +111,17 @@ export default function GuwenLessonDecode() {
   // otherwise re-opening the lesson lands on phase 'steps' with no current step (findCurrentStep finds none
   // left) — none of the four phase branches match, and the page renders nothing but the back link.
   const allStepsSolved = Boolean(lesson) && lesson!.steps.length > 0 && solvedIds.size >= lesson!.steps.length;
-  // Some lessons (刻舟求劍) have a 3-screen closing sequence — event ordering, then a causal-chain summary,
-  // then an evidence multi-select — shown after every word/phrase step but before the final translation
-  // unlocks. Lessons without one (司馬光) get an empty list here, so `allClosingSolved` is vacuously true and
-  // behavior is unchanged from before this feature existed.
-  const closingStepsList = lesson?.closingSequence
-    ? [lesson.closingSequence.sequenceOrdering, lesson.closingSequence.causalChain, lesson.closingSequence.evidenceMultiSelect]
-    : [];
+  // Some lessons (刻舟求劍) have up to 3 closing screens — event ordering, then a causal-chain summary, then
+  // an evidence multi-select — shown after every word/phrase step but before the final translation unlocks.
+  // Each screen is its own independent, optional field on the lesson (王戎 only needs the multi-select), so
+  // this list is built by checking each field's presence individually, in that fixed order. Lessons with none
+  // (司馬光) get an empty list here, so `allClosingSolved` is vacuously true and behavior is unchanged from
+  // before this feature existed.
+  const closingStepsList: { kind: ClosingStageKind; id: string }[] = [
+    ...(lesson?.sequenceOrderingClosing ? [{ kind: 'ordering' as const, id: lesson.sequenceOrderingClosing.id }] : []),
+    ...(lesson?.causalChainClosing ? [{ kind: 'causal' as const, id: lesson.causalChainClosing.id }] : []),
+    ...(lesson?.evidenceMultiSelectClosing ? [{ kind: 'multiselect' as const, id: lesson.evidenceMultiSelectClosing.id }] : []),
+  ];
   const allClosingSolved = closingStepsList.every((c) => solvedIds.has(c.id));
   const readyForComplete = allStepsSolved && allClosingSolved;
   // A redo (this text has been fully completed at least once before, surviving any resets) still pays out,
@@ -169,24 +175,36 @@ export default function GuwenLessonDecode() {
   // — resumed once at mount from solvedIds, then advanced explicitly by each screen's own "continue" click —
   // for the same reason `activeStepId` above isn't derived live: reacting to solvedIds directly would jump
   // the screen the instant a correct answer lands, before the child sees the praise/explanation for it.
-  const [closingStage, setClosingStage] = useState<'ordering' | 'causal' | 'multiselect'>(() => {
-    if (!lesson?.closingSequence) return 'ordering';
-    if (!solvedIds.has(lesson.closingSequence.sequenceOrdering.id)) return 'ordering';
-    if (!solvedIds.has(lesson.closingSequence.causalChain.id)) return 'causal';
-    return 'multiselect';
+  const [closingStage, setClosingStage] = useState<ClosingStageKind>(() => {
+    const firstUnsolved = closingStepsList.find((c) => !solvedIds.has(c.id));
+    return firstUnsolved?.kind ?? 'multiselect';
   });
   const [orderingArrangement, setOrderingArrangement] = useState<string[]>(() =>
-    lesson?.closingSequence ? lesson.closingSequence.sequenceOrdering.cards.map((c) => c.id) : [],
+    lesson?.sequenceOrderingClosing ? lesson.sequenceOrderingClosing.cards.map((c) => c.id) : [],
   );
   const [orderingWrong, setOrderingWrong] = useState(false);
   const [orderingSolved, setOrderingSolved] = useState(() =>
-    Boolean(lesson?.closingSequence && solvedIds.has(lesson.closingSequence.sequenceOrdering.id)),
+    Boolean(lesson?.sequenceOrderingClosing && solvedIds.has(lesson.sequenceOrderingClosing.id)),
   );
   const [multiSelectChoice, setMultiSelectChoice] = useState<Set<number>>(new Set());
   const [multiSelectWrong, setMultiSelectWrong] = useState(false);
   const [multiSelectSolved, setMultiSelectSolved] = useState(() =>
-    Boolean(lesson?.closingSequence && solvedIds.has(lesson.closingSequence.evidenceMultiSelect.id)),
+    Boolean(lesson?.evidenceMultiSelectClosing && solvedIds.has(lesson.evidenceMultiSelectClosing.id)),
   );
+
+  /** Advances past `fromKind` to whichever closing screen (if any) comes next in this lesson's actual
+   * closingStepsList — not a hardcoded 'ordering'→'causal'→'multiselect' chain, since a lesson may only have
+   * a subset of the three (王戎 has just the multi-select). Falls through to completion when there's nothing
+   * left, so this same function works whether `fromKind` is the middle or the last screen present. */
+  function advanceClosingStage(fromKind: ClosingStageKind) {
+    const idx = closingStepsList.findIndex((c) => c.kind === fromKind);
+    const next = closingStepsList[idx + 1];
+    if (next) {
+      setClosingStage(next.kind);
+    } else {
+      handleFinishClosingSequence();
+    }
+  }
 
   function playFullSequence(fullText: string) {
     setIsPlaying(true);
@@ -539,7 +557,7 @@ export default function GuwenLessonDecode() {
     // forever, and the closing-sequence / complete-phase branches below (which key off `!currentStep`) would
     // never take over.
     setActiveStepId(undefined);
-    if (lesson?.closingSequence && !allClosingSolved) return; // hand off to the closing-sequence screens
+    if (closingStepsList.length > 0 && !allClosingSolved) return; // hand off to the closing-sequence screens
     completeGuwenText(lesson!.id);
     reward(completionCoinBonus, completionStarBonus, { big: true });
     setVerificationOpen(false);
@@ -558,7 +576,7 @@ export default function GuwenLessonDecode() {
   }
 
   function handleSubmitOrdering() {
-    const closing = lesson!.closingSequence!.sequenceOrdering;
+    const closing = lesson!.sequenceOrderingClosing!;
     const isCorrect =
       orderingArrangement.length === closing.correctOrder.length &&
       orderingArrangement.every((id, i) => id === closing.correctOrder[i]);
@@ -574,15 +592,15 @@ export default function GuwenLessonDecode() {
   }
 
   function handleContinueFromOrdering() {
-    setClosingStage('causal');
+    advanceClosingStage('ordering');
   }
 
   function handleContinueFromCausalChain() {
-    const closing = lesson!.closingSequence!.causalChain;
+    const closing = lesson!.causalChainClosing!;
     recordGuwenWord(lesson!.id, closing.id);
     reward(guwenCoinAmount, guwenStarAmount);
     playSuccessChime();
-    setClosingStage('multiselect');
+    advanceClosingStage('causal');
   }
 
   function toggleMultiSelectOption(i: number) {
@@ -597,7 +615,7 @@ export default function GuwenLessonDecode() {
   }
 
   function handleSubmitMultiSelect() {
-    const closing = lesson!.closingSequence!.evidenceMultiSelect;
+    const closing = lesson!.evidenceMultiSelectClosing!;
     const isCorrect = closing.options.every((opt, i) => opt.correct === multiSelectChoice.has(i));
     if (!isCorrect) {
       setMultiSelectWrong(true);
@@ -631,8 +649,8 @@ export default function GuwenLessonDecode() {
     setIsPaused(false);
     setVerificationOpen(false);
     setActiveStepId(lesson ? findCurrentStep(lesson, new Set())?.id : undefined);
-    setClosingStage('ordering');
-    setOrderingArrangement(lesson?.closingSequence ? lesson.closingSequence.sequenceOrdering.cards.map((c) => c.id) : []);
+    setClosingStage(closingStepsList[0]?.kind ?? 'ordering');
+    setOrderingArrangement(lesson?.sequenceOrderingClosing ? lesson.sequenceOrderingClosing.cards.map((c) => c.id) : []);
     setOrderingWrong(false);
     setOrderingSolved(false);
     setMultiSelectChoice(new Set());
@@ -737,7 +755,7 @@ export default function GuwenLessonDecode() {
   }
 
   function renderSequenceOrdering() {
-    const closing = lesson!.closingSequence!.sequenceOrdering;
+    const closing = lesson!.sequenceOrderingClosing!;
     const cardsInOrder = orderingArrangement
       .map((id) => closing.cards.find((c) => c.id === id))
       .filter((c): c is SequenceCard => Boolean(c));
@@ -802,7 +820,7 @@ export default function GuwenLessonDecode() {
   }
 
   function renderCausalChain() {
-    const closing = lesson!.closingSequence!.causalChain;
+    const closing = lesson!.causalChainClosing!;
     return (
       <div className="bg-white rounded-2xl shadow p-5 space-y-4">
         <h3 className="font-bold text-gray-800">{closing.title}</h3>
@@ -831,7 +849,7 @@ export default function GuwenLessonDecode() {
   }
 
   function renderEvidenceMultiSelect() {
-    const closing = lesson!.closingSequence!.evidenceMultiSelect;
+    const closing = lesson!.evidenceMultiSelectClosing!;
     return (
       <div className="bg-white rounded-2xl shadow p-5 space-y-4">
         <h3 className="font-bold text-gray-800">{closing.title}</h3>
@@ -890,7 +908,7 @@ export default function GuwenLessonDecode() {
   }
 
   function renderClosingSequence() {
-    if (!lesson?.closingSequence) return null;
+    if (closingStepsList.length === 0) return null;
     if (closingStage === 'ordering') return renderSequenceOrdering();
     if (closingStage === 'causal') return renderCausalChain();
     return renderEvidenceMultiSelect();
@@ -1106,8 +1124,8 @@ export default function GuwenLessonDecode() {
               >
                 {solvedIds.size < totalSteps
                   ? '下一道密碼 →'
-                  : lesson.closingSequence
-                    ? '繼續 → 最後三關'
+                  : closingStepsList.length > 0
+                    ? '繼續 → 最後關卡'
                     : '🎉 完成！看看整篇文章'}
               </button>
             )}
@@ -1119,7 +1137,7 @@ export default function GuwenLessonDecode() {
           never on `allClosingSolved` — that flips true the instant the multi-select's own recordGuwenWord
           call lands, which would otherwise yank this whole block away (including the multi-select's own
           correct-feedback screen) before the child ever saw it or clicked "開啟白話驗證卷軸" themselves. */}
-      {phase === 'steps' && !currentStep && allStepsSolved && lesson.closingSequence && (
+      {phase === 'steps' && !currentStep && allStepsSolved && closingStepsList.length > 0 && (
         <div className="space-y-4">
           {renderPassage()}
           {renderClosingSequence()}

@@ -154,12 +154,6 @@ export interface EvidenceMultiSelectClosing {
   finalNote: string;
 }
 
-export interface ClosingSequence {
-  sequenceOrdering: SequenceOrderingClosing;
-  causalChain: CausalChainClosing;
-  evidenceMultiSelect: EvidenceMultiSelectClosing;
-}
-
 export interface ComparisonRow {
   decodedEvidence: string;
   vernacularExpression: string;
@@ -186,9 +180,14 @@ export interface GuwenLesson {
   /** fullText split into individually-readable sentences (concatenating these reproduces fullText exactly). */
   sentences: string[];
   steps: LessonStep[];
-  /** Optional whole-lesson wrap-up screens shown after every step is solved, before the final translation
-   * unlocks — event-sequencing, then a causal-chain summary, then an evidence-boundary multi-select. */
-  closingSequence?: ClosingSequence;
+  /** Optional whole-lesson wrap-up screens shown (in this fixed order — whichever are present) after every
+   * step is solved, before the final translation unlocks. Independent and each individually optional — not
+   * every lesson needs all three. 刻舟求劍 uses all three (event-sequencing, then a causal-chain summary,
+   * then an evidence-boundary multi-select); 王戎不取道旁李 uses only the multi-select, since its causal-chain
+   * reasoning is already a regular scored `story_reasoning` step and it has no card-reordering task. */
+  sequenceOrderingClosing?: SequenceOrderingClosing;
+  causalChainClosing?: CausalChainClosing;
+  evidenceMultiSelectClosing?: EvidenceMultiSelectClosing;
   finalVerification: FinalVerification;
 }
 
@@ -1307,8 +1306,7 @@ export const keZhouQiuJianLesson: GuwenLesson = {
       finalDraftLine: '像這樣尋找劍，不是很糊塗嗎？',
     },
   ],
-  closingSequence: {
-    sequenceOrdering: {
+  sequenceOrderingClosing: {
       id: 'closing_sequence_order',
       title: '最後一關：把破解畫面排回故事',
       intro: '所有古文密碼都破解了，但五張故事畫面被打亂了。請依照古文發生的順序，把它們重新排好。',
@@ -1322,8 +1320,8 @@ export const keZhouQiuJianLesson: GuwenLesson = {
       correctOrder: ['B', 'D', 'E', 'A', 'C'],
       correctFeedback: '全文破解成功！你已經把五個畫面依照古文順序接回去了。',
       retryHint: '先找故事的起點：劍是在刻記號以前掉進水裡，還是在刻記號以後？',
-    },
-    causalChain: {
+  },
+  causalChainClosing: {
       id: 'closing_causal_chain',
       title: '破譯完成：這個方法為什麼出了問題？',
       displayNote: '這一段是全文理解摘要，不需作答。',
@@ -1340,8 +1338,8 @@ export const keZhouQiuJianLesson: GuwenLesson = {
       evidenceBoundary:
         '原文寫到楚人「入水求之」，沒有直接交代他最後有沒有找到劍。因此，摘要只說船上的記號已經不能指出原來落劍的位置，不把「他最後沒有找到劍」寫成古文明確交代的結果。',
       continueButtonLabel: '開始證據判讀',
-    },
-    evidenceMultiSelect: {
+  },
+  evidenceMultiSelectClosing: {
       id: 'closing_evidence_multiselect',
       title: '最後一關：哪些真的寫在古文裡？',
       intro:
@@ -1363,7 +1361,6 @@ export const keZhouQiuJianLesson: GuwenLesson = {
         '證據判讀成功！前四件事都能在古文中找到明確證據。後三件事雖然可能聽起來合理，卻是讀者補出的想法，古文沒有明說。你已經能分清楚：「古文告訴我們的事」和「我們根據故事作出的推測」。',
       retryHint: '還有選項沒有判斷準確。再問自己一次：這件事能不能在古文中找到直接對應的句子？如果只是「可能如此」，卻找不到原句，就不能打勾。',
       finalNote: '我們可以根據故事提出推測；但是當我們說「古文告訴我們」時，必須能在原文中找到證據。',
-    },
   },
   finalVerification: {
     prerequisiteStepIds: [
