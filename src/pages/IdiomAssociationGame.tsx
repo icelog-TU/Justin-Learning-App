@@ -12,6 +12,7 @@ import {
   findByWord,
   maskHint,
   pickRandomCharacter,
+  buildCharZhuyinMap,
   qualityLevel,
   type ChainEntry,
   type MoeRawEntry,
@@ -81,7 +82,7 @@ function PositionDisplay({ position, char }: { position: IdiomPosition; char: st
 }
 
 export default function IdiomAssociationGame() {
-  const { reward, data, toggleBookmark, recordAssociationCrack } = useAppDataContext();
+  const { reward, data, toggleBookmark, recordAssociationCrack, addCustomIdiom } = useAppDataContext();
   const [pool, setPool] = useState<ChainEntry[]>(() => [...buildCuratedPool(), ...buildCustomPool([])]);
   const [extraLoaded, setExtraLoaded] = useState(false);
 
@@ -93,6 +94,11 @@ export default function IdiomAssociationGame() {
   const [roundComplete, setRoundComplete] = useState(false);
   const [showCelebration, setShowCelebration] = useState(false);
   const [celebrationSummary, setCelebrationSummary] = useState({ coins: 0, stars: 0 });
+  const [customCharOpen, setCustomCharOpen] = useState(false);
+  const [customCharInput, setCustomCharInput] = useState('');
+  const [customCharError, setCustomCharError] = useState('');
+  const [addCandidate, setAddCandidate] = useState<{ position: IdiomPosition; word: string } | null>(null);
+  const [newMeaning, setNewMeaning] = useState('');
 
   const [hintModal, setHintModal] = useState<{
     position: IdiomPosition;
@@ -177,6 +183,18 @@ export default function IdiomAssociationGame() {
     return next;
   }
 
+  /** Lands the slot machine on a specific character — shared by the random spin's landing tick and by
+   * picking a custom challenge character, so both paths get the same ding/speech/row-detection treatment. */
+  function settleOnCharacter(char: string, zhuyin: string) {
+    setReelChar(char);
+    setTargetChar(char);
+    setTargetZhuyin(zhuyin);
+    setRows(detectNoAnswerRows(char, zhuyin, pool));
+    setSpinning(false);
+    playSlotDingSound();
+    window.setTimeout(() => speak(char), 250);
+  }
+
   function handleSpin() {
     if (spinning || pool.length === 0) return;
     setSpinning(true);
@@ -186,6 +204,8 @@ export default function IdiomAssociationGame() {
     setHintModal(null);
     setTargetChar('');
     setRows(emptyRows());
+    setAddCandidate(null);
+    setNewMeaning('');
     playSlotSpinSound();
 
     const reelChars = pool.map((e) => e.firstChar).filter(Boolean);
@@ -198,15 +218,32 @@ export default function IdiomAssociationGame() {
         const landed = pickRandomCharacter(pool);
         const char = landed?.char ?? reelChars[0] ?? '人';
         const zhuyin = landed?.zhuyin ?? '';
-        setReelChar(char);
-        setTargetChar(char);
-        setTargetZhuyin(zhuyin);
-        setRows(detectNoAnswerRows(char, zhuyin, pool));
-        setSpinning(false);
-        playSlotDingSound();
-        window.setTimeout(() => speak(char), 250);
+        settleOnCharacter(char, zhuyin);
       }
     }, 110);
+  }
+
+  function handleUseCustomChallenge() {
+    const char = customCharInput.trim()[0];
+    if (!char) return;
+    const zhuyin = buildCharZhuyinMap(pool)[char] ?? '';
+    const hasAnyPosition = POSITIONS.some((p) => findCandidatesAtPosition(pool, p, char, zhuyin, new Set()).length > 0);
+    if (!hasAnyPosition) {
+      setCustomCharError(`還沒有成語用得到「${char}」這個字，換一個字試試看？`);
+      return;
+    }
+    if (spinTimerRef.current) window.clearInterval(spinTimerRef.current);
+    setSpinning(false);
+    setRoundComplete(false);
+    setShowCelebration(false);
+    hintHistoryActiveRef.current = false;
+    setHintModal(null);
+    setAddCandidate(null);
+    setNewMeaning('');
+    settleOnCharacter(char, zhuyin);
+    setCustomCharOpen(false);
+    setCustomCharInput('');
+    setCustomCharError('');
   }
 
   function updateRow(position: IdiomPosition, patch: Partial<RowState>) {
@@ -268,9 +305,12 @@ export default function IdiomAssociationGame() {
 
     const entry = findByWord(pool, raw);
     if (!entry) {
+      const canAdd = raw.length === 4 && raw[position - 1] === targetChar;
       updateRow(position, { feedback: { type: 'error', message: '這個成語我們的題庫裡還沒有喔，換一個試試看？' } });
+      setAddCandidate(canAdd ? { position, word: raw } : null);
       return;
     }
+    setAddCandidate(null);
     if (!matchesTargetAtPosition(entry, position, targetChar, targetZhuyin)) {
       updateRow(position, {
         feedback: {
@@ -291,6 +331,28 @@ export default function IdiomAssociationGame() {
     setRows(next);
     checkRoundComplete(next);
     closeHintModal();
+  }
+
+  function handleAddCustomIdiom() {
+    if (!addCandidate) return;
+    const { position, word } = addCandidate;
+    const charMap = buildCharZhuyinMap(pool);
+    const firstChar = word[0];
+    const lastChar = word[word.length - 1];
+    const newEntry = {
+      word,
+      meaning: newMeaning.trim(),
+      firstChar,
+      firstZhuyin: position === 1 ? targetZhuyin : (charMap[firstChar] ?? ''),
+      lastChar,
+      lastZhuyin: position === 4 ? targetZhuyin : (charMap[lastChar] ?? ''),
+      addedAt: new Date().toISOString(),
+    };
+    addCustomIdiom(newEntry);
+    setPool((prev) => [...prev, ...buildCustomPool([newEntry])]);
+    setAddCandidate(null);
+    setNewMeaning('');
+    updateRow(position, { input: word, feedback: null });
   }
 
   function openHint(position: IdiomPosition, quality = true) {
@@ -388,6 +450,49 @@ export default function IdiomAssociationGame() {
           {spinning ? '轉動中...🎰' : targetChar ? '🎰 再轉一次' : '🎰 拉霸開始！'}
         </button>
 
+        <div>
+          <button
+            type="button"
+            onClick={() => {
+              setCustomCharOpen((cur) => !cur);
+              setCustomCharError('');
+            }}
+            disabled={spinning}
+            className="text-sm text-violet-600 underline disabled:text-gray-300"
+          >
+            🎯 自選挑戰字
+          </button>
+        </div>
+
+        {customCharOpen && (
+          <div className="space-y-1.5 max-w-xs mx-auto">
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={customCharInput}
+                onChange={(e) => {
+                  setCustomCharInput(e.target.value);
+                  setCustomCharError('');
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleUseCustomChallenge();
+                }}
+                placeholder="輸入一個字，例如：山"
+                maxLength={4}
+                className="flex-1 rounded-full border-2 border-gray-200 px-4 py-2 text-sm focus:border-violet-400 focus:outline-none"
+              />
+              <button
+                type="button"
+                onClick={handleUseCustomChallenge}
+                className="bg-violet-500 hover:bg-violet-600 text-white rounded-full px-4 py-2 text-sm font-medium"
+              >
+                挑戰
+              </button>
+            </div>
+            {customCharError && <p className="text-xs text-red-500 px-2">{customCharError}</p>}
+          </div>
+        )}
+
         {targetChar && !spinning && (
           <button
             type="button"
@@ -479,6 +584,38 @@ export default function IdiomAssociationGame() {
                       >
                         {row.feedback.message}
                       </p>
+                    )}
+
+                    {addCandidate?.position === position && (
+                      <div className="bg-amber-50 rounded-xl p-4 text-left space-y-2">
+                        <p className="text-sm text-gray-700">
+                          要把「<span className="font-bold text-amber-700">{addCandidate.word}</span>」加進你的題庫嗎？
+                        </p>
+                        <input
+                          type="text"
+                          value={newMeaning}
+                          onChange={(e) => setNewMeaning(e.target.value)}
+                          placeholder="這個成語的意思（可以留空）"
+                          className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-300"
+                        />
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={handleAddCustomIdiom}
+                            className="flex-1 bg-amber-500 text-white rounded-full py-2 text-sm font-medium hover:bg-amber-600"
+                          >
+                            ➕ 新增到題庫
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setAddCandidate(null)}
+                            className="flex-1 bg-gray-100 text-gray-600 rounded-full py-2 text-sm font-medium hover:bg-gray-200"
+                          >
+                            取消
+                          </button>
+                        </div>
+                        <p className="text-[11px] text-gray-400">新增的成語會存進你的題庫，也會自動備份到雲端，換手機或電腦也看得到。</p>
+                      </div>
                     )}
 
                     <div className="flex gap-2">

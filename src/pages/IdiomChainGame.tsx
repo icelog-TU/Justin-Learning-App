@@ -74,15 +74,21 @@ export default function IdiomChainGame() {
   const [newMeaning, setNewMeaning] = useState('');
   const [listening, setListening] = useState(false);
   const recognitionRef = useRef<MinimalSpeechRecognition | null>(null);
+  const [customStartOpen, setCustomStartOpen] = useState(false);
+  const [customStartInput, setCustomStartInput] = useState('');
+  const [customStartError, setCustomStartError] = useState('');
   const speechSupported = getSpeechRecognitionCtor() !== null;
 
   const chainHistoryRef = useRef(chainHistory);
   chainHistoryRef.current = chainHistory;
 
-  function startNewChain(fromPool: ChainEntry[]) {
-    const start = pickRandomStart(fromPool);
-    setTargetChar(start.firstChar);
-    setTargetZhuyin(start.firstZhuyin);
+  /** `forcedStart` lets the child pick their own opening character (see handleUseCustomStart) instead of
+   * the usual random pick — everything else about starting a fresh round is identical either way. */
+  function startNewChain(fromPool: ChainEntry[], forcedStart?: { char: string; zhuyin: string }) {
+    const randomEntry = pickRandomStart(fromPool);
+    const start = forcedStart ?? { char: randomEntry.firstChar, zhuyin: randomEntry.firstZhuyin };
+    setTargetChar(start.char);
+    setTargetZhuyin(start.zhuyin);
     setChainHistory([]);
     setUsedIds(new Set());
     setInputValue('');
@@ -158,6 +164,24 @@ export default function IdiomChainGame() {
       recordChainRound(chainHistory.map((entry) => entry.word));
     }
     startNewChain(pool);
+  }
+
+  function handleUseCustomStart() {
+    const char = customStartInput.trim()[0];
+    if (!char) return;
+    const zhuyin = buildCharZhuyinMap(pool)[char] ?? '';
+    if (findCandidates(pool, new Set(), char, zhuyin).length === 0) {
+      setCustomStartError(`還沒有成語是用「${char}」開頭的，換一個字試試看？`);
+      return;
+    }
+    if (chainHistory.length > 0) {
+      reportChainLength(chainHistory.length);
+      recordChainRound(chainHistory.map((entry) => entry.word));
+    }
+    startNewChain(pool, { char, zhuyin });
+    setCustomStartOpen(false);
+    setCustomStartInput('');
+    setCustomStartError('');
   }
 
   function handleSubmit() {
@@ -411,7 +435,7 @@ export default function IdiomChainGame() {
                 取消
               </button>
             </div>
-            <p className="text-[11px] text-gray-400">新增的成語只會存在這台裝置上，不會同步到別的手機或電腦。</p>
+            <p className="text-[11px] text-gray-400">新增的成語會存進你的題庫，也會自動備份到雲端，換手機或電腦也看得到。</p>
           </div>
         )}
 
@@ -470,7 +494,46 @@ export default function IdiomChainGame() {
           >
             🔄 換新的開頭字
           </button>
+          <button
+            type="button"
+            onClick={() => {
+              setCustomStartOpen((cur) => !cur);
+              setCustomStartError('');
+            }}
+            className="flex-1 bg-gray-100 text-gray-600 rounded-full py-2 text-sm font-medium hover:bg-gray-200"
+          >
+            🎯 自選開頭字
+          </button>
         </div>
+
+        {customStartOpen && (
+          <div className="space-y-1.5">
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={customStartInput}
+                onChange={(e) => {
+                  setCustomStartInput(e.target.value);
+                  setCustomStartError('');
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleUseCustomStart();
+                }}
+                placeholder="輸入一個字，例如：山"
+                maxLength={4}
+                className="flex-1 rounded-full border-2 border-gray-200 px-4 py-2 text-sm focus:border-teal-400 focus:outline-none"
+              />
+              <button
+                type="button"
+                onClick={handleUseCustomStart}
+                className="bg-teal-500 hover:bg-teal-600 text-white rounded-full px-4 py-2 text-sm font-medium"
+              >
+                開始
+              </button>
+            </div>
+            {customStartError && <p className="text-xs text-red-500 px-2">{customStartError}</p>}
+          </div>
+        )}
 
         {hintEntries.length > 0 && (
           <div className="space-y-2">
