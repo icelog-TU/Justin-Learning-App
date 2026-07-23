@@ -75,7 +75,7 @@ This is the core loop, one word at a time (`wordIndex` state), advancing via "�
 
 **Must be pausable.** The target-sentence "🔊 聽這句話" button and the prompt's inline 🔊 icon both drive the *same* shared toggle (id `` `puzzle-${word.id}` ``, via the generic `togglePlayback`/`playbackLabel` helpers — see "Shared pause-capable playback" below), so either one flips between 🔊/⏸/▶️ in sync and either one can pause the auto-play or resume it.
 
-**The corpus options (or pattern examples) are never part of the auto-play.** They're always individually tap-to-listen only — the auto-play covers "what is this puzzle asking," never the candidate answers themselves. Don't ever queue them into the entry auto-play sequence, no matter how tempting it is to "just read the whole card."
+**`context`'s corpus options are never part of the auto-play** — they're individually tap-to-listen only, since they're the candidate *answers* the child is choosing between. **`pattern`'s examples are the opposite: they're evidence, not answers, so they ARE part of the auto-play** (see Puzzle types below) — only `patternOptions` (the actual multiple-choice answers) stay tap-to-listen-only, matching `context`'s corpus options.
 
 Layout, top to bottom:
 1. Passage (`renderPassage(currentWord.id)`) — current word pulses faster/brighter than not-yet-reached ones, solved ones are solid amber
@@ -95,11 +95,12 @@ A word is **not** automatically a 3-choice comparison. Pick the type based on wh
 
 Use this when: real corpus sentences that use the character in 2-3 genuinely distinguishable senses actually exist and read naturally in modern Chinese.
 
-**`'pattern'`** — the word doesn't decompose into discrete senses; it's a grammatical/positional habit that has to be felt out from repetition, not chosen between. Forcing a 3-choice "which is closest" question here is dishonest — all 3 corpus sentences would use it the same way, and the child is left guessing which one the answer key considers "closest" for no real reason. Fields: `patternPrompt: string`, `patternExamples: string[]` (typically 3).
-- Rendered as: the prompt (own 🔊), then each example as a **read-only** row (own 🔊, no click-to-select, no right/wrong styling) — then a single "💡 我發現規律了，看看對不對 →" button that immediately solves the word (`handlePatternReveal` → same `markWordSolved` path as a correct context pick) and reveals the explanation.
-- This is a "notice the pattern yourself" exercise, not a quiz — there is no wrong answer to click.
+**`'pattern'`** — the word doesn't decompose into discrete senses; it's a grammatical/positional habit that has to be felt out from repetition, not chosen between. Forcing a 3-choice "which is closest" question here is dishonest — all 3 corpus sentences would use it the same way, and the child is left guessing which one the answer key considers "closest" for no real reason. But this must still be a **real quiz with a real wrong answer**, not a passive "read then click reveal" — an earlier version used a single "💡 我發現規律了，看看對不對 →" reveal button, and the user correctly called this out as not actually testing anything (a reveal button just shows the answer on demand, no reasoning required). Fields: `patternPrompt: string`, `patternExamples: string[]` (typically 3), `patternQuestion: string`, `patternOptions: string[]` (exactly 3), `patternCorrectIndex`.
+- The `patternExamples` are **part of the auto-play sequence now** (unlike `context`'s `corpus`, which is never auto-played) — the whole point is the child hears all 3 examples read aloud back-to-back before being asked to generalize, so the auto-play for a `pattern` puzzle is: `targetSentence → patternPrompt → example 1 → example 2 → example 3 → patternQuestion`, all one `speakSequence` (see `puzzleAutoPlayLines()` in `GuwenDecode.tsx`).
+- Rendered top to bottom: prompt (own 🔊) → each example as a **read-only** row (own 🔊, no click-to-select — these are evidence, not choices) → `patternQuestion` (own 🔊) → then `patternOptions` as 3 **clickable** option rows, visually and behaviorally identical to `context`'s corpus options (`role="button"` divs, red highlight + non-timed hint on wrong pick via `handlePatternSelect`, green highlight + reward + explanation on correct pick, per-option nested 🔊 button with `stopPropagation`).
+- The correct option states the real grammatical pattern (e.g. "「諸」後面接的都是人或事物的名稱，「諸」本身沒有特別意思，只是表示後面的東西不只一個"). The 2 wrong options must each be a **plausible-sounding overgeneralization**, not nonsense — and each must be refutable by checking it against all 3 examples together, not just one. E.g. for 諸: "後面接的都是很多人組成的團體" sounds right if you only look at 諸位老師/諸國, but breaks on 諸小兒 (a handful of kids isn't really "a group/institution"); "後面接的東西一定要用敬語稱呼" also breaks on 諸小兒 (kids aren't an honorific-requiring referent). The explanation must name this exact refutation, not just assert the right answer.
 
-**Real example this fixed:** 諸's original `context` puzzle used 諸位/諸如/諸事 as the three options — all three are just "諸 = many/each," so "which is closest" was unanswerable-but-for-guessing. Converted to `pattern`: 諸位老師/諸國/諸小兒 as three examples, prompt asks what's common about what follows 諸, explanation confirms "it just means 不只一個" regardless of what noun follows. **When authoring a new word, if you notice your 3 "distractor" corpus meanings are actually all the same meaning, that's the signal to switch to `pattern`, not to force better distractors.**
+**Real example this fixed (two rounds):** 諸's original `context` puzzle used 諸位/諸如/諸事 as three options that were all just "諸 = many/each," making "which is closest" unanswerable-but-for-guessing — that was the first fix, converting to `pattern`. But `pattern`'s first implementation was a passive reveal button, which the user then also rejected as not being a real question. The final design (above) keeps the "read 3 examples, generalize the rule" structure but turns the generalization itself into a 3-choice question with reasoned distractors. **When authoring a new word: if your 3 "distractor" corpus meanings are actually all the same meaning, switch to `pattern` — but never implement `pattern` as a reveal-only interaction; it must always end in a real multiple-choice question about the pattern.**
 
 A third puzzle type discussed but **not yet built**: a "pronoun-tracking" type for words like 之/其 that asks "who does this refer to?" per occurrence rather than "what does this mean?" — the current `occurrences` comparison block (below) covers some of this need in a lighter, reveal-after-solving form. Build the dedicated interactive version only if asked; don't invent it speculatively.
 
@@ -134,13 +135,14 @@ One generic mechanism used everywhere a *longer* piece of text needs a stop cont
 const [playbackId, setPlaybackId] = useState<string | null>(null);
 const [playbackPaused, setPlaybackPaused] = useState(false);
 
-function togglePlayback(id: string, content: string) {
+function togglePlayback(id: string, content: string | string[]) {
   if (playbackId === id) {
     playbackPaused ? (resumeSpeech(), setPlaybackPaused(false)) : (pauseSpeech(), setPlaybackPaused(true));
   } else {
     setPlaybackId(id);
     setPlaybackPaused(false);
-    speak(content, () => setPlaybackId((cur) => (cur === id ? null : cur)));
+    const onDone = () => setPlaybackId((cur) => (cur === id ? null : cur));
+    Array.isArray(content) ? speakSequence(content, onDone) : speak(content, onDone);
   }
 }
 function playbackLabel(id, idleLabel, playingLabel, pausedLabel) {
@@ -148,7 +150,9 @@ function playbackLabel(id, idleLabel, playingLabel, pausedLabel) {
 }
 ```
 
-Rule of thumb for what needs this vs. a plain one-shot `speak()`: if it's more than ~1 short sentence, or it's something that auto-plays without the user asking, it needs pause. A single corpus option or a single occurrence sentence doesn't (clicking any other 🔊 button just cancels-and-restarts via `speak()`'s own `cancel()` call, which is enough).
+Rule of thumb for what needs this vs. a plain one-shot `speak()`: if it's more than ~1 short sentence, or it's something that auto-plays without the user asking, it needs pause. A single corpus option, a single pattern example, a single pattern option, or a single occurrence sentence doesn't (clicking any other 🔊 button just cancels-and-restarts via `speak()`'s own `cancel()` call, which is enough).
+
+`togglePlayback` accepts `content: string | string[]` — pass an array (e.g. `puzzleAutoPlayLines(word)`) when the pause-capable content is actually several lines that must play in strict order (a `pattern` puzzle's target+prompt+examples+question); it internally routes to `speakSequence` instead of `speak`. This is how the same one toggle mechanism covers both a single explanation paragraph and a 6-line puzzle narration — don't build a second toggle function for the sequence case.
 
 For queueing multiple *separate* lines back-to-back where each must fully finish before the next starts (page-entry narration), use `speakSequence(lines, onDone)` instead — it queues real separate utterances so the browser (not a guessed timer) decides when one ends and the next begins.
 

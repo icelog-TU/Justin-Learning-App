@@ -23,10 +23,26 @@ function introParagraph(text: GuwenText): string {
   return `這篇文章裡，很多字看起來像你平常認識的漢字，對不對？但其實裡面藏了 ${text.words.length} 個「古文字」——它們的意思，跟現在完全不一樣！`;
 }
 
-/** The spoken question for a word's puzzle — differs by puzzleType, shared by the auto-play effect and the manual replay buttons. */
-function puzzlePromptText(word: GuwenWord): string {
-  if (word.puzzleType === 'pattern') return word.patternPrompt ?? '';
-  return `「${word.char}」在這句話裡是什麼意思？比比看，下面哪一句語料的用法跟它最接近？`;
+const CONTEXT_PROMPT_TEXT = (word: GuwenWord) =>
+  `「${word.char}」在這句話裡是什麼意思？比比看，下面哪一句語料的用法跟它最接近？`;
+
+/**
+ * The full auto-play script for a word's puzzle, as separate lines (queued with speakSequence so each
+ * one fully finishes before the next starts). Differs by puzzleType:
+ * - 'context': target sentence, then the comparison question.
+ * - 'pattern': target sentence, the opening prompt, every example in order, then the closing question —
+ *   the examples are part of the auto-play here (unlike 'context' corpus options, which are never
+ *   auto-played and stay tap-to-listen only), because the child needs to hear all of them before the
+ *   pattern-recognition question makes sense.
+ * Shared by the auto-play effect and every manual replay button for this puzzle, so they never drift apart.
+ */
+function puzzleAutoPlayLines(word: GuwenWord): string[] {
+  if (word.puzzleType === 'pattern') {
+    return [word.targetSentence, word.patternPrompt ?? '', ...(word.patternExamples ?? []), word.patternQuestion ?? ''].filter(
+      Boolean,
+    );
+  }
+  return [word.targetSentence, CONTEXT_PROMPT_TEXT(word)];
 }
 
 /** Splits `sentence` on every occurrence of `char`, highlighting each match — used for both the target
@@ -107,7 +123,7 @@ export default function GuwenDecode() {
     speak(sentence);
   }
 
-  function togglePlayback(id: string, content: string) {
+  function togglePlayback(id: string, content: string | string[]) {
     if (playbackId === id) {
       if (playbackPaused) {
         resumeSpeech();
@@ -119,7 +135,12 @@ export default function GuwenDecode() {
     } else {
       setPlaybackId(id);
       setPlaybackPaused(false);
-      speak(content, () => setPlaybackId((cur) => (cur === id ? null : cur)));
+      const onDone = () => setPlaybackId((cur) => (cur === id ? null : cur));
+      if (Array.isArray(content)) {
+        speakSequence(content, onDone);
+      } else {
+        speak(content, onDone);
+      }
     }
   }
 
@@ -172,7 +193,7 @@ export default function GuwenDecode() {
     const id = `puzzle-${word.id}`;
     setPlaybackId(id);
     setPlaybackPaused(false);
-    speak(`${word.targetSentence}${puzzlePromptText(word)}`, () => setPlaybackId((cur) => (cur === id ? null : cur)));
+    speakSequence(puzzleAutoPlayLines(word), () => setPlaybackId((cur) => (cur === id ? null : cur)));
     return () => {
       cancelSpeech();
       setPlaybackId((cur) => (cur === id ? null : cur));
@@ -278,6 +299,29 @@ export default function GuwenDecode() {
                 <p className="text-gray-800 flex-1">{highlightChar(ex, reviewWord.char)}</p>
               </div>
             ))}
+            <p className="text-sm text-gray-600 font-semibold pt-1">{reviewWord.patternQuestion}</p>
+            {reviewWord.patternOptions?.map((opt, i) => {
+              const isAnswer = i === reviewWord.patternCorrectIndex;
+              return (
+                <div
+                  key={i}
+                  className={`w-full text-left rounded-xl border-2 px-4 py-3 flex items-start gap-2 ${
+                    isAnswer ? 'bg-emerald-50 border-emerald-400' : 'bg-gray-50 border-gray-200'
+                  }`}
+                >
+                  <button
+                    type="button"
+                    onClick={() => speak(opt)}
+                    aria-label="聽這個選項"
+                    className="text-sky-500 shrink-0"
+                  >
+                    🔊
+                  </button>
+                  <p className="text-gray-800 flex-1">{opt}</p>
+                  {isAnswer && <span className="text-emerald-600 text-xs font-bold shrink-0">✓ 正解</span>}
+                </div>
+              );
+            })}
           </div>
         ) : (
           <div className="space-y-2">
@@ -418,9 +462,14 @@ export default function GuwenDecode() {
     }
   }
 
-  function handlePatternReveal() {
+  function handlePatternSelect(index: number) {
     if (!currentWord || feedback === 'correct') return;
-    markWordSolved(currentWord);
+    setWrongIndex(null);
+    if (index === currentWord.patternCorrectIndex) {
+      markWordSolved(currentWord);
+    } else {
+      setWrongIndex(index);
+    }
   }
 
   function handleNextWord() {
@@ -600,9 +649,7 @@ export default function GuwenDecode() {
               </p>
               <button
                 type="button"
-                onClick={() =>
-                  togglePlayback(`puzzle-${currentWord.id}`, `${currentWord.targetSentence}${puzzlePromptText(currentWord)}`)
-                }
+                onClick={() => togglePlayback(`puzzle-${currentWord.id}`, puzzleAutoPlayLines(currentWord))}
                 className="text-xs text-sky-600"
               >
                 {playbackLabel(`puzzle-${currentWord.id}`, '🔊 聽這句話', '⏸ 暫停朗讀', '▶️ 繼續朗讀')}
@@ -615,12 +662,7 @@ export default function GuwenDecode() {
                   <p className="text-sm text-center text-gray-600">{currentWord.patternPrompt}</p>
                   <button
                     type="button"
-                    onClick={() =>
-                      togglePlayback(
-                        `puzzle-${currentWord.id}`,
-                        `${currentWord.targetSentence}${puzzlePromptText(currentWord)}`,
-                      )
-                    }
+                    onClick={() => togglePlayback(`puzzle-${currentWord.id}`, puzzleAutoPlayLines(currentWord))}
                     aria-label="聽這段說明"
                     className="text-sky-500 shrink-0 mt-0.5"
                   >
@@ -647,15 +689,60 @@ export default function GuwenDecode() {
                   ))}
                 </div>
 
-                {feedback !== 'correct' && (
+                <div className="flex items-start justify-center gap-2">
+                  <p className="text-sm text-center text-gray-600 font-semibold">{currentWord.patternQuestion}</p>
                   <button
                     type="button"
-                    onClick={handlePatternReveal}
-                    className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl py-2.5"
+                    onClick={() => currentWord.patternQuestion && speak(currentWord.patternQuestion)}
+                    aria-label="聽這段說明"
+                    className="text-sky-500 shrink-0 mt-0.5"
                   >
-                    💡 我發現規律了，看看對不對 →
+                    🔊
                   </button>
-                )}
+                </div>
+
+                <div className="space-y-2">
+                  {currentWord.patternOptions?.map((opt, i) => {
+                    const isWrong = wrongIndex === i;
+                    const isCorrectPick = feedback === 'correct' && i === currentWord.patternCorrectIndex;
+                    return (
+                      <div
+                        key={i}
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => handlePatternSelect(i)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            handlePatternSelect(i);
+                          }
+                        }}
+                        className={`w-full text-left rounded-xl border-2 px-4 py-3 transition-colors flex items-start gap-2 ${
+                          feedback === 'correct' ? 'cursor-default' : 'cursor-pointer'
+                        } ${
+                          isCorrectPick
+                            ? 'bg-emerald-50 border-emerald-400'
+                            : isWrong
+                              ? 'bg-red-50 border-red-300'
+                              : 'bg-gray-50 border-gray-200 hover:border-indigo-300'
+                        }`}
+                      >
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            speak(opt);
+                          }}
+                          aria-label="聽這個選項"
+                          className="text-sky-500 shrink-0"
+                        >
+                          🔊
+                        </button>
+                        <p className="text-gray-800">{opt}</p>
+                      </div>
+                    );
+                  })}
+                </div>
               </>
             ) : (
               <>
@@ -666,12 +753,7 @@ export default function GuwenDecode() {
                   </p>
                   <button
                     type="button"
-                    onClick={() =>
-                      togglePlayback(
-                        `puzzle-${currentWord.id}`,
-                        `${currentWord.targetSentence}${puzzlePromptText(currentWord)}`,
-                      )
-                    }
+                    onClick={() => togglePlayback(`puzzle-${currentWord.id}`, puzzleAutoPlayLines(currentWord))}
                     aria-label="聽這段說明"
                     className="text-sky-500 shrink-0 mt-0.5"
                   >
@@ -781,10 +863,20 @@ export default function GuwenDecode() {
             )}
             {wrongIndex !== null && feedback !== 'correct' && (
               <div className="flex items-center justify-center gap-2">
-                <p className="text-center text-sm text-red-500">再想想看，比一比上下文的意思～</p>
+                <p className="text-center text-sm text-red-500">
+                  {currentWord.puzzleType === 'pattern'
+                    ? '再想想看，這個規律能不能解釋每一句例句～'
+                    : '再想想看，比一比上下文的意思～'}
+                </p>
                 <button
                   type="button"
-                  onClick={() => speak('再想想看，比一比上下文的意思。')}
+                  onClick={() =>
+                    speak(
+                      currentWord.puzzleType === 'pattern'
+                        ? '再想想看，這個規律能不能解釋每一句例句。'
+                        : '再想想看，比一比上下文的意思。',
+                    )
+                  }
                   aria-label="聽這段提示"
                   className="text-red-400 shrink-0"
                 >

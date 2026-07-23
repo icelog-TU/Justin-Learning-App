@@ -15,9 +15,12 @@ export interface GuwenOccurrence {
  * - 'context' (default): the word has genuinely distinct senses — the child compares 3 corpus sentences
  *   and picks whichever usage matches the target sentence, ruling the others out.
  * - 'pattern': the word doesn't have discrete senses to choose between (e.g. 諸 just marks "many/each" in
- *   front of whatever follows) — forcing a 3-choice "which is closest" question is artificial since all
- *   the examples would use it the same way. Instead the child reads several real examples and is asked
- *   to notice the shared pattern themselves, then reveals whether they got it.
+ *   front of whatever follows) — forcing a 3-choice "which is closest" question about a single example is
+ *   artificial since all the examples use it the same way. Instead the child reads several real examples
+ *   (auto-played together, then individually replayable), then answers a genuine multiple-choice question
+ *   about what the *shared pattern* is — not a passive "reveal" button. The wrong options must each have
+ *   their own internal logic (usually a generalization that fits 2 of the 3 examples but breaks on the
+ *   third), not just be nonsense — the point is to teach checking a rule against *all* the evidence.
  */
 export type GuwenPuzzleType = 'context' | 'pattern';
 
@@ -33,9 +36,13 @@ export interface GuwenWord {
   /** Used when puzzleType is 'context' (or omitted). */
   corpus?: GuwenCorpusOption[];
   correctIndex?: number;
-  /** Used when puzzleType is 'pattern': the open-ended question, and the example sentences to read. */
+  /** Used when puzzleType is 'pattern'. Spoken/shown in order: patternPrompt → each of patternExamples →
+   * patternQuestion → then the patternOptions become the actual answer choices (one correct). */
   patternPrompt?: string;
   patternExamples?: string[];
+  patternQuestion?: string;
+  patternOptions?: string[];
+  patternCorrectIndex?: number;
   meaning: string;
   explanation: string;
   /** Other places this word reappears in the same text, shown together once solved so the child can compare whether the meaning stays the same or shifts. */
@@ -111,9 +118,16 @@ export const wangRongText: GuwenText = {
       puzzleType: 'pattern',
       patternPrompt: '請把下面幾句話唸一遍，你有沒有發現「諸」後面接的東西有什麼共同點？',
       patternExamples: ['諸位老師都到了。', '諸國派使者前來。', '諸小兒一起玩耍。'],
+      patternQuestion: '你發現「諸」字用法的規律了嗎？',
+      patternOptions: [
+        '「諸」後面接的都是很多人組成的團體，所以「諸」只能用在講一群人的時候。',
+        '「諸」後面接的都是人或事物的名稱，「諸」本身沒有特別意思，只是表示後面的東西不只一個。',
+        '「諸」後面接的東西一定是要用敬語稱呼的對象，所以「諸」表示尊敬的意思。',
+      ],
+      patternCorrectIndex: 1,
       meaning: '眾多的、各個',
       explanation:
-        '很棒！「諸」常常放在一群人或一群東西前面，表示「很多個、各個」的意思——不管後面接的是「老師」「國家」還是「小孩」，「諸」本身沒有特別的意思，它只是讓後面的東西變成「不只一個」。「諸小兒」就是「一群小朋友」，「諸位老師」就是「各位老師」，「諸國」就是「各個國家」。',
+        '「諸」後面接的東西雖然不一樣——老師、國家、小孩——但共同點是它們都是「人或事物的名稱」，而且都不只一個。「諸」本身沒有特別的意思，它只是讓後面的東西變成「很多個」。如果只看「諸位老師」和「諸國」，可能會覺得「諸」是在講很有身分地位的人或團體，但「諸小兒」（一群小孩）就不算「很有地位」，這個說法就不成立了；同樣地，如果覺得「諸」代表尊敬，那「諸小兒」也不太算是需要用敬語稱呼的對象。所以最準確的規律是：「諸」＋名詞＝很多個那個東西。「諸小兒」就是「一群小朋友」，「諸位老師」就是「各位老師」，「諸國」就是「各個國家」。',
     },
     {
       id: 'you',
