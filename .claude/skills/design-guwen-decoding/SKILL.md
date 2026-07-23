@@ -187,6 +187,7 @@ Search authoritative or primary sources when wording, attribution, or punctuatio
 - the clue's `source` field (and any Markdown draft's 線索出處 list) must say outright that it is an invented illustrative example, not a real quotation — e.g. "⚠️ 仿古文句式示意例句，非真實古籍引用";
 - still search first for a real parallel before writing an invented one — only fall back to this once a real search has come up empty or misleading (document what was checked and why it was rejected, as with 王戎's 《孟子》 note);
 - never let an invented clue's citation-looking `source` line read like a real book/chapter attribution — that would make a fabricated example indistinguishable from sourced content to a later reader.
+- **the invented clue's `text` must itself be written in real classical grammar and diction throughout, not modern vernacular with the target word/phrase stapled onto the end.** 信然's first draft wrote "老農說今年的稻子一定會豐收。到了秋天收割，信然。" — plain modern Chinese ("老農說…到了…") with "信然" awkwardly appended, so the clue read as two different registers glued together and "信然" landing after it felt unnatural, not evidence. Fixed to genuine classical phrasing: "老農言歲必大熟，及秋，信然。" (言…必…；及…，信然 — real classical connective structure throughout, so "信然" arrives as a natural continuation of the same register, not a tacked-on label).
 
 ## Approved-content implementation boundary
 
