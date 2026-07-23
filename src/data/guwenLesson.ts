@@ -314,7 +314,7 @@ export const simaGuangLesson: GuwenLesson = {
       type: 'evidence',
       prerequisiteIds: ['zu_die_mo_shui_zhong'],
       targetSentence: '眾皆棄去',
-      intro: '其他孩子看見有人沒入水中，接著「棄去」了。他們只是走到別的地方嗎？我們找古文線索比對。',
+      intro: '其他孩子看見有人沒入水中，接著「棄去」了。這是甚麼意思呢？我們找古文線索比對。',
       clues: [
         {
           text: '長者加以金銀華美之服，輒羞赧棄去之。',
@@ -471,7 +471,7 @@ export const simaGuangLesson: GuwenLesson = {
       type: 'evidence',
       prerequisiteIds: ['beng'],
       targetSentence: '兒得活',
-      intro: '水湧出去後，古文說「兒得活」。這是得到一樣東西，還是危險之後出現的新結果？',
+      intro: '水湧出去後，古文說「兒得活」。這是甚麼意思呢？',
       clues: [
         {
           text: '幾死，眾救得活。',
