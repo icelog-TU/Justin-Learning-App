@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAppDataContext } from '../lib/AppDataContext';
 import {
@@ -22,12 +22,19 @@ export default function GachaPage() {
   const { data, rollGacha } = useAppDataContext();
   const [lastResult, setLastResult] = useState<GachaResult | null>(null);
   const [rolling, setRolling] = useState(false);
+  // A plain ref, checked/set synchronously — `rolling` (React state) only updates the disabled attribute
+  // once React actually commits the re-render, which is not guaranteed to happen before a second rapid
+  // tap/click is dispatched (fast double-taps, key-repeat, or a flaky touchscreen can fire two click events
+  // in the same tick). Guarding on state alone let two overlapping rolls slip through — this ref closes
+  // that gap, since ref writes take effect immediately, not on the next render.
+  const rollingRef = useRef(false);
 
   const activeBase = currentUnlockedBase(data.characters);
   const canAfford = data.coins >= GACHA_COST_COINS;
 
   function handleRoll() {
-    if (rolling) return;
+    if (rollingRef.current) return;
+    rollingRef.current = true;
     setRolling(true);
     setLastResult(null);
     playGachaSpinSound();
@@ -35,6 +42,10 @@ export default function GachaPage() {
       const result = rollGacha();
       setLastResult(result);
       setRolling(false);
+      rollingRef.current = false;
+      // Speaking the result is purely cosmetic feedback — it happens after rollGacha() has already
+      // committed the coin/character change and after rollingRef is cleared, so a slow or misbehaving
+      // speech engine can never delay or block the next roll from being allowed.
       if (result) {
         playGachaRevealSound(!result.isDupe);
         speak(result.isDupe ? '喔！你轉到已經有的角色了，再接再厲！' : '恭喜！轉到新角色了！');

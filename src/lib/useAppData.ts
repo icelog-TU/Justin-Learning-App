@@ -142,24 +142,25 @@ export function useAppData() {
     setCelebration({ coins, stars, nonce: celebrationCounter.current, big: opts?.big });
   }, []);
 
+  // Computed directly off `dataRef.current` and written via a plain `setData(nextData)` rather than the
+  // functional-updater form — React does not guarantee a functional updater runs synchronously (it's an
+  // "eager state" fast path that's skipped once more than one update is already queued, e.g. from rapid
+  // repeated taps), so a `let result` closed over and assigned *inside* the updater is not reliably set by
+  // the time this function returns. That used to be exactly the "轉蛋連續按太快，扣了金幣卻抽不到角色" bug: the
+  // coin deduction and character grant genuinely did land in `data` once React got around to applying the
+  // queued updater, but the caller's `rollGacha()` return value — read immediately, before that — could
+  // still be `null`, so the UI showed nothing for a roll that actually happened. Same fix already applied to
+  // `recordAssociationCrack` below; see its comment for the general rule.
   const rollGacha = useCallback((): GachaResult | null => {
-    let result: GachaResult | null = null;
-    setData((prev) => {
-      const outcome = rollGachaMutation({ ...prev, characters: { ...prev.characters } });
-      result = outcome.result;
-      return outcome.data;
-    });
-    return result;
+    const outcome = rollGachaMutation({ ...dataRef.current, characters: { ...dataRef.current.characters } });
+    setData(outcome.data);
+    return outcome.result;
   }, []);
 
   const giveHeart = useCallback((id: string): boolean => {
-    let success = false;
-    setData((prev) => {
-      const outcome = giveHeartMutation({ ...prev, characters: { ...prev.characters } }, id);
-      success = outcome.success;
-      return outcome.data;
-    });
-    return success;
+    const outcome = giveHeartMutation({ ...dataRef.current, characters: { ...dataRef.current.characters } }, id);
+    setData(outcome.data);
+    return outcome.success;
   }, []);
 
   const addChainLink = useCallback(() => {
