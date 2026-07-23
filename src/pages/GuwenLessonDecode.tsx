@@ -1,7 +1,10 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useAppDataContext } from '../lib/AppDataContext';
-import { findGuwenLesson, type GuwenLesson, type LessonStep } from '../data/guwenLesson';
+import { findGuwenLesson, type GuwenLesson, type LessonStep, type RevealStep, type SequenceCard } from '../data/guwenLesson';
+
+/** Every step type except RevealStep has a real question/options/correctIndex/retryHint to grade against. */
+type GradedStep = Exclude<LessonStep, RevealStep>;
 import { speak, speakSequence, pauseSpeech, resumeSpeech, cancelSpeech } from '../lib/speech';
 import { playSuccessChime, playCoinSound, playStarSound, playRollTickSound } from '../lib/sound';
 import {
@@ -48,8 +51,12 @@ function stepAutoPlayLines(step: LessonStep): string[] {
     step.keys.forEach((k) => {
       lines.push(k.code, k.decodedEvidence);
     });
+  } else if (step.type === 'reveal' && step.keys) {
+    step.keys.forEach((k) => {
+      lines.push(k.code, k.decodedEvidence);
+    });
   }
-  if (step.question !== step.intro) lines.push(step.question);
+  if (step.type !== 'reveal' && step.question !== step.intro) lines.push(step.question);
   return lines.filter(Boolean);
 }
 
@@ -102,6 +109,15 @@ export default function GuwenLessonDecode() {
   // otherwise re-opening the lesson lands on phase 'steps' with no current step (findCurrentStep finds none
   // left) — none of the four phase branches match, and the page renders nothing but the back link.
   const allStepsSolved = Boolean(lesson) && lesson!.steps.length > 0 && solvedIds.size >= lesson!.steps.length;
+  // Some lessons (刻舟求劍) have a 3-screen closing sequence — event ordering, then a causal-chain summary,
+  // then an evidence multi-select — shown after every word/phrase step but before the final translation
+  // unlocks. Lessons without one (司馬光) get an empty list here, so `allClosingSolved` is vacuously true and
+  // behavior is unchanged from before this feature existed.
+  const closingStepsList = lesson?.closingSequence
+    ? [lesson.closingSequence.sequenceOrdering, lesson.closingSequence.causalChain, lesson.closingSequence.evidenceMultiSelect]
+    : [];
+  const allClosingSolved = closingStepsList.every((c) => solvedIds.has(c.id));
+  const readyForComplete = allStepsSolved && allClosingSolved;
   // A redo (this text has been fully completed at least once before, surviving any resets) still pays out,
   // just at a reduced rate — the very first clear stays the biggest payday, but replaying isn't worthless.
   // This is captured once per run (mount, or an explicit reset — see handleResetProgress), NOT derived fresh
@@ -119,7 +135,7 @@ export default function GuwenLessonDecode() {
     : GUWEN_TEXT_COMPLETE_BONUS_STARS;
 
   const [phase, setPhase] = useState<Phase>(() => {
-    if (alreadyComplete || allStepsSolved) return 'complete';
+    if (alreadyComplete || readyForComplete) return 'complete';
     if (solvedIds.size > 0) return 'steps';
     return 'intro';
   });
@@ -148,6 +164,29 @@ export default function GuwenLessonDecode() {
   );
 
   const currentStep = lesson?.steps.find((s) => s.id === activeStepId);
+
+  // Closing-sequence state (刻舟求劍-style lessons only). Which of the 3 screens is showing is its own state
+  // — resumed once at mount from solvedIds, then advanced explicitly by each screen's own "continue" click —
+  // for the same reason `activeStepId` above isn't derived live: reacting to solvedIds directly would jump
+  // the screen the instant a correct answer lands, before the child sees the praise/explanation for it.
+  const [closingStage, setClosingStage] = useState<'ordering' | 'causal' | 'multiselect'>(() => {
+    if (!lesson?.closingSequence) return 'ordering';
+    if (!solvedIds.has(lesson.closingSequence.sequenceOrdering.id)) return 'ordering';
+    if (!solvedIds.has(lesson.closingSequence.causalChain.id)) return 'causal';
+    return 'multiselect';
+  });
+  const [orderingArrangement, setOrderingArrangement] = useState<string[]>(() =>
+    lesson?.closingSequence ? lesson.closingSequence.sequenceOrdering.cards.map((c) => c.id) : [],
+  );
+  const [orderingWrong, setOrderingWrong] = useState(false);
+  const [orderingSolved, setOrderingSolved] = useState(() =>
+    Boolean(lesson?.closingSequence && solvedIds.has(lesson.closingSequence.sequenceOrdering.id)),
+  );
+  const [multiSelectChoice, setMultiSelectChoice] = useState<Set<number>>(new Set());
+  const [multiSelectWrong, setMultiSelectWrong] = useState(false);
+  const [multiSelectSolved, setMultiSelectSolved] = useState(() =>
+    Boolean(lesson?.closingSequence && solvedIds.has(lesson.closingSequence.evidenceMultiSelect.id)),
+  );
 
   function playFullSequence(fullText: string) {
     setIsPlaying(true);
@@ -218,19 +257,27 @@ export default function GuwenLessonDecode() {
   }, [phase, lesson]);
 
   // Grants the completion bonus the child would have gotten from clicking "🎉 完成", for the case where
-  // every step is already solved but that button was never clicked (see the `allStepsSolved` comment above).
-  // The ref guards against re-firing on every render once `completeGuwenText` lands and `alreadyComplete`
-  // flips true — without it, this would otherwise still be eligible to run again on remounts before that
-  // state change is reflected.
+  // every step (word/phrase steps *and* any closing sequence) was ALREADY solved before this page mounted,
+  // but that button was never clicked (see the `allStepsSolved` comment above) — e.g. they left via the back
+  // link right after the last correct answer. This must check the state present at *mount*, not react live
+  // to `readyForComplete` on every render: a lesson with a closing sequence reaches `readyForComplete` the
+  // instant the child finishes the multi-select through the completely normal, intended flow (the last
+  // `recordGuwenWord` call updates `solvedIds` right there in the same session) — a reactive effect fired at
+  // that exact moment, jumping straight to phase 'complete' before the child ever saw the multi-select's own
+  // correct-feedback screen or clicked its own "開啟白話驗證卷軸" button. Caught via Playwright: solving the
+  // multi-select correctly showed the app-wide completion-bonus celebration immediately, with no multi-select
+  // feedback screen in between. `useRef`'s initializer argument is only evaluated on the first render, so
+  // this ref permanently freezes exactly the "was it already fully done when I opened this page" snapshot.
+  const wasReadyForCompleteOnMountRef = useRef(readyForComplete);
   const missedCompletionAwardedRef = useRef(false);
   useEffect(() => {
     if (missedCompletionAwardedRef.current) return;
-    if (!lesson || alreadyComplete || !allStepsSolved) return;
+    if (!lesson || alreadyComplete || !wasReadyForCompleteOnMountRef.current) return;
     missedCompletionAwardedRef.current = true;
     completeGuwenText(lesson.id);
     reward(completionCoinBonus, completionStarBonus, { big: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lesson, alreadyComplete, allStepsSolved]);
+  }, []);
 
   useEffect(() => {
     if (phase !== 'complete' || !lesson || !verificationOpen) return;
@@ -467,7 +514,7 @@ export default function GuwenLessonDecode() {
   }
 
   function handleSelect(index: number) {
-    if (!currentStep || feedback === 'correct') return;
+    if (!currentStep || feedback === 'correct' || currentStep.type === 'reveal') return;
     setWrongIndex(null);
     if (index === currentStep.correctIndex) {
       markStepSolved(currentStep);
@@ -483,14 +530,91 @@ export default function GuwenLessonDecode() {
     // solvedIds already includes the just-solved step (recordGuwenWord already landed), so this looks up
     // whichever step should come after it — or nothing, if that was the last one.
     const next = lesson ? findCurrentStep(lesson, solvedIds) : undefined;
-    if (!next) {
-      completeGuwenText(lesson!.id);
-      reward(completionCoinBonus, completionStarBonus, { big: true });
-      setVerificationOpen(false);
-      setPhase('complete');
-    } else {
+    if (next) {
       setActiveStepId(next.id);
+      return;
     }
+    // No regular word/phrase step left. `currentStep` is derived from `activeStepId`, not recomputed fresh,
+    // so it must be cleared explicitly here — otherwise it would keep pointing at the just-solved last step
+    // forever, and the closing-sequence / complete-phase branches below (which key off `!currentStep`) would
+    // never take over.
+    setActiveStepId(undefined);
+    if (lesson?.closingSequence && !allClosingSolved) return; // hand off to the closing-sequence screens
+    completeGuwenText(lesson!.id);
+    reward(completionCoinBonus, completionStarBonus, { big: true });
+    setVerificationOpen(false);
+    setPhase('complete');
+  }
+
+  function moveOrderingCard(index: number, direction: -1 | 1) {
+    setOrderingArrangement((cur) => {
+      const next = [...cur];
+      const target = index + direction;
+      if (target < 0 || target >= next.length) return cur;
+      [next[index], next[target]] = [next[target], next[index]];
+      return next;
+    });
+    setOrderingWrong(false);
+  }
+
+  function handleSubmitOrdering() {
+    const closing = lesson!.closingSequence!.sequenceOrdering;
+    const isCorrect =
+      orderingArrangement.length === closing.correctOrder.length &&
+      orderingArrangement.every((id, i) => id === closing.correctOrder[i]);
+    if (!isCorrect) {
+      setOrderingWrong(true);
+      return;
+    }
+    recordGuwenWord(lesson!.id, closing.id);
+    reward(guwenCoinAmount, guwenStarAmount);
+    playSuccessChime();
+    setOrderingWrong(false);
+    setOrderingSolved(true);
+  }
+
+  function handleContinueFromOrdering() {
+    setClosingStage('causal');
+  }
+
+  function handleContinueFromCausalChain() {
+    const closing = lesson!.closingSequence!.causalChain;
+    recordGuwenWord(lesson!.id, closing.id);
+    reward(guwenCoinAmount, guwenStarAmount);
+    playSuccessChime();
+    setClosingStage('multiselect');
+  }
+
+  function toggleMultiSelectOption(i: number) {
+    if (multiSelectSolved) return;
+    setMultiSelectChoice((cur) => {
+      const next = new Set(cur);
+      if (next.has(i)) next.delete(i);
+      else next.add(i);
+      return next;
+    });
+    setMultiSelectWrong(false);
+  }
+
+  function handleSubmitMultiSelect() {
+    const closing = lesson!.closingSequence!.evidenceMultiSelect;
+    const isCorrect = closing.options.every((opt, i) => opt.correct === multiSelectChoice.has(i));
+    if (!isCorrect) {
+      setMultiSelectWrong(true);
+      return;
+    }
+    recordGuwenWord(lesson!.id, closing.id);
+    reward(guwenCoinAmount, guwenStarAmount);
+    playSuccessChime();
+    setMultiSelectWrong(false);
+    setMultiSelectSolved(true);
+  }
+
+  function handleFinishClosingSequence() {
+    completeGuwenText(lesson!.id);
+    reward(completionCoinBonus, completionStarBonus, { big: true });
+    setVerificationOpen(false);
+    setPhase('complete');
   }
 
   function handleResetProgress() {
@@ -507,6 +631,13 @@ export default function GuwenLessonDecode() {
     setIsPaused(false);
     setVerificationOpen(false);
     setActiveStepId(lesson ? findCurrentStep(lesson, new Set())?.id : undefined);
+    setClosingStage('ordering');
+    setOrderingArrangement(lesson?.closingSequence ? lesson.closingSequence.sequenceOrdering.cards.map((c) => c.id) : []);
+    setOrderingWrong(false);
+    setOrderingSolved(false);
+    setMultiSelectChoice(new Set());
+    setMultiSelectWrong(false);
+    setMultiSelectSolved(false);
     setPhase('intro');
   }
 
@@ -535,7 +666,7 @@ export default function GuwenLessonDecode() {
     );
   }
 
-  function renderOptions(step: LessonStep, readOnly: boolean) {
+  function renderOptions(step: GradedStep, readOnly: boolean) {
     return (
       <div className="space-y-2">
         {step.options.map((opt, i) => {
@@ -605,6 +736,166 @@ export default function GuwenLessonDecode() {
     );
   }
 
+  function renderSequenceOrdering() {
+    const closing = lesson!.closingSequence!.sequenceOrdering;
+    const cardsInOrder = orderingArrangement
+      .map((id) => closing.cards.find((c) => c.id === id))
+      .filter((c): c is SequenceCard => Boolean(c));
+    return (
+      <div className="bg-white rounded-2xl shadow p-5 space-y-4">
+        <h3 className="font-bold text-gray-800">{closing.title}</h3>
+        <p className="text-sm text-gray-600">{closing.intro}</p>
+        <div className="space-y-2">
+          {cardsInOrder.map((card, i) => (
+            <div key={card.id} className="flex items-center gap-2 rounded-xl border-2 border-gray-200 bg-gray-50 px-3 py-2">
+              <span className="font-bold text-gray-400 w-5 text-center shrink-0">{i + 1}</span>
+              <p className="flex-1 text-sm text-gray-800">{card.text}</p>
+              {!orderingSolved && (
+                <div className="flex flex-col gap-0.5 shrink-0">
+                  <button
+                    type="button"
+                    disabled={i === 0}
+                    onClick={() => moveOrderingCard(i, -1)}
+                    aria-label="上移"
+                    className="disabled:opacity-20 text-indigo-600 leading-none text-lg"
+                  >
+                    ▲
+                  </button>
+                  <button
+                    type="button"
+                    disabled={i === cardsInOrder.length - 1}
+                    onClick={() => moveOrderingCard(i, 1)}
+                    aria-label="下移"
+                    className="disabled:opacity-20 text-indigo-600 leading-none text-lg"
+                  >
+                    ▼
+                  </button>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+        {!orderingSolved && orderingWrong && <p className="text-sm text-red-500 text-center">{closing.retryHint}</p>}
+        {!orderingSolved && (
+          <button
+            type="button"
+            onClick={handleSubmitOrdering}
+            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl py-2.5"
+          >
+            送出順序
+          </button>
+        )}
+        {orderingSolved && (
+          <div className="bg-emerald-50 rounded-xl p-4 space-y-3">
+            <p className="font-bold text-emerald-700">{closing.correctFeedback}</p>
+            <button
+              type="button"
+              onClick={handleContinueFromOrdering}
+              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl py-2.5"
+            >
+              繼續 →
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  function renderCausalChain() {
+    const closing = lesson!.closingSequence!.causalChain;
+    return (
+      <div className="bg-white rounded-2xl shadow p-5 space-y-4">
+        <h3 className="font-bold text-gray-800">{closing.title}</h3>
+        <p className="text-xs text-gray-400">{closing.displayNote}</p>
+        <div className="space-y-1">
+          {closing.nodes.map((node, i) => (
+            <div key={i}>
+              <p className="text-sm text-gray-800 bg-gray-50 rounded-lg px-3 py-2">{node}</p>
+              {i < closing.nodes.length - 1 && <p className="text-center text-gray-300">↓</p>}
+            </div>
+          ))}
+        </div>
+        <div className="bg-amber-50 rounded-xl p-4">
+          <p className="text-sm font-bold text-amber-700 whitespace-pre-line">{closing.coreSummary}</p>
+        </div>
+        {closing.evidenceBoundary && <p className="text-xs text-gray-400">{closing.evidenceBoundary}</p>}
+        <button
+          type="button"
+          onClick={handleContinueFromCausalChain}
+          className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl py-2.5"
+        >
+          {closing.continueButtonLabel}
+        </button>
+      </div>
+    );
+  }
+
+  function renderEvidenceMultiSelect() {
+    const closing = lesson!.closingSequence!.evidenceMultiSelect;
+    return (
+      <div className="bg-white rounded-2xl shadow p-5 space-y-4">
+        <h3 className="font-bold text-gray-800">{closing.title}</h3>
+        <p className="text-sm text-gray-600">{closing.intro}</p>
+        <div className="space-y-2">
+          {closing.options.map((opt, i) => (
+            <label
+              key={i}
+              className={`flex items-start gap-2 rounded-xl border-2 px-3 py-2 ${
+                multiSelectSolved ? 'cursor-default' : 'cursor-pointer'
+              } ${multiSelectChoice.has(i) ? 'bg-indigo-50 border-indigo-300' : 'bg-gray-50 border-gray-200'}`}
+            >
+              <input
+                type="checkbox"
+                checked={multiSelectChoice.has(i)}
+                disabled={multiSelectSolved}
+                onChange={() => toggleMultiSelectOption(i)}
+                className="mt-1"
+              />
+              <span className="text-sm text-gray-800">{opt.text}</span>
+            </label>
+          ))}
+        </div>
+        {!multiSelectSolved && multiSelectWrong && <p className="text-sm text-red-500 text-center">{closing.retryHint}</p>}
+        {!multiSelectSolved && (
+          <button
+            type="button"
+            onClick={handleSubmitMultiSelect}
+            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl py-2.5"
+          >
+            提交判斷
+          </button>
+        )}
+        {multiSelectSolved && (
+          <div className="bg-emerald-50 rounded-xl p-4 space-y-3">
+            <p className="font-bold text-emerald-700 whitespace-pre-line">{closing.correctFeedback}</p>
+            <div className="space-y-1">
+              {closing.options.map((opt, i) => (
+                <p key={i} className="text-xs text-gray-600">
+                  {opt.correct ? '✓' : '✗'} {opt.text} — {opt.detail}
+                </p>
+              ))}
+            </div>
+            <p className="text-xs text-gray-500 italic">{closing.finalNote}</p>
+            <button
+              type="button"
+              onClick={handleFinishClosingSequence}
+              className="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-xl py-2.5"
+            >
+              開啟白話驗證卷軸
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  function renderClosingSequence() {
+    if (!lesson?.closingSequence) return null;
+    if (closingStage === 'ordering') return renderSequenceOrdering();
+    if (closingStage === 'causal') return renderCausalChain();
+    return renderEvidenceMultiSelect();
+  }
+
   function renderReviewPanel() {
     if (!reviewStep) return null;
     return (
@@ -620,8 +911,13 @@ export default function GuwenLessonDecode() {
           <div className="space-y-2">{reviewStep.clues.map((c, i) => renderClue(c, i))}</div>
         )}
         {reviewStep.type === 'reconstruction' && renderKeyTable(reviewStep.keys)}
-        <p className="text-sm font-semibold text-gray-700">{reviewStep.question}</p>
-        {renderOptions(reviewStep, true)}
+        {reviewStep.type === 'reveal' && reviewStep.keys && renderKeyTable(reviewStep.keys)}
+        {reviewStep.type !== 'reveal' && (
+          <>
+            <p className="text-sm font-semibold text-gray-700">{reviewStep.question}</p>
+            {renderOptions(reviewStep, true)}
+          </>
+        )}
         <div className="bg-emerald-50 rounded-xl p-3 space-y-1">
           <p className="text-sm font-bold text-emerald-700">{reviewStep.correctFeedback}</p>
           <p className="text-sm text-emerald-700 whitespace-pre-line">{reviewStep.explanation}</p>
@@ -726,18 +1022,36 @@ export default function GuwenLessonDecode() {
               <div className="space-y-2">{currentStep.clues.map((c, i) => renderClue(c, i))}</div>
             )}
             {currentStep.type === 'reconstruction' && renderKeyTable(currentStep.keys)}
+            {currentStep.type === 'reveal' && currentStep.keys && renderKeyTable(currentStep.keys)}
 
-            <p className="text-sm font-semibold text-center text-gray-700">{currentStep.question}</p>
+            {currentStep.type !== 'reveal' && (
+              <>
+                <p className="text-sm font-semibold text-center text-gray-700">{currentStep.question}</p>
+                {feedback !== 'correct' && renderOptions(currentStep, false)}
+                {wrongIndex !== null && feedback !== 'correct' && (
+                  <div className="flex items-center justify-center gap-2">
+                    <p className="text-center text-sm text-red-500">{currentStep.retryHint}</p>
+                    <button
+                      type="button"
+                      onClick={() => speak(currentStep.retryHint)}
+                      aria-label="聽這段提示"
+                      className="text-red-400 shrink-0"
+                    >
+                      🔊
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
 
-            {feedback !== 'correct' && renderOptions(currentStep, false)}
-
-            {wrongIndex !== null && feedback !== 'correct' && (
-              <div className="flex items-center justify-center gap-2">
-                <p className="text-center text-sm text-red-500">{currentStep.retryHint}</p>
-                <button type="button" onClick={() => speak(currentStep.retryHint)} aria-label="聽這段提示" className="text-red-400 shrink-0">
-                  🔊
-                </button>
-              </div>
+            {currentStep.type === 'reveal' && feedback !== 'correct' && (
+              <button
+                type="button"
+                onClick={() => markStepSolved(currentStep)}
+                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl py-2.5"
+              >
+                {currentStep.continueLabel ?? '揭曉這句話 →'}
+              </button>
             )}
 
             {feedback === 'correct' && celebration && (
@@ -790,10 +1104,25 @@ export default function GuwenLessonDecode() {
                 onClick={handleNextStep}
                 className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl py-2.5"
               >
-                {solvedIds.size >= totalSteps ? '🎉 完成！看看整篇文章' : '下一道密碼 →'}
+                {solvedIds.size < totalSteps
+                  ? '下一道密碼 →'
+                  : lesson.closingSequence
+                    ? '繼續 → 最後三關'
+                    : '🎉 完成！看看整篇文章'}
               </button>
             )}
           </div>
+        </div>
+      )}
+
+      {/* Deliberately gated on `phase`/`currentStep` (both stable, changed only by explicit user action),
+          never on `allClosingSolved` — that flips true the instant the multi-select's own recordGuwenWord
+          call lands, which would otherwise yank this whole block away (including the multi-select's own
+          correct-feedback screen) before the child ever saw it or clicked "開啟白話驗證卷軸" themselves. */}
+      {phase === 'steps' && !currentStep && allStepsSolved && lesson.closingSequence && (
+        <div className="space-y-4">
+          {renderPassage()}
+          {renderClosingSequence()}
         </div>
       )}
 
