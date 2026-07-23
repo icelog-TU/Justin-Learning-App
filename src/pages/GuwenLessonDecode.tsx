@@ -987,6 +987,19 @@ export default function GuwenLessonDecode() {
                 🔊
               </button>
             </div>
+            {closing.explanation && (
+              <div className="flex items-start gap-2">
+                <p className="text-xs text-emerald-700 whitespace-pre-line flex-1">{closing.explanation}</p>
+                <button
+                  type="button"
+                  onClick={() => togglePlayback(`closing-explanation-${closing.id}`, closing.explanation!.replace(/\n+/g, ' '))}
+                  aria-label="聽這段說明"
+                  className="text-emerald-600 shrink-0"
+                >
+                  {playbackLabel(`closing-explanation-${closing.id}`, '🔊', '⏸', '▶️')}
+                </button>
+              </div>
+            )}
             <button
               type="button"
               onClick={handleContinueFromOrdering}
