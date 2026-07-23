@@ -180,6 +180,11 @@ A clue's `text` should be as short as the target word/phrase genuinely needs —
 
 Search authoritative or primary sources when wording, attribution, or punctuation is uncertain. Distinguish exact quotation from an excerpt. Do not invent classical examples or force modern meanings into pseudo-classical sentences.
 
+**Narrow, user-approved exception: the two-clue comparison *format* can outlive a failed search for real clues, but only if the invented clues are labeled, never as if sourced.** For 王戎不取道旁李's 多子折枝, no clean real classical parallel exists for "fruit-weight bends a branch" (the one famous real quote using 折枝, 《孟子》's "為長者折枝", means the opposite — a person deliberately snapping a twig). The first draft of this rewrite switched the step to `local_inference` (reason from story context alone) to avoid the misleading real quote. The user compared this against the original live app's version of the same step — which used a two-clue side-by-side comparison ("柿樹多子壓枝。" / "葡萄多實垂架。", both invented parallel-structure example sentences, not real quotations) — judged that interaction *format* meaningfully better for this kind of ambiguous-character puzzle than open-ended local_inference, and explicitly approved keeping it. Rule going forward: when a target has no clean sourced cross-text parallel, prefer reusing the two-clue comparison structure with carefully-written illustrative sentences over defaulting to `local_inference`, **but**:
+- the clue's `source` field (and any Markdown draft's 線索出處 list) must say outright that it is an invented illustrative example, not a real quotation — e.g. "⚠️ 仿古文句式示意例句，非真實古籍引用";
+- still search first for a real parallel before writing an invented one — only fall back to this once a real search has come up empty or misleading (document what was checked and why it was rejected, as with 王戎's 《孟子》 note);
+- never let an invented clue's citation-looking `source` line read like a real book/chapter attribution — that would make a fabricated example indistinguishable from sourced content to a later reader.
+
 ## Approved-content implementation boundary
 
 When the task is to put a completed lesson into the app:
