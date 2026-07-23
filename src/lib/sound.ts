@@ -147,3 +147,24 @@ export function playAssociationCompleteFanfare() {
   const t = ctx.currentTime;
   [523, 659, 784, 1047, 1319, 1568, 2093].forEach((f, i) => tone(ctx, f, t + i * 0.09, 0.35, 'triangle', 0.14));
 }
+
+/** The biggest fanfare in the app — plays once when a whole 古文破譯家 lesson is fully solved, on top of the
+ * per-step chime and the standard reward burst. A rising arpeggio into a held, sparkling chord, meant to sit
+ * behind several seconds of fireworks + narration, not the quick ~0.5s stinger the other fanfares are. */
+export function playGuwenLessonCompleteFanfare() {
+  const ctx = getContext();
+  if (!ctx) return;
+  const t = ctx.currentTime;
+  [392, 523, 659, 784, 988, 1175, 1568, 1976].forEach((f, i) => tone(ctx, f, t + i * 0.1, 0.4, 'triangle', 0.15));
+  [1568, 1976, 2349].forEach((f, i) => tone(ctx, f, t + 0.9 + i * 0.03, 1.1, 'sine', 0.08));
+}
+
+/** A short bright "twinkle" — used to punctuate each wave of a sustained fireworks-style celebration. */
+export function playTwinkleSound() {
+  const ctx = getContext();
+  if (!ctx) return;
+  const t = ctx.currentTime;
+  const base = 1200 + Math.random() * 500;
+  tone(ctx, base, t, 0.14, 'sine', 0.09);
+  tone(ctx, base * 1.5, t + 0.05, 0.18, 'sine', 0.07);
+}

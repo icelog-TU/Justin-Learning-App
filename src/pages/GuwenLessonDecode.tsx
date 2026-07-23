@@ -6,7 +6,7 @@ import { findGuwenLesson, type GuwenLesson, type LessonStep, type RevealStep, ty
 /** Every step type except RevealStep has a real question/options/correctIndex/retryHint to grade against. */
 type GradedStep = Exclude<LessonStep, RevealStep>;
 import { speak, speakSequence, pauseSpeech, resumeSpeech, cancelSpeech } from '../lib/speech';
-import { playSuccessChime, playCoinSound, playStarSound, playRollTickSound } from '../lib/sound';
+import { playSuccessChime, playCoinSound, playStarSound, playRollTickSound, playGuwenLessonCompleteFanfare, playTwinkleSound } from '../lib/sound';
 import {
   COIN_PER_GUWEN_WORD,
   STAR_PER_GUWEN_WORD,
@@ -42,13 +42,61 @@ interface CelebrationState {
   stage: 'rolling' | 'settled';
 }
 
+/** Spoken once, right when the whole lesson finishes — the biggest moment in this feature, so it gets its
+ * own grand line rather than reusing one of the per-step PRAISE_LINES. */
+const LESSON_COMPLETE_PRAISE_LINE = '恭喜你，把整篇古文都破解成功了！讓我們一起把整段古文，還有你自己拼出來的故事，再讀一次。';
+
+const FIREWORK_EMOJI = ['🎉', '🎆', '🎇', '✨', '⭐', '🌟', '🎊'];
+const FIREWORK_WAVE_COUNT = 6;
+const FIREWORK_WAVE_GAP_S = 0.8;
+const FIREWORK_PARTICLE_DURATION_S = 1.3;
+/** Total time the overlay stays mounted — last wave's start + its own animation + a little settle time. */
+const FIREWORK_TOTAL_MS = (FIREWORK_WAVE_COUNT - 1) * FIREWORK_WAVE_GAP_S * 1000 + FIREWORK_PARTICLE_DURATION_S * 1000 + 700;
+
+interface FireworkParticle {
+  id: number;
+  emoji: string;
+  left: string;
+  top: string;
+  tx: number;
+  ty: number;
+  rot: number;
+  delay: number;
+}
+
+/** Several staggered "waves" of particles across a few seconds — reuses the same `burst-particle` keyframe
+ * as the app-wide reward burst (see CelebrationOverlay.tsx), just spread over a much longer, repeated
+ * timeline and launched from random spots across the top of the screen instead of one fixed point, so it
+ * reads as sustained fireworks rather than one quick burst. */
+function buildFireworkParticles(): FireworkParticle[] {
+  const particles: FireworkParticle[] = [];
+  let id = 0;
+  for (let wave = 0; wave < FIREWORK_WAVE_COUNT; wave++) {
+    const waveDelay = wave * FIREWORK_WAVE_GAP_S;
+    const count = 7 + Math.floor(Math.random() * 3);
+    for (let i = 0; i < count; i++) {
+      particles.push({
+        id: id++,
+        emoji: FIREWORK_EMOJI[Math.floor(Math.random() * FIREWORK_EMOJI.length)],
+        left: `${5 + Math.random() * 90}%`,
+        top: `${10 + Math.random() * 35}%`,
+        tx: (Math.random() - 0.5) * 320,
+        ty: -(100 + Math.random() * 220),
+        rot: (Math.random() - 0.5) * 480,
+        delay: waveDelay + Math.random() * 0.3,
+      });
+    }
+  }
+  return particles;
+}
+
 /** The full auto-play script for a step, as separate lines (queued with speakSequence so each one fully
  * finishes before the next starts). Clues/keys are part of the auto-play here — the child needs to hear all
  * the evidence before the question makes sense, mirroring the guwen-decoder skill's 'pattern' puzzle rule. */
 function stepAutoPlayLines(step: LessonStep): string[] {
   const lines: string[] = [step.targetSentence, step.intro];
   if (step.type === 'evidence') {
-    lines.push(step.clues[0].text, step.clues[0].unlockedMeaning, step.clues[1].text, step.clues[1].unlockedMeaning);
+    step.clues.forEach((c) => lines.push(c.text, c.unlockedMeaning ?? ''));
   } else if (step.type === 'reconstruction') {
     step.keys.forEach((k) => {
       lines.push(k.code, k.decodedEvidence);
@@ -174,6 +222,12 @@ export default function GuwenLessonDecode() {
   const explainTimeoutRef = useRef<number | null>(null);
   const [celebration, setCelebration] = useState<CelebrationState | null>(null);
   const [celebrationPaused, setCelebrationPaused] = useState(false);
+  // The grand, sustained "you finished the whole lesson" celebration — distinct from (and much bigger than)
+  // the per-step roll-up above. Fireworks particles are pre-built for the whole timeline up front (see
+  // buildFireworkParticles) rather than pushed wave-by-wave into state, so a single unmount/cleanup covers
+  // the entire multi-second sequence.
+  const [showLessonCelebration, setShowLessonCelebration] = useState(false);
+  const [fireworkParticles, setFireworkParticles] = useState<FireworkParticle[]>([]);
   const celebrationTimeoutRef = useRef<number | null>(null);
   const celebrationPraiseFallbackRef = useRef<number | null>(null);
   // Which step is on screen right now — deliberately its own state (not derived fresh from solvedIds on
@@ -314,6 +368,38 @@ export default function GuwenLessonDecode() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // The grand completion celebration — fireworks, a bright fanfare, and narration reading out the full
+  // classical text plus the child's own reconstructed 破譯稿 lines. Fires exactly once, only for a
+  // completion that happens *during this visit* (freshly finishing the last step/closing screen, or the
+  // missed-completion retroactive grant right above) — never when simply reopening a lesson finished in a
+  // past session, which would make the fanfare feel like it fires at random on every revisit. Frozen at
+  // mount for the same reason `wasReadyForCompleteOnMountRef` is above: `alreadyComplete` itself flips to
+  // true reactively the moment `completeGuwenText` lands, so checking it live inside the effect would always
+  // see "already complete" and never fire.
+  const wasAlreadyCompleteOnMountRef = useRef(alreadyComplete);
+  const lessonCelebrationFiredRef = useRef(false);
+  useEffect(() => {
+    if (phase !== 'complete' || !lesson) return;
+    if (wasAlreadyCompleteOnMountRef.current || lessonCelebrationFiredRef.current) return;
+    lessonCelebrationFiredRef.current = true;
+    setFireworkParticles(buildFireworkParticles());
+    setShowLessonCelebration(true);
+    playGuwenLessonCompleteFanfare();
+    const twinkleTimers: number[] = [];
+    for (let wave = 1; wave < FIREWORK_WAVE_COUNT; wave++) {
+      twinkleTimers.push(window.setTimeout(() => playTwinkleSound(), wave * FIREWORK_WAVE_GAP_S * 1000));
+    }
+    const finalDraftLines = lesson.steps.filter((s) => s.finalDraftLine).map((s) => s.finalDraftLine!);
+    speakSequence([LESSON_COMPLETE_PRAISE_LINE, lesson.fullText, ...finalDraftLines]);
+    const hideTimer = window.setTimeout(() => setShowLessonCelebration(false), FIREWORK_TOTAL_MS);
+    return () => {
+      window.clearTimeout(hideTimer);
+      twinkleTimers.forEach((id) => window.clearTimeout(id));
+      cancelSpeech();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase]);
+
   useEffect(() => {
     if (phase !== 'complete' || !lesson || !verificationOpen) return;
     const timer = window.setTimeout(() => {
@@ -357,6 +443,33 @@ export default function GuwenLessonDecode() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, currentStep?.id]);
 
+  // Auto-plays the "what am I supposed to do here" line for whichever closing screen is showing — the
+  // sequence-ordering intro, the causal-chain displayNote, or the multi-select intro — every time
+  // `closingStage` changes (including the very first time `currentStep` becomes undefined and the closing
+  // block takes over). Per-card/node/option text is deliberately NOT auto-played here, only available via
+  // its own 🔊 button — matching how a step's own corpus/pattern options are tap-to-listen-only, not part
+  // of the auto-play (see "Puzzle types" history in this file).
+  useEffect(() => {
+    if (phase !== 'steps' || currentStep || !allStepsSolved || closingStepsList.length === 0) return;
+    const line =
+      closingStage === 'ordering'
+        ? lesson?.sequenceOrderingClosing?.intro
+        : closingStage === 'causal'
+          ? lesson?.causalChainClosing?.displayNote
+          : lesson?.evidenceMultiSelectClosing?.intro;
+    if (!line) return;
+    const id = `closing-intro-${closingStage}`;
+    setPlaybackId(id);
+    setPlaybackPaused(false);
+    speak(line, () => setPlaybackId((cur) => (cur === id ? null : cur)));
+    return () => {
+      cancelSpeech();
+      setPlaybackId((cur) => (cur === id ? null : cur));
+      setPlaybackPaused(false);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, currentStep, allStepsSolved, closingStage]);
+
   // Once the roll-up reaches its target *and* the praise line is done (real onend, or the fallback safety
   // timer), settle for a brief beat, then hand off to the explanation.
   useEffect(() => {
@@ -394,7 +507,13 @@ export default function GuwenLessonDecode() {
   const earnedStars = solvedIds.size * guwenStarAmount + (alreadyComplete ? completionStarBonus : 0);
   const reviewStep = reviewStepId ? lesson.steps.find((s) => s.id === reviewStepId) : undefined;
 
+  /** One circle per word/phrase step, PLUS one more for each closing screen this lesson actually has
+   * (ordering/causal/multiselect) — the closing screens are their own locks to unlock too, not something
+   * that happens "outside" the step chain, so they need to show up in the same row. Closing chips are
+   * display-only (no click-to-review — the closing screens don't have a review-panel renderer the way
+   * graded steps do), but otherwise follow the exact same solved/current/locked visual rules. */
   function renderStepChips() {
+    const totalWordSteps = lesson!.steps.length;
     return (
       <div className="flex flex-wrap justify-center gap-2">
         {lesson!.steps.map((s, i) => {
@@ -425,6 +544,26 @@ export default function GuwenLessonDecode() {
               }`}
             >
               {isCurrent ? i + 1 : '🔒'}
+            </span>
+          );
+        })}
+        {closingStepsList.map((c, i) => {
+          const solved = solvedIds.has(c.id);
+          const isCurrent = !currentStep && allStepsSolved && closingStage === c.kind;
+          const label = totalWordSteps + i + 1;
+          return (
+            <span
+              key={c.id}
+              aria-label={`第 ${label} 關（收尾任務）`}
+              className={`w-9 h-9 flex items-center justify-center rounded-full font-bold text-sm border-2 ${
+                solved
+                  ? 'bg-amber-100 border-amber-400 text-amber-700'
+                  : isCurrent
+                    ? 'bg-indigo-100 border-indigo-500 text-indigo-700'
+                    : 'bg-gray-50 border-gray-200 text-gray-300'
+              }`}
+            >
+              {solved || isCurrent ? label : '🔒'}
             </span>
           );
         })}
@@ -676,7 +815,7 @@ export default function GuwenLessonDecode() {
     setPhase('intro');
   }
 
-  function renderClue(clue: { text: string; highlight: string; unlockedMeaning: string; source: string }, i: number) {
+  function renderClue(clue: { text: string; highlight: string; unlockedMeaning?: string; source: string }, i: number) {
     return (
       <div key={i} className="rounded-xl border-2 border-gray-200 bg-gray-50 px-4 py-3 space-y-1.5">
         <div className="flex items-start gap-2">
@@ -685,17 +824,21 @@ export default function GuwenLessonDecode() {
           </button>
           <p className="text-gray-800 font-medium">{highlightPhrase(clue.text, clue.highlight)}</p>
         </div>
-        <div className="flex items-start gap-2 pl-1">
-          <button
-            type="button"
-            onClick={() => speak(clue.unlockedMeaning)}
-            aria-label="聽這句白話"
-            className="text-sky-500 shrink-0 text-xs"
-          >
-            🔊
-          </button>
-          <p className="text-xs text-gray-500">已破解為：{highlightQuoted(clue.unlockedMeaning)}</p>
-        </div>
+        {/* Some clues deliberately omit unlockedMeaning — the child is meant to compare bare clues and
+            induce the pattern themselves, so translating one here would hand over the answer. */}
+        {clue.unlockedMeaning && (
+          <div className="flex items-start gap-2 pl-1">
+            <button
+              type="button"
+              onClick={() => speak(clue.unlockedMeaning!)}
+              aria-label="聽這句白話"
+              className="text-sky-500 shrink-0 text-xs"
+            >
+              🔊
+            </button>
+            <p className="text-xs text-gray-500">已破解為：{highlightQuoted(clue.unlockedMeaning)}</p>
+          </div>
+        )}
         <p className="text-[11px] text-gray-300 pl-1">出處：{clue.source}</p>
       </div>
     );
@@ -778,12 +921,25 @@ export default function GuwenLessonDecode() {
       .filter((c): c is SequenceCard => Boolean(c));
     return (
       <div className="bg-white rounded-2xl shadow p-5 space-y-4">
-        <h3 className="font-bold text-gray-800">{closing.title}</h3>
+        <div className="flex items-start gap-2">
+          <h3 className="font-bold text-gray-800 flex-1">{closing.title}</h3>
+          <button
+            type="button"
+            onClick={() => togglePlayback(`closing-intro-ordering`, closing.intro)}
+            aria-label="聽這段說明"
+            className="text-sky-500 shrink-0"
+          >
+            {playbackLabel(`closing-intro-ordering`, '🔊', '⏸', '▶️')}
+          </button>
+        </div>
         <p className="text-sm text-gray-600">{closing.intro}</p>
         <div className="space-y-2">
           {cardsInOrder.map((card, i) => (
             <div key={card.id} className="flex items-center gap-2 rounded-xl border-2 border-gray-200 bg-gray-50 px-3 py-2">
               <span className="font-bold text-gray-400 w-5 text-center shrink-0">{i + 1}</span>
+              <button type="button" onClick={() => speak(card.text)} aria-label="聽這張畫面" className="text-sky-500 shrink-0">
+                🔊
+              </button>
               <p className="flex-1 text-sm text-gray-800">{card.text}</p>
               {!orderingSolved && (
                 <div className="flex flex-col gap-0.5 shrink-0">
@@ -822,7 +978,17 @@ export default function GuwenLessonDecode() {
         )}
         {orderingSolved && (
           <div className="bg-emerald-50 rounded-xl p-4 space-y-3">
-            <p className="font-bold text-emerald-700">{closing.correctFeedback}</p>
+            <div className="flex items-start gap-2">
+              <p className="font-bold text-emerald-700 flex-1">{closing.correctFeedback}</p>
+              <button
+                type="button"
+                onClick={() => speak(closing.correctFeedback)}
+                aria-label="聽這段回饋"
+                className="text-emerald-600 shrink-0"
+              >
+                🔊
+              </button>
+            </div>
             <button
               type="button"
               onClick={handleContinueFromOrdering}
@@ -840,20 +1006,57 @@ export default function GuwenLessonDecode() {
     const closing = lesson!.causalChainClosing!;
     return (
       <div className="bg-white rounded-2xl shadow p-5 space-y-4">
-        <h3 className="font-bold text-gray-800">{closing.title}</h3>
+        <div className="flex items-start gap-2">
+          <h3 className="font-bold text-gray-800 flex-1">{closing.title}</h3>
+          <button
+            type="button"
+            onClick={() => togglePlayback(`closing-intro-causal`, closing.displayNote)}
+            aria-label="聽這段說明"
+            className="text-sky-500 shrink-0"
+          >
+            {playbackLabel(`closing-intro-causal`, '🔊', '⏸', '▶️')}
+          </button>
+        </div>
         <p className="text-xs text-gray-400">{closing.displayNote}</p>
         <div className="space-y-1">
           {closing.nodes.map((node, i) => (
             <div key={i}>
-              <p className="text-sm text-gray-800 bg-gray-50 rounded-lg px-3 py-2">{node}</p>
+              <div className="flex items-center gap-2 bg-gray-50 rounded-lg px-3 py-2">
+                <button type="button" onClick={() => speak(node)} aria-label="聽這個階段" className="text-sky-500 shrink-0">
+                  🔊
+                </button>
+                <p className="flex-1 text-sm text-gray-800">{node}</p>
+              </div>
               {i < closing.nodes.length - 1 && <p className="text-center text-gray-300">↓</p>}
             </div>
           ))}
         </div>
         <div className="bg-amber-50 rounded-xl p-4">
-          <p className="text-sm font-bold text-amber-700 whitespace-pre-line">{closing.coreSummary}</p>
+          <div className="flex items-start gap-2">
+            <p className="text-sm font-bold text-amber-700 whitespace-pre-line flex-1">{closing.coreSummary}</p>
+            <button
+              type="button"
+              onClick={() => togglePlayback(`closing-summary-${closing.id}`, closing.coreSummary)}
+              aria-label="聽這段結論"
+              className="text-amber-600 shrink-0"
+            >
+              {playbackLabel(`closing-summary-${closing.id}`, '🔊', '⏸', '▶️')}
+            </button>
+          </div>
         </div>
-        {closing.evidenceBoundary && <p className="text-xs text-gray-400">{closing.evidenceBoundary}</p>}
+        {closing.evidenceBoundary && (
+          <div className="flex items-start gap-2">
+            <p className="text-xs text-gray-400 flex-1">{closing.evidenceBoundary}</p>
+            <button
+              type="button"
+              onClick={() => speak(closing.evidenceBoundary!)}
+              aria-label="聽這段證據邊界"
+              className="text-gray-400 shrink-0"
+            >
+              🔊
+            </button>
+          </div>
+        )}
         <button
           type="button"
           onClick={handleContinueFromCausalChain}
@@ -869,7 +1072,17 @@ export default function GuwenLessonDecode() {
     const closing = lesson!.evidenceMultiSelectClosing!;
     return (
       <div className="bg-white rounded-2xl shadow p-5 space-y-4">
-        <h3 className="font-bold text-gray-800">{closing.title}</h3>
+        <div className="flex items-start gap-2">
+          <h3 className="font-bold text-gray-800 flex-1">{closing.title}</h3>
+          <button
+            type="button"
+            onClick={() => togglePlayback(`closing-intro-multiselect`, closing.intro)}
+            aria-label="聽這段說明"
+            className="text-sky-500 shrink-0"
+          >
+            {playbackLabel(`closing-intro-multiselect`, '🔊', '⏸', '▶️')}
+          </button>
+        </div>
         <p className="text-sm text-gray-600">{closing.intro}</p>
         <div className="space-y-2">
           {closing.options.map((opt, i) => (
@@ -886,7 +1099,19 @@ export default function GuwenLessonDecode() {
                 onChange={() => toggleMultiSelectOption(i)}
                 className="mt-1"
               />
-              <span className="text-sm text-gray-800">{opt.text}</span>
+              <span className="text-sm text-gray-800 flex-1">{opt.text}</span>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  speak(opt.text);
+                }}
+                aria-label="聽這個選項"
+                className="text-sky-500 shrink-0"
+              >
+                🔊
+              </button>
             </label>
           ))}
         </div>
@@ -902,15 +1127,45 @@ export default function GuwenLessonDecode() {
         )}
         {multiSelectSolved && (
           <div className="bg-emerald-50 rounded-xl p-4 space-y-3">
-            <p className="font-bold text-emerald-700 whitespace-pre-line">{closing.correctFeedback}</p>
+            <div className="flex items-start gap-2">
+              <p className="font-bold text-emerald-700 whitespace-pre-line flex-1">{closing.correctFeedback}</p>
+              <button
+                type="button"
+                onClick={() => togglePlayback(`closing-feedback-${closing.id}`, closing.correctFeedback)}
+                aria-label="聽這段回饋"
+                className="text-emerald-600 shrink-0"
+              >
+                {playbackLabel(`closing-feedback-${closing.id}`, '🔊', '⏸', '▶️')}
+              </button>
+            </div>
             <div className="space-y-1">
               {closing.options.map((opt, i) => (
-                <p key={i} className="text-xs text-gray-600">
-                  {opt.correct ? '✓' : '✗'} {opt.text} — {opt.detail}
-                </p>
+                <div key={i} className="flex items-start gap-2">
+                  <p className="text-xs text-gray-600 flex-1">
+                    {opt.correct ? '✓' : '✗'} {opt.text} — {opt.detail}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => speak(`${opt.text}${opt.detail}`)}
+                    aria-label="聽這一項"
+                    className="text-gray-400 shrink-0"
+                  >
+                    🔊
+                  </button>
+                </div>
               ))}
             </div>
-            <p className="text-xs text-gray-500 italic">{closing.finalNote}</p>
+            <div className="flex items-start gap-2">
+              <p className="text-xs text-gray-500 italic flex-1">{closing.finalNote}</p>
+              <button
+                type="button"
+                onClick={() => speak(closing.finalNote)}
+                aria-label="聽這段提醒"
+                className="text-gray-400 shrink-0"
+              >
+                🔊
+              </button>
+            </div>
             <button
               type="button"
               onClick={handleFinishClosingSequence}
@@ -968,6 +1223,35 @@ export default function GuwenLessonDecode() {
 
   return (
     <div className="space-y-4">
+      {showLessonCelebration && (
+        <div className="fixed inset-0 z-50 pointer-events-none overflow-hidden">
+          {fireworkParticles.map((p) => (
+            <span
+              key={p.id}
+              className="absolute text-3xl"
+              style={
+                {
+                  left: p.left,
+                  top: p.top,
+                  '--tx': `${p.tx}px`,
+                  '--ty': `${p.ty}px`,
+                  '--rot': `${p.rot}deg`,
+                  animation: `burst-particle ${FIREWORK_PARTICLE_DURATION_S}s ease-out ${p.delay}s forwards`,
+                } as React.CSSProperties
+              }
+            >
+              {p.emoji}
+            </span>
+          ))}
+          <div
+            className="absolute left-1/2 top-[16%] -translate-x-1/2 whitespace-nowrap text-xl sm:text-2xl font-extrabold text-white bg-gradient-to-r from-amber-500 via-orange-500 to-pink-500 px-6 py-3 rounded-full shadow-2xl"
+            style={{ animation: `pop-text ${FIREWORK_TOTAL_MS / 1000}s ease-out forwards` }}
+          >
+            🏆 全文破譯成功！太厲害了！
+          </div>
+        </div>
+      )}
+
       <Link to="/guwen" className="text-teal-600 text-sm font-medium">
         ← 回古文破譯家
       </Link>
@@ -1157,6 +1441,7 @@ export default function GuwenLessonDecode() {
       {phase === 'steps' && !currentStep && allStepsSolved && closingStepsList.length > 0 && (
         <div className="space-y-4">
           {renderPassage()}
+          {renderStepChips()}
           {renderClosingSequence()}
         </div>
       )}

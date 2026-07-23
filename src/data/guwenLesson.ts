@@ -14,8 +14,12 @@ export interface ClassicalClue {
   text: string;
   /** The exact substring of `text` to visually highlight (the word/phrase this clue is evidence for). */
   highlight: string;
-  /** Child-facing vernacular gloss for this clue sentence only — unlocks the clue, never the target sentence. */
-  unlockedMeaning: string;
+  /** Child-facing vernacular gloss for this clue sentence only — unlocks the clue, never the target sentence.
+   * Deliberately omitted for a clue whose whole point is a structural/positional pattern the child must
+   * induce by comparing two bare clues side by side (e.g. "入海求神藥"/"入林求木" for 入水求之) — spelling out
+   * the translation there would directly hand over the "入X求Y＝進入X，尋找Y" pattern the question is testing,
+   * not just gloss a word. Only omit it for this reason, never just to save authoring effort. */
+  unlockedMeaning?: string;
   /** Traceable source (author/work), preserved verbatim from the approved lesson content. */
   source: string;
 }
@@ -1060,13 +1064,13 @@ export const keZhouQiuJianLesson: GuwenLesson = {
         {
           text: '方士徐市等入海求神藥。',
           highlight: '入海求神藥',
-          unlockedMeaning: '方士徐市等人「入海求神藥」，也就是一起進入海中，尋找長生不老的仙藥。',
+          // 故意不給白話翻譯：這條線索要考的正是「入X求Y」這個位置關係本身，翻成白話等於直接告訴孩子答案。
           source: '《史記．秦始皇本紀》',
         },
         {
           text: '與數人入林求木。',
           highlight: '入林求木',
-          unlockedMeaning: '他和幾個人一起「入林求木」，也就是進入樹林，尋找可以使用的木材。',
+          // 故意不給白話翻譯，理由同上一條——兩句放在一起比較，是要讓孩子自己看出「入X求Y」的排列方式。
           source: '《太平廣記．楊溥》引《紀聞》',
         },
       ],
