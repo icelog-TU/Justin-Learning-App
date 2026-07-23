@@ -95,9 +95,15 @@ export default function GuwenLessonDecode() {
   const progress = lesson ? data.guwenProgress[lesson.id] : undefined;
   const solvedIds = useMemo(() => new Set(progress?.decodedWordIds ?? []), [progress]);
   const alreadyComplete = Boolean(progress?.completedAt);
+  // Every step can be solved without `completedAt` ever being recorded — that field is only set when the
+  // child clicks the final "🎉 完成" button, so leaving via "← 回古文破譯家" right after the last correct
+  // answer skips it. Treat "nothing left to solve" the same as "explicitly completed" everywhere below,
+  // otherwise re-opening the lesson lands on phase 'steps' with no current step (findCurrentStep finds none
+  // left) — none of the four phase branches match, and the page renders nothing but the back link.
+  const allStepsSolved = Boolean(lesson) && lesson!.steps.length > 0 && solvedIds.size >= lesson!.steps.length;
 
   const [phase, setPhase] = useState<Phase>(() => {
-    if (alreadyComplete) return 'complete';
+    if (alreadyComplete || allStepsSolved) return 'complete';
     if (solvedIds.size > 0) return 'steps';
     return 'intro';
   });
@@ -194,6 +200,21 @@ export default function GuwenLessonDecode() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, lesson]);
+
+  // Grants the completion bonus the child would have gotten from clicking "🎉 完成", for the case where
+  // every step is already solved but that button was never clicked (see the `allStepsSolved` comment above).
+  // The ref guards against re-firing on every render once `completeGuwenText` lands and `alreadyComplete`
+  // flips true — without it, this would otherwise still be eligible to run again on remounts before that
+  // state change is reflected.
+  const missedCompletionAwardedRef = useRef(false);
+  useEffect(() => {
+    if (missedCompletionAwardedRef.current) return;
+    if (!lesson || alreadyComplete || !allStepsSolved) return;
+    missedCompletionAwardedRef.current = true;
+    completeGuwenText(lesson.id);
+    reward(GUWEN_TEXT_COMPLETE_BONUS_COINS, GUWEN_TEXT_COMPLETE_BONUS_STARS, { big: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lesson, alreadyComplete, allStepsSolved]);
 
   useEffect(() => {
     if (phase !== 'complete' || !lesson || !verificationOpen) return;
