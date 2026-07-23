@@ -3,12 +3,23 @@
  * text needs a rarer one — the Web Speech API takes plain text only (no SSML/phoneme tags), so the standard
  * workaround is substituting a homophone-for-the-intended-reading character purely in the string handed to
  * the speech engine, never in any displayed or stored text (classical text and clues must stay
- * character-for-character faithful — see guwenLesson.ts). Currently: 沒 followed by 水/入 means "submerged"
- * (讀ㄇㄛˋ, mò, as in 沒水中/沒入) — voices default it to the far more common 沒有-style ㄇㄟˊ (méi) negation
- * reading instead, which doesn't collide with any actual 沒有/沒人/沒說-type negation in this app's content.
+ * character-for-character faithful — see guwenLesson.ts). Currently:
+ * - 沒 followed by 水/入 means "submerged" (讀ㄇㄛˋ, mò, as in 沒水中/沒入) — voices default it to the far more
+ *   common 沒有-style ㄇㄟˊ (méi) negation reading instead, which doesn't collide with any actual
+ *   沒有/沒人/沒說-type negation in this app's content.
+ * - 溱 (as in 《詩經．鄭風．褰裳》「褰裳涉溱」, the river name) should read ㄓㄣ (zhēn) — voices default to the
+ *   rarer ㄑㄧㄣˊ (qín) reading instead. Substituted globally since this app only ever uses 溱 as this river
+ *   name.
+ * - 裳 in 褰裳/衣裳 should read the neutral-tone ㄕㄤ (shang, as in colloquial 衣裳), not ㄔㄤˊ (cháng, the
+ *   reading used elsewhere in classical Chinese for 裳 as "a skirt/lower garment" on its own, e.g. 裳裳者華) —
+ *   scoped to right after 褰/衣 specifically, not a blanket substitution, since a future lesson quoting 裳 in
+ *   a genuine cháng context would need the opposite fix.
  */
 function ttsSafe(text: string): string {
-  return text.replace(/沒(?=[水入])/g, '末');
+  return text
+    .replace(/沒(?=[水入])/g, '末')
+    .replace(/溱/g, '真')
+    .replace(/(?<=[褰衣])裳/g, '傷');
 }
 
 /** Reads text aloud using the browser's built-in text-to-speech (no API cost, works offline once voices are installed). */
