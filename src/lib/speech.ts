@@ -27,6 +27,11 @@
  *   figure. Scoped to right after 徐 specifically — 市 genuinely means "market" elsewhere in this app (e.g.
  *   the 其 clue "曾子之妻之市" two lines above, or 王戎's original guwen.ts corpus), so a blanket swap would be
  *   wrong there.
+ * - 樂樂 (as in 《孟子》「與少樂樂，與眾樂樂，孰樂」, used for 眾) is a classical wordplay where the *first* 樂 in
+ *   each pair means "to enjoy/appreciate" (讀ㄩㄝˋ, yuè) and the *second* means "happy" (讀ㄌㄜˋ, lè) — voices
+ *   default both to lè. Fixed by substituting the first of each pair with 月 (unambiguously yuè), leaving
+ *   the second 樂 and every standalone 樂 elsewhere (快樂/不亦樂乎/孰樂) untouched, since lè is already their
+ *   correct and default reading.
  */
 function ttsSafe(text: string): string {
   return text
@@ -35,7 +40,8 @@ function ttsSafe(text: string): string {
     .replace(/(?<=[褰衣])裳/g, '傷')
     .replace(/好(?=上高)/g, '耗')
     .replace(/曾(?=子)/g, '增')
-    .replace(/(?<=徐)市/g, '福');
+    .replace(/(?<=徐)市/g, '福')
+    .replace(/樂(?=樂)/g, '月');
 }
 
 /** Reads text aloud using the browser's built-in text-to-speech (no API cost, works offline once voices are installed). */
