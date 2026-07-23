@@ -135,11 +135,12 @@ export default function GuwenLessonDecode() {
 
   function toggleFullPlayback() {
     if (!lesson) return;
-    if (!isPlaying) {
+    if (!isPlaying || isPaused) {
+      // speechSynthesis.resume() is unreliable on some browsers once paused for more than a moment — the
+      // engine silently drops the utterance instead of continuing (a real bug the user hit: pause worked,
+      // but pressing play again produced no sound). Restarting the whole sequence from the top is a small
+      // UX compromise but guarantees sound actually resumes, covering both "starting fresh" and "resuming".
       playFullSequence(lesson.fullText);
-    } else if (isPaused) {
-      resumeSpeech();
-      setIsPaused(false);
     } else {
       pauseSpeech();
       setIsPaused(true);
@@ -147,15 +148,7 @@ export default function GuwenLessonDecode() {
   }
 
   function togglePlayback(id: string, content: string | string[]) {
-    if (playbackId === id) {
-      if (playbackPaused) {
-        resumeSpeech();
-        setPlaybackPaused(false);
-      } else {
-        pauseSpeech();
-        setPlaybackPaused(true);
-      }
-    } else {
+    const startOrRestart = () => {
       setPlaybackId(id);
       setPlaybackPaused(false);
       const onDone = () => setPlaybackId((cur) => (cur === id ? null : cur));
@@ -164,6 +157,18 @@ export default function GuwenLessonDecode() {
       } else {
         speak(content, onDone);
       }
+    };
+    if (playbackId === id) {
+      if (playbackPaused) {
+        // Same resume-is-unreliable issue as toggleFullPlayback — restart from the top instead of trusting
+        // speechSynthesis.resume().
+        startOrRestart();
+      } else {
+        pauseSpeech();
+        setPlaybackPaused(true);
+      }
+    } else {
+      startOrRestart();
     }
   }
 

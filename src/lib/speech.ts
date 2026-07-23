@@ -1,3 +1,16 @@
+/**
+ * A few characters have one much more common "default" reading that TTS voices always pick, even when the
+ * text needs a rarer one — the Web Speech API takes plain text only (no SSML/phoneme tags), so the standard
+ * workaround is substituting a homophone-for-the-intended-reading character purely in the string handed to
+ * the speech engine, never in any displayed or stored text (classical text and clues must stay
+ * character-for-character faithful — see guwenLesson.ts). Currently: 沒 followed by 水/入 means "submerged"
+ * (讀ㄇㄛˋ, mò, as in 沒水中/沒入) — voices default it to the far more common 沒有-style ㄇㄟˊ (méi) negation
+ * reading instead, which doesn't collide with any actual 沒有/沒人/沒說-type negation in this app's content.
+ */
+function ttsSafe(text: string): string {
+  return text.replace(/沒(?=[水入])/g, '末');
+}
+
 /** Reads text aloud using the browser's built-in text-to-speech (no API cost, works offline once voices are installed). */
 export function speak(text: string, onEnd?: () => void) {
   if (typeof window === 'undefined' || !window.speechSynthesis) {
@@ -5,7 +18,7 @@ export function speak(text: string, onEnd?: () => void) {
     return;
   }
   window.speechSynthesis.cancel();
-  const utterance = new SpeechSynthesisUtterance(text);
+  const utterance = new SpeechSynthesisUtterance(ttsSafe(text));
   utterance.lang = 'zh-TW';
   utterance.rate = 0.95;
   if (onEnd) utterance.onend = onEnd;
@@ -25,7 +38,7 @@ export function speakSequence(texts: string[], onDone?: () => void) {
   }
   window.speechSynthesis.cancel();
   texts.forEach((text, i) => {
-    const utterance = new SpeechSynthesisUtterance(text);
+    const utterance = new SpeechSynthesisUtterance(ttsSafe(text));
     utterance.lang = 'zh-TW';
     utterance.rate = 0.95;
     if (i === texts.length - 1 && onDone) utterance.onend = onDone;

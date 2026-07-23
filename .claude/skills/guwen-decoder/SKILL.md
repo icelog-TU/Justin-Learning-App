@@ -194,13 +194,17 @@ const [playbackId, setPlaybackId] = useState<string | null>(null);
 const [playbackPaused, setPlaybackPaused] = useState(false);
 
 function togglePlayback(id: string, content: string | string[]) {
-  if (playbackId === id) {
-    playbackPaused ? (resumeSpeech(), setPlaybackPaused(false)) : (pauseSpeech(), setPlaybackPaused(true));
-  } else {
+  const startOrRestart = () => {
     setPlaybackId(id);
     setPlaybackPaused(false);
     const onDone = () => setPlaybackId((cur) => (cur === id ? null : cur));
     Array.isArray(content) ? speakSequence(content, onDone) : speak(content, onDone);
+  };
+  if (playbackId === id) {
+    // Resume restarts from the top rather than calling resumeSpeech() — see the pitfall below.
+    playbackPaused ? startOrRestart() : (pauseSpeech(), setPlaybackPaused(true));
+  } else {
+    startOrRestart();
   }
 }
 function playbackLabel(id, idleLabel, playingLabel, pausedLabel) {
@@ -219,6 +223,18 @@ For queueing multiple *separate* lines back-to-back where each must fully finish
 `scheduleExplanationFor` (called once the post-correct celebration finishes — see above) speaks the explanation via `window.setTimeout(..., 250)` (a short pause after the celebration fires feels better than speaking instantly). If the child clicks "下一個古文字" inside that 250ms window, `cancelSpeech()` alone does nothing — there's no speech playing *yet* to cancel, only a pending timer. The timeout still fires later, once the *next* word's screen is already showing, and hijacks whatever that screen is playing (a real bug the user hit: "我在第二題頁面還聽得到第一題的詳解語音").
 
 The fix, and the general rule: **any `window.setTimeout` that leads to a `speak()` call must have its ID stored in a ref and explicitly cleared by every path that navigates away**, not just have `cancelSpeech()` called on the *already-started* utterance. Here that's `explainTimeoutRef`, cleared by a shared `stopPuzzleSpeech()` helper called from both `handleNextWord` and `handleResetProgress` (both places that change `wordIndex` or otherwise leave the current word behind). The celebration's own roll-up timer (`celebrationTimeoutRef`) follows the identical pattern and is cleared by the same `stopPuzzleSpeech()`. If a future puzzle type or feature adds another delayed-then-speak (or delayed-then-anything) call, route it through the same ref-and-clear pattern rather than trusting `cancelSpeech()` to cover it.
+
+### Known pitfall: `speechSynthesis.resume()` is not reliable — treat "resume" as "restart"
+
+A real bug the user hit: "念全文，唸到一半，我按暫停，它可以停下來，但是我再按一次播放，它不會繼續播放" — pausing worked (`pauseSpeech()`/`window.speechSynthesis.pause()` visibly stopped the audio), but clicking play again produced no sound. This is a known WebSpeech engine issue on some browsers: once paused for more than a moment, the underlying engine silently drops the utterance instead of continuing, and `resume()` becomes a no-op.
+
+**Fix, and the standing rule for every pause-capable control in this feature (both `togglePlayback` and `toggleFullPlayback`, in both `GuwenDecode.tsx` and `GuwenLessonDecode.tsx`):** don't call `resumeSpeech()` on the resume branch at all — call the same start/restart logic used for "begin from idle" instead (re-run `speak()`/`speakSequence()` on the same content from the top). This means resuming always re-plays from the beginning of the current utterance/sequence rather than picking up mid-sentence — a real UX trade-off, but "restarts a sentence or two early" is a far better failure mode than "silently produces nothing," and it's guaranteed to work regardless of which underlying browser bug caused the stall (an explicit pause that won't resume, or Chrome's separate ~15s-continuous-speech auto-stop). `toggleCelebrationPause` (the roll-up celebration's pause button) still calls `resumeSpeech()` for the short praise line — that's a narrower, shorter-lived case that hasn't shown this failure in practice; apply the same restart fix there too if it's ever reported.
+
+### Known pitfall: some characters need a TTS-only pronunciation override, never a text change
+
+A real bug the user hit: "沒應該唸莫，他唸梅" — in "足跌沒水中"/"沒入水中", the child's TTS voice read 沒 as its far-more-common ㄇㄟˊ (méi, "沒有"-style negation) instead of the correct ㄇㄛˋ (mò, "submerged") the classical text needs here. The Web Speech API takes plain text only — no SSML, no phoneme tags — so there's no way to tell the engine "read this character differently" without changing what string it receives.
+
+**Fix, and the rule for any future multi-reading-character (多音字) mispronunciation:** add a narrowly-scoped find/replace in `ttsSafe()` (`src/lib/speech.ts`, applied inside `speak()`/`speakSequence()` for every utterance app-wide) that substitutes a homophone-for-the-intended-reading character — e.g. `沒(?=[水入])` → `末` (末 is unambiguously mò) — **only in the string handed to the speech engine, never in any displayed or stored text.** The classical text and clues in `guwenLesson.ts`/`guwen.ts` must stay character-for-character faithful per the implementation contract; `ttsSafe()` is the one sanctioned place where "what's spoken" is allowed to diverge from "what's shown," and it must stay that way — never work around a mispronunciation by editing the source text itself. Scope every substitution as tightly as possible (a lookahead/lookbehind on the specific compound, not a blanket character swap) so it can't accidentally mis-fire on an unrelated, correctly-pronounced instance of the same character elsewhere in the app (confirmed here: `沒(?=[水入])` fixes 沒水中/沒入 without touching 沒有/沒關係/沒人, which are correctly méi and appear throughout this lesson's explanations).
 
 ### Known pitfall (evidence-lesson format): never derive "the current step" fresh from solvedIds every render
 
