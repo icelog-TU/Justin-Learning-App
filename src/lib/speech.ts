@@ -32,6 +32,11 @@
  *   default both to lè. Fixed by substituting the first of each pair with 月 (unambiguously yuè), leaving
  *   the second 樂 and every standalone 樂 elsewhere (快樂/不亦樂乎/孰樂) untouched, since lè is already their
  *   correct and default reading.
+ * - 說 in 不亦說乎 (as in 《論語．學而》「學而時習之，不亦說乎」) is a 通假字 for 悅 and should read ㄩㄝˋ (yuè,
+ *   "pleased") — voices default to the far more common ㄕㄨㄛ (shuō, "to speak") reading instead. Substituted
+ *   with 悅 (which only ever reads yuè, so it's an unambiguous stand-in), scoped tightly to right between 亦
+ *   and 乎 — 說 as shuō is one of the most common characters in this app's own explanations/hints, so a
+ *   blanket swap would break far more than it fixes.
  */
 function ttsSafe(text: string): string {
   return text
@@ -41,7 +46,8 @@ function ttsSafe(text: string): string {
     .replace(/好(?=上高)/g, '耗')
     .replace(/曾(?=子)/g, '增')
     .replace(/(?<=徐)市/g, '福')
-    .replace(/樂(?=樂)/g, '月');
+    .replace(/樂(?=樂)/g, '月')
+    .replace(/(?<=亦)說(?=乎)/g, '悅');
 }
 
 /** Reads text aloud using the browser's built-in text-to-speech (no API cost, works offline once voices are installed). */

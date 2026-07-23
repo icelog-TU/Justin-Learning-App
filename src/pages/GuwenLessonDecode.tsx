@@ -62,6 +62,23 @@ function stepAutoPlayLines(step: LessonStep): string[] {
   return lines.filter(Boolean);
 }
 
+/** Highlights every 「...」-quoted span in `text` (quotes included) — used for a clue's vernacular gloss,
+ * where the quoted span is the classical word/phrase the child just decoded, kept visible inside the
+ * modern-Chinese sentence so it's easy to spot at a glance, matching how the classical text itself
+ * highlights the same word via `highlightPhrase`. */
+function highlightQuoted(text: string): ReactNode[] {
+  const parts = text.split(/(「[^」]*」)/);
+  return parts.map((part, i) =>
+    part.startsWith('「') && part.endsWith('」') ? (
+      <span key={i} className="text-indigo-600 font-bold">
+        {part}
+      </span>
+    ) : (
+      <span key={i}>{part}</span>
+    ),
+  );
+}
+
 /** Splits `sentence` on every occurrence of `phrase`, highlighting each match. */
 function highlightPhrase(sentence: string, phrase: string): ReactNode[] {
   if (!phrase || !sentence.includes(phrase)) return [<span key="t">{sentence}</span>];
@@ -677,7 +694,7 @@ export default function GuwenLessonDecode() {
           >
             🔊
           </button>
-          <p className="text-xs text-gray-500">已破解為：{clue.unlockedMeaning}</p>
+          <p className="text-xs text-gray-500">已破解為：{highlightQuoted(clue.unlockedMeaning)}</p>
         </div>
         <p className="text-[11px] text-gray-300 pl-1">出處：{clue.source}</p>
       </div>
