@@ -64,8 +64,8 @@ const FIREWORK_COLORS = ['金色', '紅色', '綠色', '紫色', '彩虹色'];
 const ANIMALS = ['獅子', '長頸鹿', '貓熊', '企鵝', '大象', '老虎'];
 
 /**
- * 33 distinct daily-life activities — more than the highest possible tier count (23, for the
- * deepest character 2^46; see buildInteractionTiers below), so no character ever repeats a
+ * 33 distinct daily-life activities — more than the highest possible tier count (23, for any
+ * base's deepest ^46 character; see buildInteractionTiers below), so no character ever repeats a
  * category across its own tier list. Each one's specific content (which song, which food, which
  * mountain...) is picked deterministically per character, so different characters describe the
  * same activity differently too.

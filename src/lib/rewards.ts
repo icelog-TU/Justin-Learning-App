@@ -1,15 +1,20 @@
+/** Deliberately skips 4/8/9/10 — those are perfect powers (or products) of bases already in this list
+ * (4=2², 8=2³, 9=3², 10=2×5), so a character built on one of them would land on the exact same big-number
+ * value as a character from an existing base at some exponent (e.g. 4^23 === 2^46) — a collision the earlier
+ * "移除4的n次方，換成7的n次方" decision was made specifically to avoid. Every base here stays numerically
+ * distinct from every other at every exponent. */
 export const GACHA_BASES = [2, 3, 5, 6, 7, 11] as const;
-/** Per-base max exponent — base 2's collection runs deeper (46) than the others (33). */
+/** Per-base max exponent — every base now runs equally deep (46). */
 export const BASE_MAX_EXPONENT: Record<number, number> = {
   2: 46,
-  3: 33,
-  5: 33,
-  6: 33,
-  7: 33,
-  11: 33,
+  3: 46,
+  5: 46,
+  6: 46,
+  7: 46,
+  11: 46,
 };
 export function maxExponentForBase(base: number): number {
-  return BASE_MAX_EXPONENT[base] ?? 33;
+  return BASE_MAX_EXPONENT[base] ?? 46;
 }
 /** Total character slots across every base — used for overall collection totals/progress bars. */
 export const TOTAL_CHARACTER_SLOTS = GACHA_BASES.reduce((sum, base) => sum + maxExponentForBase(base), 0);
@@ -115,7 +120,7 @@ export function formatBigNumber(n: bigint): string {
  * is its own distinct color instead of one flat base color repeated throughout — exponent 1 is red,
  * the base's highest exponent is violet, sweeping smoothly through the spectrum between.
  */
-export function characterColor(exponent: number, maxExponent: number = 33): string {
+export function characterColor(exponent: number, maxExponent: number = 46): string {
   const hue = maxExponent > 1 ? ((exponent - 1) / (maxExponent - 1)) * 300 : 0;
   return `hsl(${hue.toFixed(0)}, 70%, 50%)`;
 }
@@ -155,7 +160,11 @@ export interface LevelInfo {
   threshold: number;
 }
 
-/** Ten levels tied to total characters collected (0 up to the full TOTAL_CHARACTER_SLOTS-character collection). */
+/** Fifteen levels tied to total characters collected (0 up to the full TOTAL_CHARACTER_SLOTS-character
+ * collection). Levels 1–10 and their thresholds are untouched from before every base was expanded to 46
+ * (see BASE_MAX_EXPONENT) — nobody's current level threshold moves. Levels 11–15 are new, added purely to
+ * spread out the extra characters that expansion added (211 → 276 total slots) across more levels, instead
+ * of just quietly raising level 10's own threshold. */
 export const LEVELS: LevelInfo[] = [
   { level: 1, title: '初心者', icon: '🥚', threshold: 0 },
   { level: 2, title: '幼幼班', icon: '🐣', threshold: 6 },
@@ -167,6 +176,11 @@ export const LEVELS: LevelInfo[] = [
   { level: 8, title: '高手', icon: '🥉', threshold: 160 },
   { level: 9, title: '大師', icon: '🥈', threshold: 192 },
   { level: 10, title: '中文高手', icon: '👑', threshold: 211 },
+  { level: 11, title: '國學新秀', icon: '🏵️', threshold: 224 },
+  { level: 12, title: '文學才子', icon: '🖋️', threshold: 237 },
+  { level: 13, title: '博學多聞', icon: '📜', threshold: 250 },
+  { level: 14, title: '一代宗師', icon: '🏆', threshold: 263 },
+  { level: 15, title: '中文之神', icon: '🌟', threshold: 276 },
 ];
 
 export function currentLevel(charactersOwned: number): LevelInfo {
