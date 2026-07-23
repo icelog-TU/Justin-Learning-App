@@ -5,6 +5,10 @@ description: Design spec and content-authoring guide for the "古文破譯家" (
 
 # 古文破譯家 (Ancient Text Decoder) — Design Spec
 
+## Standing instruction: keep this file current
+
+The user has explicitly asked that every future requirement, fix, or rule they raise about this feature gets folded into this file **without being asked each time** — they don't want to have to judge what's "worth" documenting themselves. So: after resolving any guwen-decoder request (bug fix, new UX rule, content-authoring decision), update this file in the same session, before considering the task done. Err toward adding — a rule that turns out to be obvious in hindsight costs nothing sitting here; a rule that's missing gets silently violated by a future session with no memory of why it mattered. Keep entries concrete (what broke / what was asked, and the fix), not just abstract principles.
+
 ## North Star
 
 > 真正的成就，不是 AI 把古文翻譯給孩子，而是孩子有一天驚訝地發現：「咦？我竟然可以自己讀懂古文了。」
@@ -147,6 +151,12 @@ function playbackLabel(id, idleLabel, playingLabel, pausedLabel) {
 Rule of thumb for what needs this vs. a plain one-shot `speak()`: if it's more than ~1 short sentence, or it's something that auto-plays without the user asking, it needs pause. A single corpus option or a single occurrence sentence doesn't (clicking any other 🔊 button just cancels-and-restarts via `speak()`'s own `cancel()` call, which is enough).
 
 For queueing multiple *separate* lines back-to-back where each must fully finish before the next starts (page-entry narration), use `speakSequence(lines, onDone)` instead — it queues real separate utterances so the browser (not a guessed timer) decides when one ends and the next begins.
+
+### Known pitfall: a delayed `speak()` needs its timer tracked, not just its speech cancelled
+
+`markWordSolved` speaks the explanation via `window.setTimeout(..., 250)` (a short pause after the reward fires feels better than speaking instantly). If the child clicks "下一個古文字" inside that 250ms window, `cancelSpeech()` alone does nothing — there's no speech playing *yet* to cancel, only a pending timer. The timeout still fires later, once the *next* word's screen is already showing, and hijacks whatever that screen is playing (a real bug the user hit: "我在第二題頁面還聽得到第一題的詳解語音").
+
+The fix, and the general rule: **any `window.setTimeout` that leads to a `speak()` call must have its ID stored in a ref and explicitly cleared by every path that navigates away**, not just have `cancelSpeech()` called on the *already-started* utterance. Here that's `explainTimeoutRef`, cleared by a shared `stopPuzzleSpeech()` helper called from both `handleNextWord` and `handleResetProgress` (both places that change `wordIndex` or otherwise leave the current word behind). If a future puzzle type or feature adds another delayed-then-speak call, route it through the same ref-and-clear pattern rather than trusting `cancelSpeech()` to cover it.
 
 ## Rewards
 

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useAppDataContext } from '../lib/AppDataContext';
 import { findGuwenText, type GuwenText, type GuwenWord } from '../data/guwen';
@@ -77,6 +77,10 @@ export default function GuwenDecode() {
   // explanations) — `id` distinguishes which button is currently "owning" playback so its label can toggle.
   const [playbackId, setPlaybackId] = useState<string | null>(null);
   const [playbackPaused, setPlaybackPaused] = useState(false);
+  // The explanation auto-speaks 250ms after a correct answer (markWordSolved). If the child advances to the
+  // next word before that timer fires, it must be cancelled — otherwise it fires late, on the *next* word's
+  // screen, and hijacks whatever is playing there.
+  const explainTimeoutRef = useRef<number | null>(null);
 
   function playFullSequence(fullText: string) {
     setIsPlaying(true);
@@ -382,13 +386,26 @@ export default function GuwenDecode() {
     recordGuwenWord(text!.id, word.id);
     reward(COIN_PER_GUWEN_WORD, STAR_PER_GUWEN_WORD);
     const id = `explain-${word.id}`;
-    window.setTimeout(() => {
+    explainTimeoutRef.current = window.setTimeout(() => {
+      explainTimeoutRef.current = null;
       setPlaybackId(id);
       setPlaybackPaused(false);
       speak(`「${word.char}」的意思是${word.meaning}。${word.explanation}`, () =>
         setPlaybackId((cur) => (cur === id ? null : cur)),
       );
     }, 250);
+  }
+
+  /** Stops anything the puzzle flow might be speaking/queued to speak — call before navigating away from
+   * the current word (next word, reset), so a stray explanation never plays over the next screen. */
+  function stopPuzzleSpeech() {
+    if (explainTimeoutRef.current !== null) {
+      window.clearTimeout(explainTimeoutRef.current);
+      explainTimeoutRef.current = null;
+    }
+    cancelSpeech();
+    setPlaybackId(null);
+    setPlaybackPaused(false);
   }
 
   function handleSelect(index: number) {
@@ -407,6 +424,7 @@ export default function GuwenDecode() {
   }
 
   function handleNextWord() {
+    stopPuzzleSpeech();
     setFeedback(null);
     setWrongIndex(null);
     if (wordIndex + 1 >= text!.words.length) {
@@ -420,14 +438,12 @@ export default function GuwenDecode() {
 
   function handleResetProgress() {
     resetGuwenText(text!.id);
-    cancelSpeech();
+    stopPuzzleSpeech();
     setConfirmReset(false);
     setFeedback(null);
     setWrongIndex(null);
     setRevealAnswer(false);
     setReviewWordId(null);
-    setPlaybackId(null);
-    setPlaybackPaused(false);
     setIsPlaying(false);
     setIsPaused(false);
     setWordIndex(0);
