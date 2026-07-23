@@ -132,6 +132,14 @@ export function playSlotDingSound() {
   tone(ctx, 2637, t, 0.4, 'sine', 0.07);
 }
 
+/** A soft, short click for one step of a slow reward-counter roll-up (古文破譯家's coin/star tally). */
+export function playRollTickSound() {
+  const ctx = getContext();
+  if (!ctx) return;
+  const t = ctx.currentTime;
+  tone(ctx, 900 + Math.random() * 200, t, 0.05, 'square', 0.05);
+}
+
 /** Grand fanfare for finishing all four positions of a 一字成語王 round. */
 export function playAssociationCompleteFanfare() {
   const ctx = getContext();

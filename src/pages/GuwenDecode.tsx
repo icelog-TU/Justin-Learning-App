@@ -4,6 +4,7 @@ import { useAppDataContext } from '../lib/AppDataContext';
 import { findGuwenText, type GuwenText, type GuwenWord } from '../data/guwen';
 import { tokenizeGuwenText } from '../lib/guwenGame';
 import { speak, speakSequence, pauseSpeech, resumeSpeech, cancelSpeech } from '../lib/speech';
+import { playSuccessChime, playCoinSound, playStarSound, playRollTickSound } from '../lib/sound';
 import {
   COIN_PER_GUWEN_WORD,
   STAR_PER_GUWEN_WORD,
@@ -18,6 +19,21 @@ const INTRO_HINT = '上面發光的字，就是等一下要破解的古文字。
 const LISTEN_LEAD_IN = '首先，跟我們一起聽一遍全文。';
 const LISTEN_PROMPT =
   '你是不是完全聽不懂它在說什麼呢？沒關係，跟著我們一步一步破解，每一個字都破解完之後，你就會自然看懂這整篇文章了！';
+
+/** Spoken the moment a word is solved, before the coin/star roll-up — picked at random so it doesn't feel
+ * robotic across the dozens of words in one text. */
+const PRAISE_LINES = [
+  '太棒了！你破解了一個古文字，這真的很不容易！',
+  '答對了！這個字不好懂，你竟然想通了！',
+  '厲害！你又破解了一個古文的秘密！',
+];
+
+/** Steps in the post-correct coin/star roll-up animation, and the delay between each step — slow enough to
+ * feel like a deliberate "count-up," not an instant number swap. Total duration ≈ CELEBRATION_TICKS *
+ * CELEBRATION_TICK_MS (currently ~1.4s), independent of how long the praise line takes to speak — the
+ * explanation only starts once *both* are done (see the celebration-transition effect below). */
+const CELEBRATION_TICKS = 10;
+const CELEBRATION_TICK_MS = 140;
 
 function introParagraph(text: GuwenText): string {
   return `這篇文章裡，很多字看起來像你平常認識的漢字，對不對？但其實裡面藏了 ${text.words.length} 個「古文字」——它們的意思，跟現在完全不一樣！`;
@@ -47,6 +63,22 @@ function puzzleAutoPlayLines(word: GuwenWord): string[] {
 
 /** Splits `sentence` on every occurrence of `char`, highlighting each match — used for both the target
  * sentence and the corpus example sentences, so the character under study always stands out the same way. */
+/** The post-correct "coin/star roll-up" celebration, in progress for at most one word at a time.
+ * 'rolling': the counter is ticking up from 0 while the praise line speaks alongside it. The transition to
+ * 'settled' is driven by the roll's own fixed duration (CELEBRATION_TICKS ticks), not by waiting for the
+ * praise line's speech-`onend` event — relying on `onend` to *gate* forward progress would risk the whole
+ * celebration hanging forever on a device/browser where it doesn't fire (e.g. voices not loaded yet). If the
+ * praise line is still talking when the roll finishes, that's fine: `speak()` always cancels whatever's
+ * currently playing before starting the next thing, so the explanation cleanly cuts it off later.
+ * 'settled': the counter has reached its target and the "哇，得到 X 金幣 Y 星星" line is showing — a brief,
+ * fixed pause (not tied to any external content, so it's not the "never guess a duration" timer pitfall)
+ * before the explanation begins. */
+interface CelebrationState {
+  wordId: string;
+  tick: number;
+  stage: 'rolling' | 'settled';
+}
+
 function highlightChar(sentence: string, char: string): ReactNode[] {
   const parts = sentence.split(char);
   const nodes: ReactNode[] = [];
@@ -93,10 +125,16 @@ export default function GuwenDecode() {
   // explanations) — `id` distinguishes which button is currently "owning" playback so its label can toggle.
   const [playbackId, setPlaybackId] = useState<string | null>(null);
   const [playbackPaused, setPlaybackPaused] = useState(false);
-  // The explanation auto-speaks 250ms after a correct answer (markWordSolved). If the child advances to the
-  // next word before that timer fires, it must be cancelled — otherwise it fires late, on the *next* word's
-  // screen, and hijacks whatever is playing there.
+  // The explanation auto-speaks 250ms after the celebration finishes (scheduleExplanationFor). If the child
+  // advances to the next word before that timer fires, it must be cancelled — otherwise it fires late, on
+  // the *next* word's screen, and hijacks whatever is playing there.
   const explainTimeoutRef = useRef<number | null>(null);
+  // The coin/star roll-up celebration that plays automatically right after a correct answer, before the
+  // explanation. `celebration` is null once it's finished (or been skipped) and the normal explanation UI
+  // takes over. See `markWordSolved`, `tickCelebration`, and the celebration-transition effect below.
+  const [celebration, setCelebration] = useState<CelebrationState | null>(null);
+  const [celebrationPaused, setCelebrationPaused] = useState(false);
+  const celebrationTimeoutRef = useRef<number | null>(null);
 
   function playFullSequence(fullText: string) {
     setIsPlaying(true);
@@ -198,9 +236,42 @@ export default function GuwenDecode() {
       cancelSpeech();
       setPlaybackId((cur) => (cur === id ? null : cur));
       setPlaybackPaused(false);
+      if (explainTimeoutRef.current !== null) {
+        window.clearTimeout(explainTimeoutRef.current);
+        explainTimeoutRef.current = null;
+      }
+      if (celebrationTimeoutRef.current !== null) {
+        window.clearTimeout(celebrationTimeoutRef.current);
+        celebrationTimeoutRef.current = null;
+      }
+      setCelebration(null);
+      setCelebrationPaused(false);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, text, wordIndex]);
+
+  // Once the roll-up reaches its target, settle for a brief beat (long enough to read "哇，得到 X 金幣 Y
+  // 星星"), then hand off to the explanation. Both the roll-up and the settle beat are fixed, deliberate
+  // delays — not guesses about external content duration — so this is a different class of timer than the
+  // ones the "never guess a duration" rule is about.
+  useEffect(() => {
+    if (!celebration) return;
+    if (celebration.stage === 'rolling' && celebration.tick >= CELEBRATION_TICKS) {
+      playCoinSound();
+      window.setTimeout(() => playStarSound(), 120);
+      setCelebration((cur) => (cur && cur.wordId === celebration.wordId ? { ...cur, stage: 'settled' } : cur));
+      return;
+    }
+    if (celebration.stage === 'settled') {
+      const wordId = celebration.wordId;
+      const timer = window.setTimeout(() => {
+        setCelebration(null);
+        scheduleExplanationFor(wordId);
+      }, 700);
+      return () => window.clearTimeout(timer);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [celebration]);
 
   if (!text) {
     return (
@@ -425,11 +496,30 @@ export default function GuwenDecode() {
     );
   }
 
-  function markWordSolved(word: GuwenWord) {
-    setFeedback('correct');
-    recordGuwenWord(text!.id, word.id);
-    reward(COIN_PER_GUWEN_WORD, STAR_PER_GUWEN_WORD);
-    const id = `explain-${word.id}`;
+  /** One step of the post-correct coin/star roll-up: bumps `tick`, plays a soft click, and schedules the
+   * next step — unless paused (toggleCelebrationPause clears celebrationTimeoutRef instead of letting this
+   * reschedule). Stale-callback safe: if the word changes (skip/reset) before this fires, the `wordId` guard
+   * inside the state updater makes it a no-op. */
+  function tickCelebration(wordId: string, tick: number) {
+    celebrationTimeoutRef.current = window.setTimeout(() => {
+      celebrationTimeoutRef.current = null;
+      const nextTick = tick + 1;
+      playRollTickSound();
+      setCelebration((cur) => (cur && cur.wordId === wordId ? { ...cur, tick: nextTick } : cur));
+      if (nextTick < CELEBRATION_TICKS) {
+        tickCelebration(wordId, nextTick);
+      }
+    }, CELEBRATION_TICK_MS);
+  }
+
+  /** Schedules the meaning+explanation speech, exactly as markWordSolved used to do immediately — now
+   * called once the celebration (praise line + roll-up) has fully finished. Kept as a 250ms grace delay
+   * (an intentional short pause, not a duration guess) so the explanation doesn't start mid-breath after
+   * the celebration's own audio. */
+  function scheduleExplanationFor(wordId: string) {
+    const word = text?.words.find((w) => w.id === wordId);
+    if (!word) return;
+    const id = `explain-${wordId}`;
     explainTimeoutRef.current = window.setTimeout(() => {
       explainTimeoutRef.current = null;
       setPlaybackId(id);
@@ -440,16 +530,55 @@ export default function GuwenDecode() {
     }, 250);
   }
 
+  function markWordSolved(word: GuwenWord) {
+    setFeedback('correct');
+    recordGuwenWord(text!.id, word.id);
+    reward(COIN_PER_GUWEN_WORD, STAR_PER_GUWEN_WORD);
+    playSuccessChime();
+    const praiseLine = PRAISE_LINES[Math.floor(Math.random() * PRAISE_LINES.length)];
+    setCelebrationPaused(false);
+    setCelebration({ wordId: word.id, tick: 0, stage: 'rolling' });
+    speak(praiseLine);
+    tickCelebration(word.id, 0);
+  }
+
+  /** Pauses/resumes both halves of the celebration at once (the praise-line speech and the roll-up ticker)
+   * — the shared togglePlayback only knows about speech, so it can't cover the roll-up's visual timer too. */
+  function toggleCelebrationPause() {
+    if (!celebration) return;
+    if (celebrationPaused) {
+      setCelebrationPaused(false);
+      resumeSpeech();
+      if (celebration.tick < CELEBRATION_TICKS) {
+        tickCelebration(celebration.wordId, celebration.tick);
+      }
+    } else {
+      setCelebrationPaused(true);
+      pauseSpeech();
+      if (celebrationTimeoutRef.current !== null) {
+        window.clearTimeout(celebrationTimeoutRef.current);
+        celebrationTimeoutRef.current = null;
+      }
+    }
+  }
+
   /** Stops anything the puzzle flow might be speaking/queued to speak — call before navigating away from
-   * the current word (next word, reset), so a stray explanation never plays over the next screen. */
+   * the current word (next word, reset), so a stray explanation never plays over the next screen. Also
+   * cuts short any in-progress celebration, since skipping ahead must always work immediately. */
   function stopPuzzleSpeech() {
     if (explainTimeoutRef.current !== null) {
       window.clearTimeout(explainTimeoutRef.current);
       explainTimeoutRef.current = null;
     }
+    if (celebrationTimeoutRef.current !== null) {
+      window.clearTimeout(celebrationTimeoutRef.current);
+      celebrationTimeoutRef.current = null;
+    }
     cancelSpeech();
     setPlaybackId(null);
     setPlaybackPaused(false);
+    setCelebration(null);
+    setCelebrationPaused(false);
   }
 
   function handleSelect(index: number) {
@@ -806,7 +935,30 @@ export default function GuwenDecode() {
               </>
             )}
 
-            {feedback === 'correct' && (
+            {feedback === 'correct' && celebration && (
+              <div className="bg-gradient-to-br from-amber-50 to-orange-50 border-2 border-amber-300 rounded-xl p-5 space-y-3 text-center">
+                <p className="text-lg font-bold text-orange-700">
+                  {celebration.stage === 'settled' ? '🎉 太棒了！' : '✨ 答對了！'}
+                </p>
+                <div className="flex items-center justify-center gap-6 text-2xl font-extrabold tabular-nums">
+                  <span className="text-orange-600">
+                    🪙 {Math.round((celebration.tick / CELEBRATION_TICKS) * COIN_PER_GUWEN_WORD)}
+                  </span>
+                  <span className="text-amber-500">
+                    ⭐ {Math.round((celebration.tick / CELEBRATION_TICKS) * STAR_PER_GUWEN_WORD)}
+                  </span>
+                </div>
+                {celebration.stage === 'settled' && (
+                  <p className="text-sm text-orange-600 font-semibold">
+                    哇，得到 {COIN_PER_GUWEN_WORD} 金幣、{STAR_PER_GUWEN_WORD} 星星！
+                  </p>
+                )}
+                <button type="button" onClick={toggleCelebrationPause} className="text-sm text-orange-500 underline">
+                  {celebrationPaused ? '▶️ 繼續播放' : '⏸ 暫停播放'}
+                </button>
+              </div>
+            )}
+            {feedback === 'correct' && !celebration && (
               <div className="bg-emerald-50 rounded-xl p-4 space-y-2">
                 <div className="flex items-start justify-between gap-2">
                   <p className="font-bold text-emerald-700">
@@ -851,15 +1003,16 @@ export default function GuwenDecode() {
                     ))}
                   </div>
                 )}
-
-                <button
-                  type="button"
-                  onClick={handleNextWord}
-                  className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl py-2.5"
-                >
-                  {wordIndex + 1 >= text.words.length ? '🎉 完成！看看整篇文章' : '下一個古文字 →'}
-                </button>
               </div>
+            )}
+            {feedback === 'correct' && (
+              <button
+                type="button"
+                onClick={handleNextWord}
+                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl py-2.5"
+              >
+                {wordIndex + 1 >= text.words.length ? '🎉 完成！看看整篇文章' : '下一個古文字 →'}
+              </button>
             )}
             {wrongIndex !== null && feedback !== 'correct' && (
               <div className="flex items-center justify-center gap-2">
