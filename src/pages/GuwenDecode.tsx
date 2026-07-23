@@ -35,6 +35,11 @@ const PRAISE_LINES = [
 const CELEBRATION_TICKS = 10;
 const CELEBRATION_TICK_MS = 140;
 
+/** Safety-valve upper bound for how long the celebration will wait on the praise line's speech-`onend`
+ * event before just moving on anyway — comfortably longer than any real PRAISE_LINES entry takes to speak,
+ * so in normal operation `onend` always fires first and this timer never actually matters. */
+const PRAISE_FALLBACK_MS = 4500;
+
 function introParagraph(text: GuwenText): string {
   return `這篇文章裡，很多字看起來像你平常認識的漢字，對不對？但其實裡面藏了 ${text.words.length} 個「古文字」——它們的意思，跟現在完全不一樣！`;
 }
@@ -61,24 +66,27 @@ function puzzleAutoPlayLines(word: GuwenWord): string[] {
   return [word.targetSentence, CONTEXT_PROMPT_TEXT(word)];
 }
 
-/** Splits `sentence` on every occurrence of `char`, highlighting each match — used for both the target
- * sentence and the corpus example sentences, so the character under study always stands out the same way. */
 /** The post-correct "coin/star roll-up" celebration, in progress for at most one word at a time.
  * 'rolling': the counter is ticking up from 0 while the praise line speaks alongside it. The transition to
- * 'settled' is driven by the roll's own fixed duration (CELEBRATION_TICKS ticks), not by waiting for the
- * praise line's speech-`onend` event — relying on `onend` to *gate* forward progress would risk the whole
- * celebration hanging forever on a device/browser where it doesn't fire (e.g. voices not loaded yet). If the
- * praise line is still talking when the roll finishes, that's fine: `speak()` always cancels whatever's
- * currently playing before starting the next thing, so the explanation cleanly cuts it off later.
+ * 'settled' needs *both* the roll to reach its target tick *and* `praiseDone` to be true — advancing on the
+ * roll alone cut the praise line off mid-sentence in practice (a real bug the user hit: "太棒了，你破解一個
+ * 古文...還沒有講完，就被中斷"). `praiseDone` is normally set by the praise line's speech-`onend` callback,
+ * but that alone would risk hanging forever if `onend` never fires on some device/browser (voices not
+ * loaded, etc.) — so `markWordSolved` also arms a generous fallback timer (`PRAISE_FALLBACK_MS`, well past
+ * any real praise line's spoken length) that force-sets `praiseDone` if `onend` hasn't fired by then. In
+ * normal operation `onend` always wins first; the fallback is a safety valve, not the common path.
  * 'settled': the counter has reached its target and the "哇，得到 X 金幣 Y 星星" line is showing — a brief,
  * fixed pause (not tied to any external content, so it's not the "never guess a duration" timer pitfall)
  * before the explanation begins. */
 interface CelebrationState {
   wordId: string;
   tick: number;
+  praiseDone: boolean;
   stage: 'rolling' | 'settled';
 }
 
+/** Splits `sentence` on every occurrence of `char`, highlighting each match — used for both the target
+ * sentence and the corpus example sentences, so the character under study always stands out the same way. */
 function highlightChar(sentence: string, char: string): ReactNode[] {
   const parts = sentence.split(char);
   const nodes: ReactNode[] = [];
@@ -135,6 +143,7 @@ export default function GuwenDecode() {
   const [celebration, setCelebration] = useState<CelebrationState | null>(null);
   const [celebrationPaused, setCelebrationPaused] = useState(false);
   const celebrationTimeoutRef = useRef<number | null>(null);
+  const celebrationPraiseFallbackRef = useRef<number | null>(null);
 
   function playFullSequence(fullText: string) {
     setIsPlaying(true);
@@ -244,19 +253,25 @@ export default function GuwenDecode() {
         window.clearTimeout(celebrationTimeoutRef.current);
         celebrationTimeoutRef.current = null;
       }
+      if (celebrationPraiseFallbackRef.current !== null) {
+        window.clearTimeout(celebrationPraiseFallbackRef.current);
+        celebrationPraiseFallbackRef.current = null;
+      }
       setCelebration(null);
       setCelebrationPaused(false);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, text, wordIndex]);
 
-  // Once the roll-up reaches its target, settle for a brief beat (long enough to read "哇，得到 X 金幣 Y
-  // 星星"), then hand off to the explanation. Both the roll-up and the settle beat are fixed, deliberate
-  // delays — not guesses about external content duration — so this is a different class of timer than the
-  // ones the "never guess a duration" rule is about.
+  // Once the roll-up reaches its target *and* the praise line is done (real onend, or the fallback safety
+  // timer — see markWordSolved), settle for a brief beat (long enough to read "哇，得到 X 金幣 Y 星星"),
+  // then hand off to the explanation. The roll-up and the settle beat are both fixed, deliberate delays —
+  // not guesses about external content duration — so they're a different class of timer than the ones the
+  // "never guess a duration" rule is about; only the praise line itself is externally-timed, which is why
+  // its completion is tracked via a real event (onend) rather than a guessed delay.
   useEffect(() => {
     if (!celebration) return;
-    if (celebration.stage === 'rolling' && celebration.tick >= CELEBRATION_TICKS) {
+    if (celebration.stage === 'rolling' && celebration.tick >= CELEBRATION_TICKS && celebration.praiseDone) {
       playCoinSound();
       window.setTimeout(() => playStarSound(), 120);
       setCelebration((cur) => (cur && cur.wordId === celebration.wordId ? { ...cur, stage: 'settled' } : cur));
@@ -537,9 +552,25 @@ export default function GuwenDecode() {
     playSuccessChime();
     const praiseLine = PRAISE_LINES[Math.floor(Math.random() * PRAISE_LINES.length)];
     setCelebrationPaused(false);
-    setCelebration({ wordId: word.id, tick: 0, stage: 'rolling' });
-    speak(praiseLine);
+    setCelebration({ wordId: word.id, tick: 0, praiseDone: false, stage: 'rolling' });
+    speak(praiseLine, () => {
+      setCelebration((cur) => (cur && cur.wordId === word.id ? { ...cur, praiseDone: true } : cur));
+    });
+    // Safety net in case `onend` above never fires on some device/browser — see the CelebrationState doc
+    // comment. Harmless no-op if `onend` already won (the `!cur.praiseDone` guard keeps it idempotent).
+    armPraiseFallback(word.id);
     tickCelebration(word.id, 0);
+  }
+
+  /** (Re)arms the praiseDone safety-net timer for `wordId` — see the CelebrationState doc comment. Called
+   * once when the celebration starts, and again on resume-from-pause (a paused fallback is cleared, so it
+   * needs re-arming, or a long pause could let it fire while the praise line is genuinely still mid-sentence
+   * once resumed). */
+  function armPraiseFallback(wordId: string) {
+    celebrationPraiseFallbackRef.current = window.setTimeout(() => {
+      celebrationPraiseFallbackRef.current = null;
+      setCelebration((cur) => (cur && cur.wordId === wordId && !cur.praiseDone ? { ...cur, praiseDone: true } : cur));
+    }, PRAISE_FALLBACK_MS);
   }
 
   /** Pauses/resumes both halves of the celebration at once (the praise-line speech and the roll-up ticker)
@@ -552,9 +583,16 @@ export default function GuwenDecode() {
       if (celebration.tick < CELEBRATION_TICKS) {
         tickCelebration(celebration.wordId, celebration.tick);
       }
+      if (!celebration.praiseDone) {
+        armPraiseFallback(celebration.wordId);
+      }
     } else {
       setCelebrationPaused(true);
       pauseSpeech();
+      if (celebrationPraiseFallbackRef.current !== null) {
+        window.clearTimeout(celebrationPraiseFallbackRef.current);
+        celebrationPraiseFallbackRef.current = null;
+      }
       if (celebrationTimeoutRef.current !== null) {
         window.clearTimeout(celebrationTimeoutRef.current);
         celebrationTimeoutRef.current = null;
@@ -573,6 +611,10 @@ export default function GuwenDecode() {
     if (celebrationTimeoutRef.current !== null) {
       window.clearTimeout(celebrationTimeoutRef.current);
       celebrationTimeoutRef.current = null;
+    }
+    if (celebrationPraiseFallbackRef.current !== null) {
+      window.clearTimeout(celebrationPraiseFallbackRef.current);
+      celebrationPraiseFallbackRef.current = null;
     }
     cancelSpeech();
     setPlaybackId(null);
