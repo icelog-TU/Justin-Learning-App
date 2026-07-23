@@ -117,7 +117,7 @@ export const simaGuangLesson: GuwenLesson = {
       type: 'evidence',
       prerequisiteIds: [],
       targetSentence: '群兒戲於庭',
-      intro: '故事一開始寫「群兒戲於庭」。「戲」和「庭」之間的「於」，把它們接成了什麼關係？',
+      intro: '故事一開始寫「群兒戲於庭」。「戲」和「庭」之間的「於」，把它們接成了什麼關係？我找到兩句已經破解的古文，我們來比對看看。',
       clues: [
         {
           text: '虞舜耕於歷山。',
