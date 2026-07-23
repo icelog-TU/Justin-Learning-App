@@ -23,6 +23,12 @@ function introParagraph(text: GuwenText): string {
   return `這篇文章裡，很多字看起來像你平常認識的漢字，對不對？但其實裡面藏了 ${text.words.length} 個「古文字」——它們的意思，跟現在完全不一樣！`;
 }
 
+/** The spoken question for a word's puzzle — differs by puzzleType, shared by the auto-play effect and the manual replay buttons. */
+function puzzlePromptText(word: GuwenWord): string {
+  if (word.puzzleType === 'pattern') return word.patternPrompt ?? '';
+  return `「${word.char}」在這句話裡是什麼意思？比比看，下面哪一句語料的用法跟它最接近？`;
+}
+
 /** Splits `sentence` on every occurrence of `char`, highlighting each match — used for both the target
  * sentence and the corpus example sentences, so the character under study always stands out the same way. */
 function highlightChar(sentence: string, char: string): ReactNode[] {
@@ -151,6 +157,25 @@ export default function GuwenDecode() {
       setPlaybackPaused(false);
     };
   }, [phase, text]);
+
+  // Auto-plays the target sentence + question every time a new puzzle comes up, so reading isn't required —
+  // but it's fully pause-able (via the shared playbackId/playbackPaused toggle) for a child who wants to
+  // read it themselves instead, or just needs a moment.
+  useEffect(() => {
+    if (phase !== 'decoding' || !text) return;
+    const word = text.words[wordIndex];
+    if (!word) return;
+    const id = `puzzle-${word.id}`;
+    setPlaybackId(id);
+    setPlaybackPaused(false);
+    speak(`${word.targetSentence}${puzzlePromptText(word)}`, () => setPlaybackId((cur) => (cur === id ? null : cur)));
+    return () => {
+      cancelSpeech();
+      setPlaybackId((cur) => (cur === id ? null : cur));
+      setPlaybackPaused(false);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, text, wordIndex]);
 
   if (!text) {
     return (
@@ -559,10 +584,12 @@ export default function GuwenDecode() {
               </p>
               <button
                 type="button"
-                onClick={() => speak(currentWord.targetSentence)}
+                onClick={() =>
+                  togglePlayback(`puzzle-${currentWord.id}`, `${currentWord.targetSentence}${puzzlePromptText(currentWord)}`)
+                }
                 className="text-xs text-sky-600"
               >
-                🔊 聽這句話
+                {playbackLabel(`puzzle-${currentWord.id}`, '🔊 聽這句話', '⏸ 暫停朗讀', '▶️ 繼續朗讀')}
               </button>
             </div>
 
@@ -572,11 +599,16 @@ export default function GuwenDecode() {
                   <p className="text-sm text-center text-gray-600">{currentWord.patternPrompt}</p>
                   <button
                     type="button"
-                    onClick={() => currentWord.patternPrompt && speak(currentWord.patternPrompt)}
+                    onClick={() =>
+                      togglePlayback(
+                        `puzzle-${currentWord.id}`,
+                        `${currentWord.targetSentence}${puzzlePromptText(currentWord)}`,
+                      )
+                    }
                     aria-label="聽這段說明"
                     className="text-sky-500 shrink-0 mt-0.5"
                   >
-                    🔊
+                    {playbackLabel(`puzzle-${currentWord.id}`, '🔊', '⏸', '▶️')}
                   </button>
                 </div>
 
@@ -619,12 +651,15 @@ export default function GuwenDecode() {
                   <button
                     type="button"
                     onClick={() =>
-                      speak(`「${currentWord.char}」在這句話裡是什麼意思？比比看，下面哪一句語料的用法跟它最接近？`)
+                      togglePlayback(
+                        `puzzle-${currentWord.id}`,
+                        `${currentWord.targetSentence}${puzzlePromptText(currentWord)}`,
+                      )
                     }
                     aria-label="聽這段說明"
                     className="text-sky-500 shrink-0 mt-0.5"
                   >
-                    🔊
+                    {playbackLabel(`puzzle-${currentWord.id}`, '🔊', '⏸', '▶️')}
                   </button>
                 </div>
 
