@@ -1222,7 +1222,11 @@ export default function GuwenLessonDecode() {
             ✕
           </button>
         </div>
-        <p className="text-sm text-gray-600">{reviewStep.intro}</p>
+        {/* Same dedupe as the live step render above — some local_inference/story_reasoning steps' intro
+            and question are the identical sentence. */}
+        {(reviewStep.type === 'reveal' || reviewStep.intro !== reviewStep.question) && (
+          <p className="text-sm text-gray-600">{reviewStep.intro}</p>
+        )}
         {reviewStep.type === 'evidence' && (
           <div className="space-y-2">{reviewStep.clues.map((c, i) => renderClue(c, i))}</div>
         )}
@@ -1361,7 +1365,14 @@ export default function GuwenLessonDecode() {
               </button>
             </div>
 
-            <p className="text-sm text-center text-gray-600">{currentStep.intro}</p>
+            {/* Some local_inference/story_reasoning steps' intro IS the question (one continuous sentence in
+                the source doc, since there's no clues panel to lead into) — rendering both paragraphs then
+                shows the exact same sentence twice. Skip the plain intro line in that case and let the bold
+                question paragraph below carry it once, mirroring stepAutoPlayLines' existing audio-side
+                dedupe (which already skips pushing `question` when it equals `intro`). */}
+            {(currentStep.type === 'reveal' || currentStep.intro !== currentStep.question) && (
+              <p className="text-sm text-center text-gray-600">{currentStep.intro}</p>
+            )}
 
             {currentStep.type === 'evidence' && (
               <div className="space-y-2">{currentStep.clues.map((c, i) => renderClue(c, i))}</div>
