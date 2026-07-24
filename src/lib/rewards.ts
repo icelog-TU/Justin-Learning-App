@@ -49,8 +49,8 @@ export const ASSOCIATION_CHAR_MILESTONE_BONUS_STARS = 10;
 /** 古文破譯家: reward for decoding one古文字/密碼 puzzle — deliberately well above COIN_PER_CORRECT/STAR_PER_CORRECT
  * (a single idiom question), since one of these requires reading and comparing real classical clues, not just
  * recognizing one modern sentence. */
-export const COIN_PER_GUWEN_WORD = 12;
-export const STAR_PER_GUWEN_WORD = 6;
+export const COIN_PER_GUWEN_WORD = 8;
+export const STAR_PER_GUWEN_WORD = 4;
 /** 古文破譯家: extra bonus for fully decoding every word/step in a whole classical text — deliberately the
  * single biggest bonus anywhere in the app (bigger than QUIZ_PERFECT_BONUS, CHAIN_MILESTONE_BONUS, or
  * ASSOCIATION_COMPLETE_BONUS), since finishing an entire classical text is a much larger, standalone
