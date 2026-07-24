@@ -403,7 +403,13 @@ export default function GuwenLessonDecode() {
     const timer = window.setTimeout(() => {
       setPlaybackId('translation');
       setPlaybackPaused(false);
-      speak(lesson.finalVerification.translation, () => setPlaybackId((cur) => (cur === 'translation' ? null : cur)));
+      // Reads the translation, then the completionFeedback encouragement line right after it — both are
+      // already shown together on the open scroll, so they read as one continuous moment rather than the
+      // child having to separately notice and tap a second 🔊 button for the encouragement paragraph.
+      speakSequence(
+        [lesson.finalVerification.translation, lesson.finalVerification.completionFeedback],
+        () => setPlaybackId((cur) => (cur === 'translation' ? null : cur)),
+      );
     }, 400);
     return () => {
       window.clearTimeout(timer);
@@ -783,6 +789,10 @@ export default function GuwenLessonDecode() {
     recordGuwenWord(lesson!.id, closing.id);
     reward(guwenCoinAmount, guwenStarAmount);
     playSuccessChime();
+    // Called directly here (a real user action), not via a useEffect keyed on multiSelectSolved — same
+    // reload-replay pitfall as handleSubmitOrdering's identical comment above: that state's initializer
+    // already returns true on mount for an already-solved lesson.
+    speak(closing.correctFeedback);
     setMultiSelectWrong(false);
     setMultiSelectSolved(true);
   }
