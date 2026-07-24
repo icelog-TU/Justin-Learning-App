@@ -2228,7 +2228,7 @@ export const shouZhuDaiTuLesson: GuwenLesson = {
       type: 'evidence',
       prerequisiteIds: ['yin_shi_qi_lei_er_shou_zhu'],
       targetSentence: '冀復得兔',
-      intro: '農夫已經守在樹樁旁，但後面的事情還沒有發生。「冀」透露了他心裡正朝著什麼結果等待。比較兩條線索看看。',
+      intro: '農夫已經守在樹樁旁，但後面的事情還沒有發生。「冀」透露了他的某種心理狀態。比較兩條線索看看。',
       clues: [
         {
           text: '不如自行搜覓，冀有萬一之得。',
