@@ -457,6 +457,17 @@ export default function GuwenLessonDecode() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase]);
 
+  // Reopening an already-finished lesson (or finishing it just now) must land on the top of the trophy
+  // screen — "🏆 全文破譯成功！" — not wherever the window happened to be scrolled to. React Router doesn't
+  // reset scroll position on navigation by itself, and finishing the lesson via the multi-select closing
+  // screen's own button leaves the page scrolled near that button, i.e. near the bottom of the *old* content.
+  // Without this, the child arrives already scrolled past the header, straight down near the claim-badge
+  // button, before ever seeing the congratulations. Runs on every arrival at 'complete', not just a fresh
+  // completion, since the scroll-position problem exists either way.
+  useEffect(() => {
+    if (phase === 'complete') window.scrollTo(0, 0);
+  }, [phase]);
+
   // Auto-plays the target sentence + intro + evidence/keys + question every time a new step comes up.
   useEffect(() => {
     if (phase !== 'steps' || !currentStep) return;
