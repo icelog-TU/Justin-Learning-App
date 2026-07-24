@@ -3159,7 +3159,7 @@ export const yanErDaoZhongLesson: GuwenLesson = {
         {
           text: '當余之從師也，嘗負篋曳屣，行深山巨谷中。',
           highlight: '也',
-          unlockedMeaning: '作者回想自己跟著老師求學的日子：當我跟著老師學習「也」，曾經負篋曳屣，走在深山和大山谷裡。',
+          unlockedMeaning: '作者回想自己跟著老師求學的日子：當我跟著老師學習「也」，曾經負著書箱、拖著鞋子，走在深山大谷中。',
           source: '宋濂〈送東陽馬生序〉',
         },
       ],
