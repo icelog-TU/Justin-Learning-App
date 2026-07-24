@@ -1055,7 +1055,7 @@ export default function GuwenLessonDecode() {
             {playbackLabel(`closing-intro-ordering`, '🔊', '⏸', '▶️')}
           </button>
         </div>
-        <p className="text-sm text-gray-600">{closing.intro}</p>
+        <p className="text-sm text-gray-600 whitespace-pre-line">{closing.intro}</p>
         <div className="space-y-2">
           {cardsInOrder.map((card, i) => (
             <div key={card.id} className="flex items-center gap-2 rounded-xl border-2 border-gray-200 bg-gray-50 px-3 py-2">
@@ -1153,7 +1153,7 @@ export default function GuwenLessonDecode() {
             {playbackLabel(`closing-intro-causal`, '🔊', '⏸', '▶️')}
           </button>
         </div>
-        <p className="text-sm text-gray-600">{closing.intro}</p>
+        <p className="text-sm text-gray-600 whitespace-pre-line">{closing.intro}</p>
         <p className="font-medium text-gray-800">{closing.question}</p>
         {!causalSolved && (
           <div className="space-y-2">
@@ -1263,7 +1263,7 @@ export default function GuwenLessonDecode() {
             {playbackLabel(`closing-intro-multiselect`, '🔊', '⏸', '▶️')}
           </button>
         </div>
-        <p className="text-sm text-gray-600">{closing.intro}</p>
+        <p className="text-sm text-gray-600 whitespace-pre-line">{closing.intro}</p>
         <div className="space-y-2">
           {closing.options.map((opt, i) => (
             <label
@@ -1378,7 +1378,9 @@ export default function GuwenLessonDecode() {
         </div>
         {/* Same dedupe as the live step render above — some local_inference/story_reasoning steps' intro
             ends with (or fully equals) the question sentence; stepIntroLeadIn strips the redundant part. */}
-        {stepIntroLeadIn(reviewStep) && <p className="text-sm text-gray-600">{stepIntroLeadIn(reviewStep)}</p>}
+        {stepIntroLeadIn(reviewStep) && (
+          <p className="text-sm text-gray-600 whitespace-pre-line">{stepIntroLeadIn(reviewStep)}</p>
+        )}
         {reviewStep.type === 'evidence' && (
           <div className="space-y-2">{reviewStep.clues.map((c, i) => renderClue(c, i))}</div>
         )}
@@ -1524,7 +1526,7 @@ export default function GuwenLessonDecode() {
                 leaving only real lead-in text here; the bold question paragraph below still carries the
                 question itself exactly once. Mirrors stepAutoPlayLines' identical audio-side dedupe. */}
             {stepIntroLeadIn(currentStep) && (
-              <p className="text-sm text-center text-gray-600">{stepIntroLeadIn(currentStep)}</p>
+              <p className="text-sm text-center text-gray-600 whitespace-pre-line">{stepIntroLeadIn(currentStep)}</p>
             )}
 
             {currentStep.type === 'evidence' && (
