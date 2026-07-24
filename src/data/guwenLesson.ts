@@ -2807,7 +2807,7 @@ export const yaMiaoZhuZhangLesson: GuwenLesson = {
           source: '《孟子・滕文公下》',
         },
       ],
-      question: '第一條是孔子在說自己的想法；第二條是孟子在說自己的理由。兩句中的「予」都指向誰？',
+      question: '讀完這兩份線索，你覺得「予」最可能是指向誰？',
       options: ['正在開口說話的人自己', '正在聽這句話的人', '前面出現過的所有人'],
       correctIndex: 0,
       correctFeedback: '找到「予」的鑰匙了！「予」和以前破解的「吾」一樣，都是說話者用來指自己。簡單說，「予」就是「我」。',
