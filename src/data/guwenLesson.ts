@@ -143,12 +143,28 @@ export interface SequenceOrderingClosing {
   explanation?: string;
 }
 
-/** 收尾二：a non-interactive causal-chain summary — no scoring, no distractors, just a sequential reveal of
- * how one event led to the next, ending in a core-summary line and a continue button. */
+/** 收尾二：a graded single-choice reasoning question asking the child to explain, using the clues already
+ * decoded, why the story's central problem happened — NOT a display-only summary. An earlier version of
+ * this screen just narrated the causal chain with `displayNote: '這一段是全文理解摘要，不需作答。'` and no
+ * question at all; the user caught this directly ("這一頁其實是故事最後的推理題，而不是閱讀摘要...最大的問題就
+ * 是它直接告訴孩子答案了") — from the "古文破譯家" child-as-codebreaker angle, telling the child the causal
+ * chain before asking anything defeats the whole exercise. Now the chain (`nodes`/`coreSummary`/
+ * `evidenceBoundary`) only appears *after* a correct answer, serving as the reasoning explanation for why
+ * that option is right — same shape as `SequenceOrderingClosing.explanation`, just always present here
+ * rather than optional. */
 export interface CausalChainClosing {
   id: string;
   title: string;
-  displayNote: string;
+  /** Shown before the question — sets up the task, must not hint at any option's wording. */
+  intro: string;
+  question: string;
+  options: string[];
+  correctIndex: number;
+  /** Short praise line shown immediately on a correct pick, before the causal-chain reasoning below it. */
+  correctFeedback: string;
+  /** Points at which evidence to re-compare on a wrong pick — never the answer. */
+  retryHint: string;
+  /** Post-answer reasoning only — the causal chain that explains why the correct option is right. */
   nodes: string[];
   coreSummary: string;
   evidenceBoundary?: string;
@@ -1389,20 +1405,29 @@ export const keZhouQiuJianLesson: GuwenLesson = {
   },
   causalChainClosing: {
       id: 'closing_causal_chain',
-      title: '破譯完成：這個方法為什麼出了問題？',
-      displayNote: '這一段是全文理解摘要，不需作答。',
-      nodes: [
-        '劍從船上掉進水裡',
-        '楚人把記號刻在船上',
-        '船繼續往目的地開去，船上的記號也跟著移動',
-        '劍沒有跟著船一起移動',
-        '船抵達目的地後停下來，楚人從已經移動的記號處進入水中找劍',
-        '船上的記號已經不能指出劍原本掉進水裡的位置',
+      title: '破譯任務：為什麼楚人找不到劍？',
+      intro: '我們已經成功破解全文了。現在請你利用剛才得到的線索，破解作者真正想說的道理。',
+      question: '楚人最後為什麼沒有找到劍？',
+      options: [
+        '因為船一直往前移動，可是掉進水裡的劍沒有跟著船一起移動。',
+        '因為他刻的記號太小，後來找不到那個記號。',
+        '因為水太深，所以摸不到劍。',
+        '因為別人先把劍撿走了。',
       ],
-      coreSummary:
-        '問題不在於楚人有沒有留下記號，而在於他把記號刻在會移動的船上。所以作者才會問：「求劍若此，不亦惑乎？」——像這樣尋找劍，不是很糊塗嗎？',
+      correctIndex: 0,
+      correctFeedback: '🔓 破解成功！我們一起整理剛才發生的事情。',
+      retryHint: '想一想：船上的記號會不會跟著船一起移動？掉進水裡的劍呢？兩者的位置後來還會一樣嗎？',
+      nodes: [
+        '劍從船上掉進水裡。',
+        '楚人在船邊刻了一個記號。',
+        '船繼續往前航行。',
+        '船上的記號跟著船一起移動。',
+        '掉進水裡的劍沒有跟著船移動。',
+        '所以船上的記號，已經不能代表劍掉下去的位置。',
+      ],
+      coreSummary: '真正的問題不是沒有做記號，而是把記號留在會移動的船上。',
       evidenceBoundary:
-        '原文寫到楚人「入水求之」，沒有直接交代他最後有沒有找到劍。因此，摘要只說船上的記號已經不能指出原來落劍的位置，不把「他最後沒有找到劍」寫成古文明確交代的結果。',
+        '原文只寫到楚人「入水求之」，並沒有直接寫出他最後有沒有找到劍。不過，透過這條因果鏈可以推得：船上的記號已經不能指出劍掉下去的位置，所以「找不到」是這條因果鏈能夠支持的合理推論，不是原文自己交代的結局。',
       continueButtonLabel: '開始證據判讀',
   },
   evidenceMultiSelectClosing: {

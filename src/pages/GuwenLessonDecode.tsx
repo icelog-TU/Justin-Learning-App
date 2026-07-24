@@ -302,6 +302,11 @@ export default function GuwenLessonDecode() {
   const [orderingSolved, setOrderingSolved] = useState(() =>
     Boolean(lesson?.sequenceOrderingClosing && solvedIds.has(lesson.sequenceOrderingClosing.id)),
   );
+  const [causalChoice, setCausalChoice] = useState<number | null>(null);
+  const [causalWrong, setCausalWrong] = useState(false);
+  const [causalSolved, setCausalSolved] = useState(() =>
+    Boolean(lesson?.causalChainClosing && solvedIds.has(lesson.causalChainClosing.id)),
+  );
   const [multiSelectChoice, setMultiSelectChoice] = useState<Set<number>>(new Set());
   const [multiSelectWrong, setMultiSelectWrong] = useState(false);
   const [multiSelectSolved, setMultiSelectSolved] = useState(() =>
@@ -497,25 +502,32 @@ export default function GuwenLessonDecode() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, currentStep?.id]);
 
-  // Auto-plays the "what am I supposed to do here" line for whichever closing screen is showing — the
-  // sequence-ordering intro, the causal-chain displayNote, or the multi-select intro — every time
-  // `closingStage` changes (including the very first time `currentStep` becomes undefined and the closing
-  // block takes over). Per-card/node/option text is deliberately NOT auto-played here, only available via
-  // its own 🔊 button — matching how a step's own corpus/pattern options are tap-to-listen-only, not part
-  // of the auto-play (see "Puzzle types" history in this file).
+  // Auto-plays the "what am I supposed to do here" line(s) for whichever closing screen is showing — the
+  // sequence-ordering intro, the causal-chain intro + question (this is a real graded question now, so both
+  // lines matter, same as a regular step's auto-play), or the multi-select intro — every time `closingStage`
+  // changes (including the very first time `currentStep` becomes undefined and the closing block takes
+  // over). Per-card/node/option text is deliberately NOT auto-played here, only available via its own 🔊
+  // button — matching how a step's own corpus/pattern options are tap-to-listen-only, not part of the
+  // auto-play (see "Puzzle types" history in this file).
   useEffect(() => {
     if (phase !== 'steps' || currentStep || !allStepsSolved || closingStepsList.length === 0) return;
-    const line =
+    const lines =
       closingStage === 'ordering'
-        ? lesson?.sequenceOrderingClosing?.intro
+        ? lesson?.sequenceOrderingClosing
+          ? [lesson.sequenceOrderingClosing.intro]
+          : undefined
         : closingStage === 'causal'
-          ? lesson?.causalChainClosing?.displayNote
-          : lesson?.evidenceMultiSelectClosing?.intro;
-    if (!line) return;
+          ? lesson?.causalChainClosing
+            ? [lesson.causalChainClosing.intro, lesson.causalChainClosing.question]
+            : undefined
+          : lesson?.evidenceMultiSelectClosing
+            ? [lesson.evidenceMultiSelectClosing.intro]
+            : undefined;
+    if (!lines || lines.length === 0) return;
     const id = `closing-intro-${closingStage}`;
     setPlaybackId(id);
     setPlaybackPaused(false);
-    speak(line, () => setPlaybackId((cur) => (cur === id ? null : cur)));
+    speakSequence(lines, () => setPlaybackId((cur) => (cur === id ? null : cur)));
     return () => {
       cancelSpeech();
       setPlaybackId((cur) => (cur === id ? null : cur));
@@ -817,11 +829,26 @@ export default function GuwenLessonDecode() {
     advanceClosingStage('ordering');
   }
 
-  function handleContinueFromCausalChain() {
+  function handleSelectCausal(i: number) {
     const closing = lesson!.causalChainClosing!;
+    if (i !== closing.correctIndex) {
+      setCausalChoice(i);
+      setCausalWrong(true);
+      return;
+    }
     recordGuwenWord(lesson!.id, closing.id);
     reward(guwenCoinAmount, guwenStarAmount);
     playSuccessChime();
+    // Called directly here (a real user action), not via a useEffect keyed on causalSolved — same
+    // reload-replay pitfall as handleSubmitOrdering's identical comment above: that state's initializer
+    // already returns true on mount for an already-solved lesson.
+    speak(closing.correctFeedback);
+    setCausalChoice(i);
+    setCausalWrong(false);
+    setCausalSolved(true);
+  }
+
+  function handleContinueFromCausalChain() {
     advanceClosingStage('causal');
   }
 
@@ -902,6 +929,9 @@ export default function GuwenLessonDecode() {
     setOrderingArrangement(lesson?.sequenceOrderingClosing ? lesson.sequenceOrderingClosing.cards.map((c) => c.id) : []);
     setOrderingWrong(false);
     setOrderingSolved(false);
+    setCausalChoice(null);
+    setCausalWrong(false);
+    setCausalSolved(false);
     setMultiSelectChoice(new Set());
     setMultiSelectWrong(false);
     setMultiSelectSolved(false);
@@ -1116,60 +1146,104 @@ export default function GuwenLessonDecode() {
           <h3 className="font-bold text-gray-800 flex-1">{closing.title}</h3>
           <button
             type="button"
-            onClick={() => togglePlayback(`closing-intro-causal`, closing.displayNote)}
+            onClick={() => togglePlayback(`closing-intro-causal`, `${closing.intro} ${closing.question}`)}
             aria-label="聽這段說明"
             className="text-sky-500 shrink-0"
           >
             {playbackLabel(`closing-intro-causal`, '🔊', '⏸', '▶️')}
           </button>
         </div>
-        <p className="text-xs text-gray-400">{closing.displayNote}</p>
-        <div className="space-y-1">
-          {closing.nodes.map((node, i) => (
-            <div key={i}>
-              <div className="flex items-center gap-2 bg-gray-50 rounded-lg px-3 py-2">
-                <button type="button" onClick={() => speak(node)} aria-label="聽這個階段" className="text-sky-500 shrink-0">
+        <p className="text-sm text-gray-600">{closing.intro}</p>
+        <p className="font-medium text-gray-800">{closing.question}</p>
+        {!causalSolved && (
+          <div className="space-y-2">
+            {closing.options.map((opt, i) => {
+              const isWrong = causalWrong && causalChoice === i;
+              return (
+                <div
+                  key={i}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => handleSelectCausal(i)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      handleSelectCausal(i);
+                    }
+                  }}
+                  className={`w-full text-left rounded-xl border-2 px-4 py-3 cursor-pointer transition-colors flex items-start gap-2 ${
+                    isWrong ? 'bg-red-50 border-red-300' : 'bg-gray-50 border-gray-200 hover:border-indigo-300'
+                  }`}
+                >
+                  <span className="font-bold text-gray-400 shrink-0">{String.fromCharCode(65 + i)}</span>
+                  <p className="flex-1 text-gray-800">{opt}</p>
+                </div>
+              );
+            })}
+          </div>
+        )}
+        {!causalSolved && causalWrong && <p className="text-sm text-red-500 text-center">{closing.retryHint}</p>}
+        {causalSolved && (
+          <div className="space-y-4">
+            <div className="flex items-start gap-2">
+              <p className="font-bold text-emerald-700 flex-1">{closing.correctFeedback}</p>
+              <button
+                type="button"
+                onClick={() => speak(closing.correctFeedback)}
+                aria-label="聽這段回饋"
+                className="text-emerald-600 shrink-0"
+              >
+                🔊
+              </button>
+            </div>
+            <div className="space-y-1">
+              {closing.nodes.map((node, i) => (
+                <div key={i}>
+                  <div className="flex items-center gap-2 bg-gray-50 rounded-lg px-3 py-2">
+                    <button type="button" onClick={() => speak(node)} aria-label="聽這個階段" className="text-sky-500 shrink-0">
+                      🔊
+                    </button>
+                    <p className="flex-1 text-sm text-gray-800">{node}</p>
+                  </div>
+                  {i < closing.nodes.length - 1 && <p className="text-center text-gray-300">↓</p>}
+                </div>
+              ))}
+            </div>
+            <div className="bg-amber-50 rounded-xl p-4">
+              <div className="flex items-start gap-2">
+                <p className="text-sm font-bold text-amber-700 whitespace-pre-line flex-1">{closing.coreSummary}</p>
+                <button
+                  type="button"
+                  onClick={() => togglePlayback(`closing-summary-${closing.id}`, closing.coreSummary)}
+                  aria-label="聽這段結論"
+                  className="text-amber-600 shrink-0"
+                >
+                  {playbackLabel(`closing-summary-${closing.id}`, '🔊', '⏸', '▶️')}
+                </button>
+              </div>
+            </div>
+            {closing.evidenceBoundary && (
+              <div className="flex items-start gap-2">
+                <p className="text-xs text-gray-400 flex-1">{closing.evidenceBoundary}</p>
+                <button
+                  type="button"
+                  onClick={() => speak(closing.evidenceBoundary!)}
+                  aria-label="聽這段證據邊界"
+                  className="text-gray-400 shrink-0"
+                >
                   🔊
                 </button>
-                <p className="flex-1 text-sm text-gray-800">{node}</p>
               </div>
-              {i < closing.nodes.length - 1 && <p className="text-center text-gray-300">↓</p>}
-            </div>
-          ))}
-        </div>
-        <div className="bg-amber-50 rounded-xl p-4">
-          <div className="flex items-start gap-2">
-            <p className="text-sm font-bold text-amber-700 whitespace-pre-line flex-1">{closing.coreSummary}</p>
+            )}
             <button
               type="button"
-              onClick={() => togglePlayback(`closing-summary-${closing.id}`, closing.coreSummary)}
-              aria-label="聽這段結論"
-              className="text-amber-600 shrink-0"
+              onClick={handleContinueFromCausalChain}
+              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl py-2.5"
             >
-              {playbackLabel(`closing-summary-${closing.id}`, '🔊', '⏸', '▶️')}
-            </button>
-          </div>
-        </div>
-        {closing.evidenceBoundary && (
-          <div className="flex items-start gap-2">
-            <p className="text-xs text-gray-400 flex-1">{closing.evidenceBoundary}</p>
-            <button
-              type="button"
-              onClick={() => speak(closing.evidenceBoundary!)}
-              aria-label="聽這段證據邊界"
-              className="text-gray-400 shrink-0"
-            >
-              🔊
+              {closing.continueButtonLabel}
             </button>
           </div>
         )}
-        <button
-          type="button"
-          onClick={handleContinueFromCausalChain}
-          className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl py-2.5"
-        >
-          {closing.continueButtonLabel}
-        </button>
       </div>
     );
   }
