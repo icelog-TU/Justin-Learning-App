@@ -97,6 +97,28 @@ function buildFireworkParticles(): FireworkParticle[] {
   return particles;
 }
 
+/** True whenever `intro`'s own trailing sentence already IS `question` verbatim — not just when the two
+ * fields are fully equal. A source doc's "App引導語" often ends by asking the question outright (the setup
+ * and the question are one continuous thought), which authors then copy into both fields; `intro` can also
+ * have extra lead-in text before that shared final sentence. Either way, showing/speaking both fields
+ * unmodified prints or reads the same sentence twice in a row — this catches both the exact-equal case and
+ * the more common "intro ends with the question" case in one check, so no future step (in any lesson) needs
+ * to avoid this phrasing pattern; the app handles it, not the content. */
+function questionRepeatsIntro(intro: string, question: string): boolean {
+  return intro.trim().endsWith(question.trim());
+}
+
+/** The portion of a step's `intro` that isn't just a restatement of `question` — i.e. `intro` with its
+ * trailing question-sentence stripped off, if present (see `questionRepeatsIntro`). Use this for the plain
+ * lead-in paragraph so only the non-redundant setup text shows; the bold `question` paragraph elsewhere
+ * still renders the question itself exactly once. Returns the empty string when the two fields are fully
+ * equal (nothing left to show as a separate lead-in) or the step has no `question` field at all (reveal). */
+function stepIntroLeadIn(step: LessonStep): string {
+  if (step.type === 'reveal') return step.intro;
+  if (!questionRepeatsIntro(step.intro, step.question)) return step.intro;
+  return step.intro.trim().slice(0, step.intro.trim().length - step.question.trim().length).trim();
+}
+
 /** The full auto-play script for a step, as separate lines (queued with speakSequence so each one fully
  * finishes before the next starts). Clues/keys are part of the auto-play here — the child needs to hear all
  * the evidence before the question makes sense, mirroring the guwen-decoder skill's 'pattern' puzzle rule. */
@@ -113,7 +135,7 @@ function stepAutoPlayLines(step: LessonStep): string[] {
       lines.push(k.code, k.decodedEvidence);
     });
   }
-  if (step.type !== 'reveal' && step.question !== step.intro) lines.push(step.question);
+  if (step.type !== 'reveal' && !questionRepeatsIntro(step.intro, step.question)) lines.push(step.question);
   return lines.filter(Boolean);
 }
 
@@ -1234,10 +1256,8 @@ export default function GuwenLessonDecode() {
           </button>
         </div>
         {/* Same dedupe as the live step render above — some local_inference/story_reasoning steps' intro
-            and question are the identical sentence. */}
-        {(reviewStep.type === 'reveal' || reviewStep.intro !== reviewStep.question) && (
-          <p className="text-sm text-gray-600">{reviewStep.intro}</p>
-        )}
+            ends with (or fully equals) the question sentence; stepIntroLeadIn strips the redundant part. */}
+        {stepIntroLeadIn(reviewStep) && <p className="text-sm text-gray-600">{stepIntroLeadIn(reviewStep)}</p>}
         {reviewStep.type === 'evidence' && (
           <div className="space-y-2">{reviewStep.clues.map((c, i) => renderClue(c, i))}</div>
         )}
@@ -1376,13 +1396,14 @@ export default function GuwenLessonDecode() {
               </button>
             </div>
 
-            {/* Some local_inference/story_reasoning steps' intro IS the question (one continuous sentence in
-                the source doc, since there's no clues panel to lead into) — rendering both paragraphs then
-                shows the exact same sentence twice. Skip the plain intro line in that case and let the bold
-                question paragraph below carry it once, mirroring stepAutoPlayLines' existing audio-side
-                dedupe (which already skips pushing `question` when it equals `intro`). */}
-            {(currentStep.type === 'reveal' || currentStep.intro !== currentStep.question) && (
-              <p className="text-sm text-center text-gray-600">{currentStep.intro}</p>
+            {/* Some local_inference/story_reasoning steps' intro ends with (or fully equals) the question
+                sentence — one continuous thought in the source doc, since there's no clues panel to lead
+                into. Rendering both paragraphs unmodified would then print that sentence twice in a row.
+                stepIntroLeadIn strips the redundant trailing part (or the whole intro, if fully equal),
+                leaving only real lead-in text here; the bold question paragraph below still carries the
+                question itself exactly once. Mirrors stepAutoPlayLines' identical audio-side dedupe. */}
+            {stepIntroLeadIn(currentStep) && (
+              <p className="text-sm text-center text-gray-600">{stepIntroLeadIn(currentStep)}</p>
             )}
 
             {currentStep.type === 'evidence' && (
