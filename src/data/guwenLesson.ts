@@ -2568,3 +2568,19 @@ export const guwenLessons: GuwenLesson[] = [wangRongLesson, simaGuangLesson, keZ
 export function findGuwenLesson(id: string): GuwenLesson | undefined {
   return guwenLessons.find((l) => l.id === id);
 }
+
+/** Total gradable/completable items in a lesson: every word/phrase step PLUS every closing screen the
+ * lesson actually has (sequenceOrderingClosing/causalChainClosing/evidenceMultiSelectClosing are each
+ * independently optional — see the closing-screen interfaces above). Each closing screen contributes its
+ * own id to `decodedWordIds` on completion just like a step does, so it counts toward the same total a
+ * child sees as "how many things are in this lesson." Use this everywhere a lesson's total is displayed
+ * (`GuwenHome.tsx`'s per-lesson progress line, `GuwenLessonDecode.tsx`'s in-lesson "已破解 X/Y" counter) —
+ * never hardcode a lesson's total or derive it from `lesson.steps.length` alone, since that silently
+ * undercounts by the number of closing screens present and goes stale the moment a lesson's step/closing
+ * count changes. */
+export function totalGuwenLessonItems(lesson: GuwenLesson): number {
+  const closingCount = [lesson.sequenceOrderingClosing, lesson.causalChainClosing, lesson.evidenceMultiSelectClosing].filter(
+    Boolean,
+  ).length;
+  return lesson.steps.length + closingCount;
+}

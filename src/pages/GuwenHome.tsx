@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAppDataContext } from '../lib/AppDataContext';
-import { guwenLessons } from '../data/guwenLesson';
+import { guwenLessons, totalGuwenLessonItems } from '../data/guwenLesson';
 
 export default function GuwenHome() {
   const { data, resetGuwenText } = useAppDataContext();
@@ -30,7 +30,7 @@ export default function GuwenHome() {
         {guwenLessons.map((lesson) => {
           const progress = data.guwenProgress[lesson.id];
           const decodedCount = progress?.decodedWordIds.length ?? 0;
-          const total = lesson.steps.length;
+          const total = totalGuwenLessonItems(lesson);
           const completed = Boolean(progress?.completedAt);
           return (
             <div key={lesson.id} className="bg-white rounded-2xl shadow hover:shadow-lg transition-shadow p-5">

@@ -1,7 +1,14 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useAppDataContext } from '../lib/AppDataContext';
-import { findGuwenLesson, type GuwenLesson, type LessonStep, type RevealStep, type SequenceCard } from '../data/guwenLesson';
+import {
+  findGuwenLesson,
+  totalGuwenLessonItems,
+  type GuwenLesson,
+  type LessonStep,
+  type RevealStep,
+  type SequenceCard,
+} from '../data/guwenLesson';
 
 /** Every step type except RevealStep has a real question/options/correctIndex/retryHint to grade against. */
 type GradedStep = Exclude<LessonStep, RevealStep>;
@@ -507,6 +514,10 @@ export default function GuwenLessonDecode() {
   }
 
   const totalSteps = lesson.steps.length;
+  // Word steps + every closing screen this lesson has — the number a child actually expects when they see
+  // "已破解 X/Y" (they count the closing screens as things to finish too), unlike `totalSteps` above, which
+  // stays word-steps-only on purpose for the "is this the last word step" button-label decision below.
+  const totalGradableItems = totalGuwenLessonItems(lesson);
   const earnedCoins = solvedIds.size * guwenCoinAmount + (alreadyComplete ? completionCoinBonus : 0);
   const earnedStars = solvedIds.size * guwenStarAmount + (alreadyComplete ? completionStarBonus : 0);
   const reviewStep = reviewStepId ? lesson.steps.find((s) => s.id === reviewStepId) : undefined;
@@ -1342,7 +1353,7 @@ export default function GuwenLessonDecode() {
           {renderPassage()}
           <div className="flex items-center justify-between text-sm">
             <span className="font-bold text-teal-600">
-              已破解 {solvedIds.size} / {totalSteps}
+              已破解 {solvedIds.size} / {totalGradableItems}
             </span>
             <span className="text-orange-600">🪙+{earnedCoins}</span>
             <span className="text-amber-500">⭐+{earnedStars}</span>
