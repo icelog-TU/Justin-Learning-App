@@ -14,9 +14,10 @@
  *   reading used elsewhere in classical Chinese for 裳 as "a skirt/lower garment" on its own, e.g. 裳裳者華) —
  *   scoped to right after 褰/衣 specifically, not a blanket substitution, since a future lesson quoting 裳 in
  *   a genuine cháng context would need the opposite fix.
- * - 好 in 好上高 (as in 柳宗元〈蝜蝂傳〉「又好上高」, "loves to climb high") should read ㄏㄠˋ (hào, "to be fond
- *   of") — voices default to the far more common ㄏㄠˇ (hǎo, "good") reading instead. Scoped tightly to
- *   right before 上高 specifically — 好 as hǎo is one of the single most common characters in this app's
+ * - 好 in 好上高 (as in 柳宗元〈蝜蝂傳〉「又好上高」, "loves to climb high") or 好乘馬 (as in 《笑府》「有好乘馬者為
+ *   人所欺」, "someone who loves riding horses", used for 為) should read ㄏㄠˋ (hào, "to be fond of") —
+ *   voices default to the far more common ㄏㄠˇ (hǎo, "good") reading instead. Scoped tightly to right
+ *   before 上高/乘馬 specifically — 好 as hǎo is one of the single most common characters in this app's
  *   modern-Chinese glosses/explanations, so a blanket swap would break far more than it fixes.
  * - 曾子 (the disciple 曾參, as in the 韓非子 clue「曾子之妻之市」) should read ㄗㄥ (Zēng, the surname) — voices
  *   default to the far more common ㄘㄥˊ (céng, "already/once", as in 曾經) reading instead. Scoped to right
@@ -52,7 +53,7 @@ function ttsSafe(text: string): string {
     .replace(/沒(?=[水入])/g, '末')
     .replace(/溱/g, '真')
     .replace(/(?<=[褰衣])裳/g, '傷')
-    .replace(/好(?=上高)/g, '耗')
+    .replace(/好(?=上高|乘馬)/g, '耗')
     .replace(/曾(?=子)/g, '增')
     .replace(/(?<=徐)市/g, '福')
     .replace(/樂(?=樂)/g, '月')
