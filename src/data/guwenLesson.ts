@@ -15,10 +15,20 @@ export interface ClassicalClue {
   /** The exact substring of `text` to visually highlight (the word/phrase this clue is evidence for). */
   highlight: string;
   /** Child-facing vernacular gloss for this clue sentence only — unlocks the clue, never the target sentence.
-   * Deliberately omitted for a clue whose whole point is a structural/positional pattern the child must
-   * induce by comparing two bare clues side by side (e.g. "入海求神藥"/"入林求木" for 入水求之) — spelling out
-   * the translation there would directly hand over the "入X求Y＝進入X，尋找Y" pattern the question is testing,
-   * not just gloss a word. Only omit it for this reason, never just to save authoring effort. */
+   * Deliberately omitted ENTIRELY for a clue whose whole point is a structural/positional pattern the child
+   * must induce by comparing two bare clues side by side (e.g. "入海求神藥"/"入林求木" for 入水求之) — spelling
+   * out the translation there would directly hand over the "入X求Y＝進入X，尋找Y" pattern the question is
+   * testing, not just gloss a word. Only omit the whole field for this reason, never just to save authoring
+   * effort.
+   * When the target is instead a single pronoun/referent inside an otherwise-safe-to-translate sentence
+   * (e.g. what "之" points to), do NOT omit the field — translate the rest of the sentence normally and
+   * leave just that one word as the untranslated classical character in 「」 (e.g. '...下車拉住了「之」。'),
+   * with no parenthetical naming the referent and no added trailing context that would name it either. A
+   * real bug: 王戎's 之 step originally had both `「之」（元方）` in the gloss AND a follow-up clause naming
+   * 元方 right after — deleting the whole gloss overcorrected (the user explicitly wants the vernacular
+   * translation of the rest of the sentence kept, just not the pronoun's answer). Full omission is for when
+   * the ENTIRE clue is the pattern; partial omission (translate everything but the one word) is for when
+   * only a piece of it is. */
   unlockedMeaning?: string;
   /** Traceable source (author/work), preserved verbatim from the approved lesson content. */
   source: string;
@@ -1666,15 +1676,18 @@ export const wangRongLesson: GuwenLesson = {
         {
           text: '友人慚，下車引之。',
           highlight: '之',
-          // 故意不給白話翻譯，也不點名「之」指的是誰：這條線索要考的正是「之」不重新寫出對象、要孩子自己回頭
-          // 到前文找的這個特性本身，先講出「元方」等於直接把答案說出來了。
+          // 白話翻譯保留，但故意不點名「之」指的是誰（不加「（元方）」括號，也不透露後續動作）：這條線索要考
+          // 的正是「之」不重新寫出對象、要孩子自己回頭到前文找的這個特性本身，先講出「元方」等於直接把答案說
+          // 出來了。
+          unlockedMeaning: '那位朋友感到慚愧，下車拉住了「之」。',
           source: '劉義慶《世說新語．方正》',
         },
         {
           text: '屠暴起，以刀劈狼首，又數刀斃之。',
           highlight: '之',
-          // 故意不給白話翻譯，理由同上一條——這條線索裡雖然本文就寫了「狼」，但仍不額外用括號點名，讓孩子自己從
-          // 整句讀出「之」指的是誰。
+          // 白話翻譯保留，理由同上一條——這條線索的古文本文自己就寫了「狼」（劈狼首），所以翻譯裡自然會出現
+          // 「狼」，這是忠實翻譯原句，不是額外點名「之」的答案；但不額外加括號註解「之」＝狼。
+          unlockedMeaning: '屠夫突然跳起來，用刀劈狼的頭，又連砍幾刀殺死「之」。',
           source: '蒲松齡《聊齋志異．狼三則》',
         },
       ],
