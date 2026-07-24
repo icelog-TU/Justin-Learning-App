@@ -47,6 +47,15 @@
  *   user's explicit instruction to force the Taiwan reading everywhere this character appears, not just in
  *   the "stuck" sense — every other use in this app (卡片/卡通/關卡) already wants kǎ too, so there's no
  *   context here where the swap could be wrong.
+ * - 長 in 揠苗助長's "不長"/"苗長"/"長高"/"長得"/"生長"/"助長" (as in「苗之不長」"the crop isn't growing", 「予助苗
+ *   長矣」"I helped the crop grow", and the lesson title/idiom name 揠苗【助長】itself) should read ㄓㄤˇ (zhǎng,
+ *   "to grow") — voices default to the far more common ㄔㄤˊ (cháng, "long") reading instead. The user caught
+ *   this directly: "應該唸掌...都念成長短的常了" (should read like 掌, it's being read like the cháng in 長短
+ *   instead). Substituted with 掌 (unambiguously zhǎng, as the user's own comparison suggested) whenever 長
+ *   follows 不/苗/生/助 or precedes 高/得 — this covers every "grow" occurrence checked across the app's
+ *   content (不長/苗長/長高/長得/生長/助長, including the pre-existing 拔苗助長 idiom card's own "助長" and
+ *   "禾苗長得太慢"), none of which collide with any actual cháng ("long") use of 長 elsewhere (e.g. 長短/長遠/
+ *   長時間/長年 all use different surrounding characters, so this scoped pattern leaves them untouched).
  */
 function ttsSafe(text: string): string {
   return text
@@ -58,7 +67,8 @@ function ttsSafe(text: string): string {
     .replace(/(?<=徐)市/g, '福')
     .replace(/樂(?=樂)/g, '月')
     .replace(/(?<=亦)說(?=乎)/g, '悅')
-    .replace(/卡/g, '佧');
+    .replace(/卡/g, '佧')
+    .replace(/(?<=[不苗生助])長|長(?=[高得])/g, '掌');
 }
 
 /** Reads text aloud using the browser's built-in text-to-speech (no API cost, works offline once voices are installed). */

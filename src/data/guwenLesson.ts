@@ -2826,7 +2826,7 @@ export const yaMiaoZhuZhangLesson: GuwenLesson = {
         { code: '予', decodedEvidence: '說話者指自己；這裡是宋人說「我」' },
         { code: '助', decodedEvidence: '本句可以直接讀成幫助' },
         { code: '苗', decodedEvidence: '田裡的禾苗' },
-        { code: '長', decodedEvidence: '禾苗往上生長、長高' },
+        { code: '苗長', decodedEvidence: '禾苗往上生長、長高' },
         { code: '矣', decodedEvidence: '提醒前面的情況現在已經出現，可接近「已經……了」' },
       ],
       question: '依照原文順序組合，「予助苗長矣」是宋人在宣稱什麼？',
