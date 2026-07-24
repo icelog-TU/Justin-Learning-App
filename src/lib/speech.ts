@@ -37,6 +37,15 @@
  *   with 悅 (which only ever reads yuè, so it's an unambiguous stand-in), scoped tightly to right between 亦
  *   and 乎 — 說 as shuō is one of the most common characters in this app's own explanations/hints, so a
  *   blanket swap would break far more than it fixes.
+ * - 卡 (e.g. 守株待兔's clue「羝羊觸藩，羸其角」gloss "羊角被卡住了") should always read Taiwan's ㄎㄚˇ (kǎ, as in
+ *   卡片/卡通/信用卡) — this is not a rare-vs-common-reading mixup like the others above, it's a Taiwan-vs-
+ *   Mainland standard difference: Mainland dictionaries give 卡 a second reading ㄑㄧㄚˇ (qiǎ) specifically for
+ *   the "stuck/jammed" meaning (卡住/關卡), which Taiwan's 教育部 一字多音 standard does not recognize at all —
+ *   in Taiwan 卡 is always kǎ regardless of meaning. Substituted globally with 佧 (unambiguously kǎ, no
+ *   alternate reading, no "stuck" semantic association to trigger a different pronunciation branch) per the
+ *   user's explicit instruction to force the Taiwan reading everywhere this character appears, not just in
+ *   the "stuck" sense — every other use in this app (卡片/卡通/關卡) already wants kǎ too, so there's no
+ *   context here where the swap could be wrong.
  */
 function ttsSafe(text: string): string {
   return text
@@ -47,7 +56,8 @@ function ttsSafe(text: string): string {
     .replace(/曾(?=子)/g, '增')
     .replace(/(?<=徐)市/g, '福')
     .replace(/樂(?=樂)/g, '月')
-    .replace(/(?<=亦)說(?=乎)/g, '悅');
+    .replace(/(?<=亦)說(?=乎)/g, '悅')
+    .replace(/卡/g, '佧');
 }
 
 /** Reads text aloud using the browser's built-in text-to-speech (no API cost, works offline once voices are installed). */
