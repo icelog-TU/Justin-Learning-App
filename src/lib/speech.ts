@@ -57,6 +57,13 @@
  *   content (不長/苗長/長高/長得/生長/助長, including the pre-existing 拔苗助長 idiom card's own "助長" and
  *   "禾苗長得太慢"), none of which collide with any actual cháng ("long") use of 長 elsewhere (e.g. 長短/長遠/
  *   長時間/長年 all use different surrounding characters, so this scoped pattern leaves them untouched).
+ * - 予 used as the first-person pronoun "I/me" (as in 揠苗助長's clues「予欲無言」"I wish to stop speaking",
+ *   「予豈好辯哉」"do I really love arguing?", and the本篇's own「予助苗長矣」"I helped the crop grow") should
+ *   read ㄩˊ (yú, homophone of 於/余/魚) — voices default to the far more common ㄩˇ (yǔ, "to give", as in
+ *   給予) reading instead. The user caught this directly: "所有的予都唸成雨了...要改成於" (every 予 is being
+ *   read like 雨/yǔ, should sound like 於 instead). Substituted with 於 (unambiguously yú) everywhere 予
+ *   appears EXCEPT right after 給 — this app's only other use of 予 is the compound word 給予 ("to give",
+ *   in a confusables.ts tip), which genuinely wants the yǔ reading and must stay untouched.
  */
 function ttsSafe(text: string): string {
   return text
@@ -69,7 +76,8 @@ function ttsSafe(text: string): string {
     .replace(/樂(?=樂)/g, '月')
     .replace(/(?<=亦)說(?=乎)/g, '悅')
     .replace(/卡/g, '佧')
-    .replace(/(?<=[不苗生助])長|長(?=[高得])/g, '掌');
+    .replace(/(?<=[不苗生助])長|長(?=[高得])/g, '掌')
+    .replace(/(?<!給)予/g, '於');
 }
 
 /** Reads text aloud using the browser's built-in text-to-speech (no API cost, works offline once voices are installed). */
