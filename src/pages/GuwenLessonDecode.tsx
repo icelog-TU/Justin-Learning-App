@@ -741,6 +741,11 @@ export default function GuwenLessonDecode() {
     recordGuwenWord(lesson!.id, closing.id);
     reward(guwenCoinAmount, guwenStarAmount);
     playSuccessChime();
+    // Auto-plays the encouragement line the instant the child gets the order right — called directly here
+    // (a real user action), not via a useEffect keyed on orderingSolved, because that state starts `true`
+    // on every remount of an already-solved lesson (see its useState initializer above) and would replay
+    // the encouragement on every reopen instead of only right after a fresh solve.
+    speak(closing.correctFeedback);
     setOrderingWrong(false);
     setOrderingSolved(true);
   }
