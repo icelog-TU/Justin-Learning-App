@@ -875,6 +875,8 @@ export default function GuwenLessonDecode() {
     setCelebrationBannerText(`🏅 收下第 ${badgeNumber} 枚徽章！`);
     setShowLessonCelebration(true);
     playBadgeAwardSound();
+    // speak() cancels whatever's still reading (e.g. the translation scroll's narration) before starting this line.
+    speak(`恭喜你，取得第 ${badgeNumber} 枚徽章！`);
     const twinkleTimers: number[] = [];
     for (let wave = 1; wave < FIREWORK_WAVE_COUNT; wave++) {
       twinkleTimers.push(window.setTimeout(() => playTwinkleSound(), wave * FIREWORK_WAVE_GAP_S * 1000));
