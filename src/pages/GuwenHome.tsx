@@ -27,7 +27,7 @@ export default function GuwenHome() {
       </div>
 
       <div className="space-y-3">
-        {guwenLessons.map((lesson) => {
+        {guwenLessons.map((lesson, index) => {
           const progress = data.guwenProgress[lesson.id];
           const decodedCount = progress?.decodedWordIds.length ?? 0;
           const total = totalGuwenLessonItems(lesson);
@@ -36,9 +36,14 @@ export default function GuwenHome() {
             <div key={lesson.id} className="bg-white rounded-2xl shadow hover:shadow-lg transition-shadow p-5">
               <Link to={`/guwen-lesson/${lesson.id}`} className="block">
                 <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <h3 className="font-bold text-lg text-gray-800">{lesson.title}</h3>
-                    <p className="text-xs text-gray-400 mt-0.5">{lesson.source}</p>
+                  <div className="flex items-start gap-2.5">
+                    <span className="shrink-0 w-7 h-7 rounded-full bg-amber-100 text-amber-700 text-sm font-bold flex items-center justify-center mt-0.5">
+                      {index + 1}
+                    </span>
+                    <div>
+                      <h3 className="font-bold text-lg text-gray-800">{lesson.title}</h3>
+                      <p className="text-xs text-gray-400 mt-0.5">{lesson.source}</p>
+                    </div>
                   </div>
                   {completed && <span className="text-2xl shrink-0">🏆</span>}
                 </div>
