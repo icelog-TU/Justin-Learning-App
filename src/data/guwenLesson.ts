@@ -2931,13 +2931,13 @@ export const yaMiaoZhuZhangLesson: GuwenLesson = {
         {
           text: '木受繩則直，金就礪則利。',
           highlight: '則',
-          unlockedMeaning: '（工匠依照墨線加工木材，用磨刀石磨刀劍。）木材依照墨線加工，「則」變直；刀劍放到磨刀石上磨，「則」變鋒利。',
+          unlockedMeaning: '木材靠著墨線切割，「則」變直；刀劍拿去磨刀石磨，「則」變鋒利。',
           source: '《荀子・勸學》',
         },
         {
           text: '橘生淮南則為橘，生於淮北則為枳。',
           highlight: '則',
-          unlockedMeaning: '（淮南、淮北是淮河以南、以北。古人認為同一種橘樹會因生長地點不同而改變。）橘樹生在淮南，「則」結出橘子；生在淮北，「則」結出枳。',
+          unlockedMeaning: '同樣的橘樹，如果長在淮南，「則」結出橘子；如果長在淮北，「則」結出枳。',
           source: '《晏子春秋・內篇雜下》',
         },
       ],
