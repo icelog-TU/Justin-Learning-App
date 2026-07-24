@@ -183,7 +183,6 @@ export interface ComparisonRow {
 export interface FinalVerification {
   /** Step ids that must all be solved before the verification scroll unlocks. */
   prerequisiteStepIds: string[];
-  unlockButtonLabel: string;
   guideLine: string;
   translation: string;
   comparisonRows: ComparisonRow[];
@@ -739,7 +738,6 @@ export const simaGuangLesson: GuwenLesson = {
       'rescue_causal_chain',
       'evidence_boundary_sima_guang',
     ],
-    unlockButtonLabel: '打開白話驗證卷軸',
     guideLine: '比一比：白話文有沒有改變故事的順序？哪些地方和你的破譯相同？哪些只是換了一種比較順的現代說法？',
     translation:
       '一群孩子在庭院裡玩耍。其中一個孩子爬上大甕，腳下失去支撐，身體沒入甕裡的水中。其他孩子全都丟下他跑開了，司馬光拿起石頭，把甕打破。水湧了出來，那個孩子因此得救了。',
@@ -1458,7 +1456,6 @@ export const keZhouQiuJianLesson: GuwenLesson = {
       'closing_causal_chain',
       'closing_evidence_multiselect',
     ],
-    unlockButtonLabel: '打開白話驗證卷軸',
     guideLine:
       '這段白話沒有告訴你新的答案。「劍掉進水裡」「立刻刻下記號」「船繼續開往目的地」「船抵達目的地後停下」「從記號處進入水中找劍」——這些畫面，都是你剛才自己一段一段破解出來的。',
     translation:
@@ -1984,7 +1981,6 @@ export const wangRongLesson: GuwenLesson = {
       'full_text_causal_chain',
       'closing_evidence_multiselect',
     ],
-    unlockButtonLabel: '打開白話驗證卷軸',
     guideLine: '你已經用古文線索把整篇故事破解完成。現在打開白話卷軸，檢查你一路建立的理解，和完整故事是否相符。',
     translation:
       '王戎七歲時，曾經和一群孩子一起遊玩。他們看見道路旁邊有一棵李樹，樹上結了很多李子，枝條受到重量而向下彎折。孩子們爭著跑去摘李子，只有王戎沒有跟著行動。\n\n有人問王戎，王戎回答：「這棵樹長在道路旁邊，樹上卻還留著這麼多李子；這一定是苦李子。」\n\n後來有人摘下李子，結果果然和王戎說的一樣，是苦的。',
@@ -2543,7 +2539,6 @@ export const shouZhuDaiTuLesson: GuwenLesson = {
       'closing_sequence_order',
       'closing_evidence_multiselect',
     ],
-    unlockButtonLabel: '打開白話驗證卷軸',
     guideLine:
       '這段白話沒有告訴你新的答案。樹樁、奔跑、碰撞、折頸、放下農具、守在樹樁旁、希望再次得到兔子，以及最後受到取笑——這些畫面，都是你剛才自己一段一段破解出來的。\n\n白話文沒有增加農夫等待了幾天、看見多少隻兔子，也沒有補寫宋國人取笑他時說了哪些話，因為原文都沒有交代。「不能靠守著樹樁再次得到兔子」是把「兔不可復得」放回前文的守株行動中理解，不代表農夫使用任何方法都不可能再得到兔子。',
     translation:

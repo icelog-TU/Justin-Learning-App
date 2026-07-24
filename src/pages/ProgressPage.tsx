@@ -5,6 +5,7 @@ import { confusableQuestions } from '../data/confusables';
 import { useAppDataContext } from '../lib/AppDataContext';
 import { getStreakDays } from '../lib/storage';
 import { GACHA_BASES, TOTAL_CHARACTER_SLOTS, maxExponentForBase, currentLevel } from '../lib/rewards';
+import { guwenLessons } from '../data/guwenLesson';
 
 const RECENT_ROUNDS_SHOWN = 5;
 
@@ -72,6 +73,35 @@ export default function ProgressPage() {
               <Link key={base} to={`/characters?base=${base}`} className="rounded-lg py-1 hover:bg-gray-50">
                 <p className="font-bold text-gray-700">{owned}/{max}</p>
                 <p>{base} 的 n 次方</p>
+              </Link>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="bg-white rounded-2xl shadow p-5">
+        <h3 className="font-bold text-gray-800 mb-1">🏅 古文徽章蒐集區</h3>
+        <p className="text-xs text-gray-500 mb-3">
+          每破解完一篇古文，就能收下一枚編號徽章——已收集 {guwenLessons.filter((l) => data.guwenProgress[l.id]?.completedAt).length}
+          {' / '}
+          {guwenLessons.length} 枚
+        </p>
+        <div className="grid grid-cols-5 sm:grid-cols-8 gap-2">
+          {guwenLessons.map((l, i) => {
+            const earned = Boolean(data.guwenProgress[l.id]?.completedAt);
+            return (
+              <Link
+                key={l.id}
+                to={`/guwen-lesson/${l.id}`}
+                title={l.title}
+                className={`aspect-square rounded-full flex flex-col items-center justify-center text-xs font-bold ${
+                  earned
+                    ? 'bg-gradient-to-br from-amber-400 to-pink-500 text-white shadow'
+                    : 'bg-gray-100 text-gray-300'
+                }`}
+              >
+                <span className="text-base leading-none">{earned ? '🏅' : '🔒'}</span>
+                <span className="leading-none mt-0.5">{i + 1}</span>
               </Link>
             );
           })}

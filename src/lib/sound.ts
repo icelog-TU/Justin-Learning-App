@@ -168,3 +168,16 @@ export function playTwinkleSound() {
   tone(ctx, base, t, 0.14, 'sine', 0.09);
   tone(ctx, base * 1.5, t + 0.05, 0.18, 'sine', 0.07);
 }
+
+/** Plays when a child claims their 古文破譯家 completion badge — a separate, later moment from
+ * `playGuwenLessonCompleteFanfare()` (which fires immediately on finishing the text). Distinct in character
+ * from that longer fanfare: a quick confident rising triad landing on a held bright top note, more like a
+ * "achievement unlocked" ding than a multi-second celebration, since the grand fanfare already happened. */
+export function playBadgeAwardSound() {
+  const ctx = getContext();
+  if (!ctx) return;
+  const t = ctx.currentTime;
+  [659, 831, 988].forEach((f, i) => tone(ctx, f, t + i * 0.09, 0.22, 'triangle', 0.14));
+  tone(ctx, 1568, t + 0.28, 0.6, 'sine', 0.13);
+  tone(ctx, 1976, t + 0.28, 0.6, 'sine', 0.07);
+}
