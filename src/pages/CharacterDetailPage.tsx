@@ -4,12 +4,15 @@ import { useAppDataContext } from '../lib/AppDataContext';
 import {
   HEART_COST_STARS,
   parseCharacterId,
-  formatCharacterLabel,
   formatBigNumber,
   characterValue,
+  characterValueFromId,
+  characterLabelFromId,
+  characterMaxHearts,
   characterColor,
   maxExponentForBase,
-  characterCollectionIndex,
+  characterCollectionIndexFromId,
+  SQUARE_CHARACTER_COUNT,
 } from '../lib/rewards';
 import { numberToChineseWords } from '../lib/chineseNumber';
 import { speak } from '../lib/speech';
@@ -118,10 +121,10 @@ const TEMPLATES: {
  * starting point for every character. A unique memory code is also appended to every message, which makes the
  * complete interaction text globally unique across all 368 characters even when two activities share a theme.
  */
-function buildInteractionTiers(base: number, exponent: number, maxHearts: number): InteractionTier[] {
+function buildInteractionTiers(id: string, base: number, exponent: number, maxHearts: number): InteractionTier[] {
   const tierCount = Math.max(1, Math.round(maxHearts / 2));
-  const characterIndex = characterCollectionIndex(base, exponent);
-  const label = formatCharacterLabel(base, exponent);
+  const characterIndex = characterCollectionIndexFromId(id);
+  const label = characterLabelFromId(id);
   const tiers: InteractionTier[] = [];
   for (let i = 1; i <= tierCount; i++) {
     const requiredHearts = Math.round((i / tierCount) * maxHearts);
@@ -185,14 +188,19 @@ export default function CharacterDetailPage() {
     );
   }
 
-  const { base, exponent } = parseCharacterId(id);
-  const maxHearts = exponent;
+  const parsed = parseCharacterId(id);
+  const base = parsed.kind === 'square' ? parsed.squareBase : parsed.base;
+  const exponent = parsed.kind === 'square' ? 2 : parsed.exponent;
+  const maxHearts = characterMaxHearts(id);
   const isFull = hearts >= maxHearts;
   const canGiveHeart = !isFull && data.stars >= HEART_COST_STARS;
-  const tiers = buildInteractionTiers(base, exponent, maxHearts);
-  const value = characterValue(base, exponent);
-  const label = formatCharacterLabel(base, exponent);
-  const color = characterColor(exponent, maxExponentForBase(base));
+  const tiers = buildInteractionTiers(id, base, exponent, maxHearts);
+  const value = characterValueFromId(id);
+  const label = characterLabelFromId(id);
+  const color = characterColor(
+    parsed.kind === 'square' ? parsed.squareBase : exponent,
+    parsed.kind === 'square' ? SQUARE_CHARACTER_COUNT : maxExponentForBase(base),
+  );
 
   function handleGiveHeart() {
     const before = hearts;
@@ -259,7 +267,7 @@ export default function CharacterDetailPage() {
 
         <div className="pt-2">
           <p className="text-sm text-gray-600 mb-2">
-            好感度：{hearts > 0 ? formatCharacterLabel(base, hearts) : '尚未培養'}（{hearts} / {maxHearts} 顆愛心{isFull && ' 💯'}）
+            好感度：{hearts > 0 ? `${hearts} 顆` : '尚未培養'}（{hearts} / {maxHearts} 顆愛心{isFull && ' 💯'}）
           </p>
           <div className="flex flex-wrap justify-center gap-1 max-w-sm mx-auto">
             {Array.from({ length: maxHearts }, (_, i) => (

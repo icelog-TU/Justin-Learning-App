@@ -7,6 +7,10 @@ import {
   ASSOCIATION_CHAR_MILESTONE_INTERVAL,
   characterId,
   currentUnlockedBase,
+  SQUARE_CHARACTER_COUNT,
+  squareCharacterId,
+  ownedSquareCharacterCount,
+  characterMaxHearts,
   type GachaResult,
 } from './rewards';
 import type { CustomChainEntry } from './chainGame';
@@ -229,46 +233,62 @@ export function earnRewards(data: AppData, coins: number, stars: number): AppDat
 export function rollGacha(data: AppData): { data: AppData; result: GachaResult | null } {
   if (data.coins < GACHA_COST_COINS) return { data, result: null };
   const base = currentUnlockedBase(data.characters);
-  if (base === null) return { data, result: null };
+  const squareCollectionActive = base === null;
+  if (squareCollectionActive && ownedSquareCharacterCount(data.characters) >= SQUARE_CHARACTER_COUNT) {
+    return { data, result: null };
+  }
 
   data.coins -= GACHA_COST_COINS;
 
-  const maxExponent = maxExponentForBase(base);
-
   // Pity system: if the last GACHA_PITY_LIMIT - 1 rolls were all dupes, this roll is guaranteed new.
   const forceNew = data.gachaPityCounter >= GACHA_PITY_LIMIT - 1;
-  let exponent: number;
-  if (forceNew) {
-    const unowned: number[] = [];
-    for (let exp = 1; exp <= maxExponent; exp++) {
-      if (data.characters[characterId(base, exp)] === undefined) unowned.push(exp);
+  let result: GachaResult;
+  if (squareCollectionActive) {
+    let squareBase: number;
+    if (forceNew) {
+      const unowned: number[] = [];
+      for (let candidate = 1; candidate <= SQUARE_CHARACTER_COUNT; candidate++) {
+        if (data.characters[squareCharacterId(candidate)] === undefined) unowned.push(candidate);
+      }
+      squareBase = unowned[Math.floor(Math.random() * unowned.length)];
+    } else {
+      squareBase = 1 + Math.floor(Math.random() * SQUARE_CHARACTER_COUNT);
     }
-    exponent = unowned[Math.floor(Math.random() * unowned.length)];
+    const id = squareCharacterId(squareBase);
+    result = { kind: 'square', id, squareBase, isDupe: data.characters[id] !== undefined };
   } else {
-    exponent = 1 + Math.floor(Math.random() * maxExponent);
+    const maxExponent = maxExponentForBase(base);
+    let exponent: number;
+    if (forceNew) {
+      const unowned: number[] = [];
+      for (let exp = 1; exp <= maxExponent; exp++) {
+        if (data.characters[characterId(base, exp)] === undefined) unowned.push(exp);
+      }
+      exponent = unowned[Math.floor(Math.random() * unowned.length)];
+    } else {
+      exponent = 1 + Math.floor(Math.random() * maxExponent);
+    }
+    const id = characterId(base, exponent);
+    result = { kind: 'power', id, base, exponent, isDupe: data.characters[id] !== undefined };
   }
 
-  const id = characterId(base, exponent);
-  const isDupe = data.characters[id] !== undefined;
-
-  if (isDupe) {
+  if (result.isDupe) {
     data.stars += DUPE_CONSOLATION_STARS;
     data.totalStarsEarned += DUPE_CONSOLATION_STARS;
     logDailyEarning(data, 0, DUPE_CONSOLATION_STARS);
     data.gachaPityCounter += 1;
   } else {
-    data.characters[id] = 0;
+    data.characters[result.id] = 0;
     data.gachaPityCounter = 0;
   }
 
-  return { data, result: { id, base, exponent, isDupe } };
+  return { data, result };
 }
 
 export function giveHeart(data: AppData, id: string): { data: AppData; success: boolean } {
   const hearts = data.characters[id];
   if (hearts === undefined) return { data, success: false };
-  const [, exponentStr] = id.split('^');
-  const maxHearts = Number(exponentStr);
+  const maxHearts = characterMaxHearts(id);
   if (hearts >= maxHearts) return { data, success: false };
   if (data.stars < HEART_COST_STARS) return { data, success: false };
 

@@ -10,36 +10,48 @@ import {
   currentUnlockedBase,
   ownedCountForBase,
   formatCharacterLabel,
+  formatSquareCharacterLabel,
   formatBigNumber,
   characterValue,
   characterColor,
+  SQUARE_CHARACTER_COUNT,
+  squareCharacterId,
+  ownedSquareCharacterCount,
+  arePowerCharactersComplete,
 } from '../lib/rewards';
 import { playHeartSound } from '../lib/sound';
 
 type CharacterSort = 'exponent-asc' | 'exponent-desc' | 'missing-desc' | 'missing-asc';
+type CollectionSelection = number | 'squares';
 
 export default function CharactersPage() {
   const { data, giveHeart } = useAppDataContext();
   const activeBase = currentUnlockedBase(data.characters);
   const [searchParams] = useSearchParams();
   const baseFromUrl = Number(searchParams.get('base'));
-  const initialBase = GACHA_BASES.includes(baseFromUrl as (typeof GACHA_BASES)[number])
-    ? baseFromUrl
-    : (activeBase ?? GACHA_BASES[0]);
-  const [selectedBase, setSelectedBase] = useState<number>(initialBase);
+  const initialCollection: CollectionSelection = searchParams.get('collection') === 'squares'
+    ? 'squares'
+    : GACHA_BASES.includes(baseFromUrl as (typeof GACHA_BASES)[number])
+      ? baseFromUrl
+      : (activeBase ?? GACHA_BASES[0]);
+  const [selectedCollection, setSelectedCollection] = useState<CollectionSelection>(initialCollection);
   const [onlyNeedsHearts, setOnlyNeedsHearts] = useState(false);
   const [sortBy, setSortBy] = useState<CharacterSort>('exponent-asc');
 
-  const selectedBaseMaxExponent = maxExponentForBase(selectedBase);
-  const exponents = Array.from({ length: selectedBaseMaxExponent }, (_, i) => i + 1)
-    .filter((exp) => {
+  const isSquareCollection = selectedCollection === 'squares';
+  const selectedCount = isSquareCollection ? SQUARE_CHARACTER_COUNT : maxExponentForBase(selectedCollection);
+  const idForIndex = (index: number) => isSquareCollection
+    ? squareCharacterId(index)
+    : characterId(selectedCollection, index);
+  const characterIndexes = Array.from({ length: selectedCount }, (_, i) => i + 1)
+    .filter((index) => {
       if (!onlyNeedsHearts) return true;
-      const hearts = data.characters[characterId(selectedBase, exp)];
-      return hearts !== undefined && hearts < exp;
+      const hearts = data.characters[idForIndex(index)];
+      return hearts !== undefined && hearts < index;
     })
     .sort((a, b) => {
-      const heartsA = data.characters[characterId(selectedBase, a)];
-      const heartsB = data.characters[characterId(selectedBase, b)];
+      const heartsA = data.characters[idForIndex(a)];
+      const heartsB = data.characters[idForIndex(b)];
       const ownedA = heartsA !== undefined;
       const ownedB = heartsB !== undefined;
 
@@ -55,10 +67,13 @@ export default function CharactersPage() {
       return sortBy === 'exponent-desc' ? b - a : a - b;
     });
 
-  const needsHeartsCount = Array.from({ length: selectedBaseMaxExponent }, (_, i) => i + 1).filter((exp) => {
-    const hearts = data.characters[characterId(selectedBase, exp)];
-    return hearts !== undefined && hearts < exp;
+  const needsHeartsCount = Array.from({ length: selectedCount }, (_, i) => i + 1).filter((index) => {
+    const hearts = data.characters[idForIndex(index)];
+    return hearts !== undefined && hearts < index;
   }).length;
+  const selectedOwnedCount = isSquareCollection
+    ? ownedSquareCharacterCount(data.characters)
+    : ownedCountForBase(data.characters, selectedCollection);
 
   return (
     <div className="space-y-4">
@@ -73,12 +88,12 @@ export default function CharactersPage() {
         {GACHA_BASES.map((base) => {
           const owned = ownedCountForBase(data.characters, base);
           const isLocked = base !== activeBase && owned === 0;
-          const isSelected = selectedBase === base;
+          const isSelected = selectedCollection === base;
           return (
             <button
               key={base}
               type="button"
-              onClick={() => setSelectedBase(base)}
+              onClick={() => setSelectedCollection(base)}
               className={`px-3 py-2 rounded-xl text-sm font-medium border flex items-center gap-2 ${
                 isSelected
                   ? 'bg-orange-500 text-white border-orange-500'
@@ -96,6 +111,24 @@ export default function CharactersPage() {
             </button>
           );
         })}
+        <button
+          type="button"
+          onClick={() => setSelectedCollection('squares')}
+          className={`px-3 py-2 rounded-xl text-sm font-medium border flex items-center gap-2 ${
+            isSquareCollection
+              ? 'bg-violet-500 text-white border-violet-500'
+              : 'bg-white text-gray-600 border-gray-200 hover:border-violet-300'
+          }`}
+        >
+          <span className="text-lg">🔲</span>
+          <span className="flex-1 text-left leading-tight">
+            <span className="block">1² 到 50²</span>
+            <span className={`block text-[11px] ${isSquareCollection ? 'text-violet-100' : 'text-gray-400'}`}>
+              {ownedSquareCharacterCount(data.characters)}/{SQUARE_CHARACTER_COUNT}
+            </span>
+          </span>
+          {!arePowerCharactersComplete(data.characters) && <span>🔒</span>}
+        </button>
       </div>
 
       <div className="rounded-2xl border-2 border-pink-200 bg-pink-50 p-4 shadow-sm space-y-3">
@@ -126,8 +159,8 @@ export default function CharactersPage() {
             onChange={(event) => setSortBy(event.target.value as CharacterSort)}
             className="w-full rounded-xl border border-pink-200 bg-white px-3 py-3 text-sm text-gray-700"
           >
-            <option value="exponent-asc">次方：小到大</option>
-            <option value="exponent-desc">次方：大到小</option>
+            <option value="exponent-asc">{isSquareCollection ? '底數' : '次方'}：小到大</option>
+            <option value="exponent-desc">{isSquareCollection ? '底數' : '次方'}：大到小</option>
             <option value="missing-desc">愛心缺最多的在最上面</option>
             <option value="missing-asc">愛心最接近填滿的在最上面</option>
           </select>
@@ -135,19 +168,25 @@ export default function CharactersPage() {
       </div>
 
       <p className="text-xs text-gray-400">
-        {ownedCountForBase(data.characters, selectedBase)} / {selectedBaseMaxExponent} 已收集
-        {onlyNeedsHearts && `・目前顯示 ${exponents.length} 隻待補愛心角色`}
+        {selectedOwnedCount} / {selectedCount} 已收集
+        {onlyNeedsHearts && `・目前顯示 ${characterIndexes.length} 隻待補愛心角色`}
       </p>
 
-      {exponents.length > 0 ? (
+      {characterIndexes.length > 0 ? (
         <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
-          {exponents.map((exp) => {
-            const id = characterId(selectedBase, exp);
+          {characterIndexes.map((index) => {
+            const id = idForIndex(index);
             const hearts = data.characters[id];
             const owned = hearts !== undefined;
             const currentHearts = hearts ?? 0;
-            const isFull = owned && currentHearts >= exp;
+            const isFull = owned && currentHearts >= index;
             const canGiveHeart = owned && !isFull && data.stars >= HEART_COST_STARS;
+            const label = isSquareCollection
+              ? formatSquareCharacterLabel(index)
+              : formatCharacterLabel(selectedCollection, index);
+            const value = isSquareCollection
+              ? characterValue(index, 2)
+              : characterValue(selectedCollection, index);
 
             return (
               <div
@@ -161,21 +200,23 @@ export default function CharactersPage() {
                     <Link to={`/characters/${encodeURIComponent(id)}`} className="block">
                       <div
                         className="mx-auto w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm"
-                        style={{ backgroundColor: characterColor(exp, selectedBaseMaxExponent) }}
+                        style={{ backgroundColor: characterColor(index, selectedCount) }}
                       >
-                        {exp}
+                        {index}
                       </div>
-                      <p className="text-lg font-extrabold text-orange-600 mt-1">{formatCharacterLabel(selectedBase, exp)}</p>
+                      <p className={`text-lg font-extrabold mt-1 ${isSquareCollection ? 'text-violet-600' : 'text-orange-600'}`}>
+                        {label}
+                      </p>
                       <p className="text-[11px] text-gray-400 leading-tight">
-                        {formatBigNumber(characterValue(selectedBase, exp))}
+                        {formatBigNumber(value)}
                       </p>
                       <p className="text-xs text-gray-600">
-                        好感度：{currentHearts > 0 ? formatCharacterLabel(selectedBase, currentHearts) : '尚未培養'}
+                        好感度：{currentHearts > 0 ? `${currentHearts} 顆` : '尚未培養'}
                       </p>
                       <p className="text-[11px] text-gray-400">
-                        {currentHearts} / {exp} 顆愛心{isFull && ' 💯'}
+                        {currentHearts} / {index} 顆愛心{isFull && ' 💯'}
                       </p>
-                      {!isFull && <p className="text-[11px] font-medium text-pink-500">還缺 {exp - currentHearts} 顆</p>}
+                      {!isFull && <p className="text-[11px] font-medium text-pink-500">還缺 {index - currentHearts} 顆</p>}
                     </Link>
                     <button
                       type="button"

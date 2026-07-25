@@ -16,8 +16,10 @@ export const BASE_MAX_EXPONENT: Record<number, number> = {
 export function maxExponentForBase(base: number): number {
   return BASE_MAX_EXPONENT[base] ?? 46;
 }
-/** Total character slots across every base — used for overall collection totals/progress bars. */
-export const TOTAL_CHARACTER_SLOTS = GACHA_BASES.reduce((sum, base) => sum + maxExponentForBase(base), 0);
+export const SQUARE_CHARACTER_COUNT = 50;
+/** Existing power-series slots stay first; the standalone 1²..50² collection unlocks after them. */
+export const POWER_CHARACTER_SLOTS = GACHA_BASES.reduce((sum, base) => sum + maxExponentForBase(base), 0);
+export const TOTAL_CHARACTER_SLOTS = POWER_CHARACTER_SLOTS + SQUARE_CHARACTER_COUNT;
 export const GACHA_COST_COINS = 10;
 export const HEART_COST_STARS = 3;
 /** Pity system: a brand-new character is guaranteed at least once every this many rolls. */
@@ -95,9 +97,20 @@ export function characterId(base: number, exponent: number): string {
   return `${base}^${exponent}`;
 }
 
-export function parseCharacterId(id: string): { base: number; exponent: number } {
+export function squareCharacterId(squareBase: number): string {
+  return `square:${squareBase}`;
+}
+
+export function isSquareCharacterId(id: string): boolean {
+  return id.startsWith('square:');
+}
+
+export function parseCharacterId(id: string): { kind: 'power'; base: number; exponent: number } | { kind: 'square'; squareBase: number } {
+  if (isSquareCharacterId(id)) {
+    return { kind: 'square', squareBase: Number(id.slice('square:'.length)) };
+  }
   const [base, exponent] = id.split('^').map(Number);
-  return { base, exponent };
+  return { kind: 'power', base, exponent };
 }
 
 export function characterValue(base: number, exponent: number): bigint {
@@ -111,6 +124,29 @@ export function formatCharacterLabel(base: number, exponent: number): string {
   };
   const sup = String(exponent).split('').map((d) => superscripts[d]).join('');
   return `${base}${sup}`;
+}
+
+export function formatSquareCharacterLabel(squareBase: number): string {
+  return formatCharacterLabel(squareBase, 2);
+}
+
+export function characterMaxHearts(id: string): number {
+  const parsed = parseCharacterId(id);
+  return parsed.kind === 'square' ? parsed.squareBase : parsed.exponent;
+}
+
+export function characterLabelFromId(id: string): string {
+  const parsed = parseCharacterId(id);
+  return parsed.kind === 'square'
+    ? formatSquareCharacterLabel(parsed.squareBase)
+    : formatCharacterLabel(parsed.base, parsed.exponent);
+}
+
+export function characterValueFromId(id: string): bigint {
+  const parsed = parseCharacterId(id);
+  return parsed.kind === 'square'
+    ? characterValue(parsed.squareBase, 2)
+    : characterValue(parsed.base, parsed.exponent);
 }
 
 export function formatBigNumber(n: bigint): string {
@@ -137,6 +173,13 @@ export function characterCollectionIndex(base: number, exponent: number): number
   return offset + Math.max(0, exponent - 1);
 }
 
+export function characterCollectionIndexFromId(id: string): number {
+  const parsed = parseCharacterId(id);
+  return parsed.kind === 'square'
+    ? POWER_CHARACTER_SLOTS + Math.max(0, parsed.squareBase - 1)
+    : characterCollectionIndex(parsed.base, parsed.exponent);
+}
+
 /** Which base is currently open for gacha pulls: the first base in order that isn't fully collected yet. */
 export function currentUnlockedBase(characters: Record<string, number>): number | null {
   for (const base of GACHA_BASES) {
@@ -157,12 +200,34 @@ export function ownedCountForBase(characters: Record<string, number>, base: numb
   return count;
 }
 
-export interface GachaResult {
+export function ownedSquareCharacterCount(characters: Record<string, number>): number {
+  let count = 0;
+  for (let squareBase = 1; squareBase <= SQUARE_CHARACTER_COUNT; squareBase++) {
+    if (characters[squareCharacterId(squareBase)] !== undefined) count++;
+  }
+  return count;
+}
+
+export function arePowerCharactersComplete(characters: Record<string, number>): boolean {
+  return currentUnlockedBase(characters) === null;
+}
+
+export interface PowerGachaResult {
+  kind: 'power';
   id: string;
   base: number;
   exponent: number;
   isDupe: boolean;
 }
+
+export interface SquareGachaResult {
+  kind: 'square';
+  id: string;
+  squareBase: number;
+  isDupe: boolean;
+}
+
+export type GachaResult = PowerGachaResult | SquareGachaResult;
 
 export interface LevelInfo {
   level: number;
@@ -193,6 +258,9 @@ export const LEVELS: LevelInfo[] = [
   { level: 17, title: '文字探險王', icon: '🧭', threshold: 322 },
   { level: 18, title: '萬卷智者', icon: '💫', threshold: 345 },
   { level: 19, title: '練功房傳奇', icon: '🌌', threshold: 368 },
+  { level: 20, title: '平方探索家', icon: '🔲', threshold: 385 },
+  { level: 21, title: '平方大師', icon: '🧮', threshold: 402 },
+  { level: 22, title: '數字宇宙王', icon: '🚀', threshold: 418 },
 ];
 
 export function currentLevel(charactersOwned: number): LevelInfo {

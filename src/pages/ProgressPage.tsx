@@ -4,7 +4,14 @@ import { idioms } from '../data/idioms';
 import { confusableQuestions } from '../data/confusables';
 import { useAppDataContext } from '../lib/AppDataContext';
 import { getStreakDays } from '../lib/storage';
-import { GACHA_BASES, TOTAL_CHARACTER_SLOTS, maxExponentForBase, currentLevel } from '../lib/rewards';
+import {
+  GACHA_BASES,
+  TOTAL_CHARACTER_SLOTS,
+  SQUARE_CHARACTER_COUNT,
+  maxExponentForBase,
+  currentLevel,
+  ownedSquareCharacterCount,
+} from '../lib/rewards';
 import { guwenLessons } from '../data/guwenLesson';
 
 const RECENT_ROUNDS_SHOWN = 5;
@@ -76,6 +83,10 @@ export default function ProgressPage() {
               </Link>
             );
           })}
+          <Link to="/characters?collection=squares" className="rounded-lg py-1 hover:bg-gray-50">
+            <p className="font-bold text-gray-700">{ownedSquareCharacterCount(data.characters)}/{SQUARE_CHARACTER_COUNT}</p>
+            <p>1² 到 50²</p>
+          </Link>
         </div>
       </div>
 

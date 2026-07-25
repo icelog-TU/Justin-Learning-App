@@ -8,12 +8,14 @@ import {
   BASE_EMOJI,
   currentUnlockedBase,
   ownedCountForBase,
-  formatCharacterLabel,
+  characterLabelFromId,
   formatBigNumber,
-  characterValue,
-  characterId,
+  characterValueFromId,
   characterColor,
   TOTAL_CHARACTER_SLOTS,
+  SQUARE_CHARACTER_COUNT,
+  ownedSquareCharacterCount,
+  arePowerCharactersComplete,
 } from '../lib/rewards';
 import type { GachaResult } from '../lib/rewards';
 import { playGachaSpinSound, playGachaRevealSound } from '../lib/sound';
@@ -26,6 +28,10 @@ export default function GachaPage() {
   const rollingRef = useRef(false);
 
   const activeBase = currentUnlockedBase(data.characters);
+  const powersComplete = arePowerCharactersComplete(data.characters);
+  const squareOwned = ownedSquareCharacterCount(data.characters);
+  const squareCollectionActive = powersComplete && squareOwned < SQUARE_CHARACTER_COUNT;
+  const allCollected = powersComplete && squareOwned >= SQUARE_CHARACTER_COUNT;
   const canAfford = data.coins >= GACHA_COST_COINS;
 
   function handleRoll() {
@@ -50,7 +56,9 @@ export default function GachaPage() {
     <div className="space-y-4">
       <div>
         <h2 className="text-xl font-bold text-gray-800">轉蛋</h2>
-        <p className="text-sm text-gray-500">用金幣轉蛋，依序收集 2、3、5、6、7、11、12、15 的次方角色，共 {TOTAL_CHARACTER_SLOTS} 隻！</p>
+        <p className="text-sm text-gray-500">
+          用金幣依序收集八組次方角色，再解鎖 1² 到 50² 的平方角色，共 {TOTAL_CHARACTER_SLOTS} 隻！
+        </p>
       </div>
 
       <div className="bg-white rounded-2xl shadow p-6 text-center space-y-4">
@@ -60,13 +68,22 @@ export default function GachaPage() {
           <span className="text-xs text-gray-400 font-normal">（每次轉蛋需要 {GACHA_COST_COINS} 枚金幣）</span>
         </div>
 
-        {activeBase === null ? (
+        {allCollected ? (
           <p className="text-emerald-600 font-bold py-6">🎉 恭喜！你已經收集了全部 {TOTAL_CHARACTER_SLOTS} 隻角色！</p>
         ) : (
           <>
             <p className="text-sm text-gray-500">
-              目前可以轉到 <span className="font-bold text-orange-600">{activeBase} 的 n 次方</span> 角色（
-              {ownedCountForBase(data.characters, activeBase)} / {maxExponentForBase(activeBase)}）
+              {squareCollectionActive ? (
+                <>
+                  目前可以轉到 <span className="font-bold text-violet-600">1² 到 50² 的平方</span>角色（
+                  {squareOwned} / {SQUARE_CHARACTER_COUNT}）
+                </>
+              ) : (
+                <>
+                  目前可以轉到 <span className="font-bold text-orange-600">{activeBase} 的 n 次方</span>角色（
+                  {ownedCountForBase(data.characters, activeBase!)} / {maxExponentForBase(activeBase!)}）
+                </>
+              )}
             </p>
 
             <button
@@ -83,29 +100,34 @@ export default function GachaPage() {
 
         {lastResult && (
           <Link
-            to={`/characters/${encodeURIComponent(characterId(lastResult.base, lastResult.exponent))}`}
+            to={`/characters/${encodeURIComponent(lastResult.id)}`}
             className="block mt-4 bg-orange-50 hover:bg-orange-100 transition-colors rounded-2xl p-6 space-y-2 animate-in fade-in"
           >
             <div
               className="mx-auto w-20 h-20 rounded-full flex items-center justify-center text-white font-extrabold text-2xl"
-              style={{ backgroundColor: characterColor(lastResult.exponent, maxExponentForBase(lastResult.base)) }}
+              style={{
+                backgroundColor: characterColor(
+                  lastResult.kind === 'square' ? lastResult.squareBase : lastResult.exponent,
+                  lastResult.kind === 'square' ? SQUARE_CHARACTER_COUNT : maxExponentForBase(lastResult.base),
+                ),
+              }}
             >
-              {lastResult.exponent}
+              {lastResult.kind === 'square' ? lastResult.squareBase : lastResult.exponent}
             </div>
             {lastResult.isDupe ? (
               <>
                 <p className="font-bold text-gray-700">
-                  抽到重複的 {formatCharacterLabel(lastResult.base, lastResult.exponent)}
+                  抽到重複的 {characterLabelFromId(lastResult.id)}
                 </p>
                 <p className="text-sm text-gray-500">已經自動換成 ⭐ 星星，可以拿去養角色好感度！</p>
               </>
             ) : (
               <>
                 <p className="text-2xl font-extrabold text-orange-600">
-                  {formatCharacterLabel(lastResult.base, lastResult.exponent)}
+                  {characterLabelFromId(lastResult.id)}
                 </p>
                 <p className="text-sm text-gray-500">
-                  = {formatBigNumber(characterValue(lastResult.base, lastResult.exponent))}
+                  = {formatBigNumber(characterValueFromId(lastResult.id))}
                 </p>
                 <p className="font-bold text-emerald-600">獲得新角色！</p>
               </>
@@ -143,6 +165,22 @@ export default function GachaPage() {
               </Link>
             );
           })}
+          <Link
+            to="/characters?collection=squares"
+            className="flex items-center gap-3 rounded-lg hover:bg-gray-50 -mx-1 px-1 py-0.5"
+          >
+            <span className="text-xl w-7">🔲</span>
+            <span className="w-16 text-sm font-semibold text-gray-700">平方角色</span>
+            <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
+              <div
+                className={`h-full ${squareCollectionActive ? 'bg-violet-500' : 'bg-emerald-500'}`}
+                style={{ width: `${(squareOwned / SQUARE_CHARACTER_COUNT) * 100}%` }}
+              />
+            </div>
+            <span className="text-xs text-gray-400 w-14 text-right">
+              {!powersComplete ? '🔒 未解鎖' : `${squareOwned}/${SQUARE_CHARACTER_COUNT}`}
+            </span>
+          </Link>
         </div>
       </div>
     </div>
