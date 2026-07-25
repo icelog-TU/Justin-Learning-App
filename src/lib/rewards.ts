@@ -1,10 +1,8 @@
-/** Deliberately skips 4/8/9/10 — those are perfect powers (or products) of bases already in this list
- * (4=2², 8=2³, 9=3², 10=2×5), so a character built on one of them would land on the exact same big-number
- * value as a character from an existing base at some exponent (e.g. 4^23 === 2^46) — a collision the earlier
- * "移除4的n次方，換成7的n次方" decision was made specifically to avoid. Every base here stays numerically
- * distinct from every other at every exponent. */
-export const GACHA_BASES = [2, 3, 5, 6, 7, 11] as const;
-/** Per-base max exponent — every base now runs equally deep (46). */
+/** Deliberately skips bases that would collide with an existing power series.
+ * Every base here has a distinct prime-factor ratio, so no two positive powers in the supported range
+ * can evaluate to the same character value. For example, 12 = 2²×3 and 15 = 3×5 are both safe additions. */
+export const GACHA_BASES = [2, 3, 5, 6, 7, 11, 12, 15] as const;
+/** Per-base max exponent — every base runs equally deep (46). */
 export const BASE_MAX_EXPONENT: Record<number, number> = {
   2: 46,
   3: 46,
@@ -12,6 +10,8 @@ export const BASE_MAX_EXPONENT: Record<number, number> = {
   6: 46,
   7: 46,
   11: 46,
+  12: 46,
+  15: 46,
 };
 export function maxExponentForBase(base: number): number {
   return BASE_MAX_EXPONENT[base] ?? 46;
@@ -80,6 +80,8 @@ export const BASE_EMOJI: Record<number, string> = {
   6: '🔴',
   7: '🟣',
   11: '🟡',
+  12: '🩵',
+  15: '🩷',
 };
 
 export interface CharacterInfo {
@@ -125,6 +127,16 @@ export function characterColor(exponent: number, maxExponent: number = 46): stri
   return `hsl(${hue.toFixed(0)}, 70%, 50%)`;
 }
 
+/** Stable zero-based position of a character in the complete collection. */
+export function characterCollectionIndex(base: number, exponent: number): number {
+  let offset = 0;
+  for (const candidate of GACHA_BASES) {
+    if (candidate === base) return offset + Math.max(0, exponent - 1);
+    offset += maxExponentForBase(candidate);
+  }
+  return offset + Math.max(0, exponent - 1);
+}
+
 /** Which base is currently open for gacha pulls: the first base in order that isn't fully collected yet. */
 export function currentUnlockedBase(characters: Record<string, number>): number | null {
   for (const base of GACHA_BASES) {
@@ -134,7 +146,7 @@ export function currentUnlockedBase(characters: Record<string, number>): number 
     ).length;
     if (ownedCount < max) return base;
   }
-  return null; // fully collected everything
+  return null;
 }
 
 export function ownedCountForBase(characters: Record<string, number>, base: number): number {
@@ -160,11 +172,7 @@ export interface LevelInfo {
   threshold: number;
 }
 
-/** Fifteen levels tied to total characters collected (0 up to the full TOTAL_CHARACTER_SLOTS-character
- * collection). Levels 1–10 and their thresholds are untouched from before every base was expanded to 46
- * (see BASE_MAX_EXPONENT) — nobody's current level threshold moves. Levels 11–15 are new, added purely to
- * spread out the extra characters that expansion added (211 → 276 total slots) across more levels, instead
- * of just quietly raising level 10's own threshold. */
+/** Existing level thresholds never move; collection expansions add new levels only at the end. */
 export const LEVELS: LevelInfo[] = [
   { level: 1, title: '初心者', icon: '🥚', threshold: 0 },
   { level: 2, title: '幼幼班', icon: '🐣', threshold: 6 },
@@ -181,6 +189,10 @@ export const LEVELS: LevelInfo[] = [
   { level: 13, title: '博學多聞', icon: '📜', threshold: 250 },
   { level: 14, title: '一代宗師', icon: '🏆', threshold: 263 },
   { level: 15, title: '中文之神', icon: '🌟', threshold: 276 },
+  { level: 16, title: '典籍守護者', icon: '🛡️', threshold: 299 },
+  { level: 17, title: '文字探險王', icon: '🧭', threshold: 322 },
+  { level: 18, title: '萬卷智者', icon: '💫', threshold: 345 },
+  { level: 19, title: '練功房傳奇', icon: '🌌', threshold: 368 },
 ];
 
 export function currentLevel(charactersOwned: number): LevelInfo {
