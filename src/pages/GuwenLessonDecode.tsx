@@ -62,7 +62,7 @@ const FIREWORK_EMOJI = ['🎉', '🎆', '🎇', '✨', '⭐', '🌟', '🎊'];
 const FIREWORK_WAVE_COUNT = 4;
 const FIREWORK_WAVE_GAP_S = 0.55;
 const FIREWORK_PARTICLE_DURATION_S = 0.95;
-/** Hard timing limit: the child can skip after 0.9s, and the ceremony auto-finishes at 4.5s. */
+/** The child can skip effects after 0.9s; effects settle at 4.5s, but badge collection always waits. */
 const COMPLETION_CEREMONY_TOTAL_MS = 4500;
 const COMPLETION_CEREMONY_SKIP_MS = 900;
 const COMPLETION_CEREMONY_ACTION_MS = 2100;
@@ -254,12 +254,13 @@ export default function GuwenLessonDecode() {
   const [celebration, setCelebration] = useState<CelebrationState | null>(null);
   const [celebrationPaused, setCelebrationPaused] = useState(false);
   // Short full-screen completion ceremony. Effects stop automatically at 4.5 seconds, and the child can
-  // skip after 0.9 seconds, so the result page is never trapped behind a long animation.
+  // skip them after 0.9 seconds. Neither path claims the badge: only the explicit claim button may do that.
   const [showLessonCelebration, setShowLessonCelebration] = useState(false);
   const [fireworkParticles, setFireworkParticles] = useState<FireworkParticle[]>([]);
   const [ceremonyCanSkip, setCeremonyCanSkip] = useState(false);
   const [ceremonyActionReady, setCeremonyActionReady] = useState(false);
   const ceremonyTimersRef = useRef<number[]>([]);
+  const badgeClaimSubmittedRef = useRef(false);
   const celebrationTimeoutRef = useRef<number | null>(null);
   const celebrationPraiseFallbackRef = useRef<number | null>(null);
   // Which step is on screen right now — deliberately its own state (not derived fresh from solvedIds on
@@ -382,36 +383,26 @@ export default function GuwenLessonDecode() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, lesson]);
 
-  // Grants the completion bonus the child would have gotten from clicking "🎉 完成", for the case where
-  // every step (word/phrase steps *and* any closing sequence) was ALREADY solved before this page mounted,
-  // but that button was never clicked (see the `allStepsSolved` comment above) — e.g. they left via the back
-  // link right after the last correct answer. This must check the state present at *mount*, not react live
-  // to `readyForComplete` on every render: a lesson with a closing sequence reaches `readyForComplete` the
-  // instant the child finishes the multi-select through the completely normal, intended flow (the last
-  // `recordGuwenWord` call updates `solvedIds` right there in the same session) — a reactive effect fired at
-  // that exact moment, jumping straight to phase 'complete' before the child ever saw the multi-select's own
-  // correct-feedback screen or clicked its own "開啟白話驗證卷軸" button. Caught via Playwright: solving the
-  // multi-select correctly showed the app-wide completion-bonus celebration immediately, with no multi-select
-  // feedback screen in between. `useRef`'s initializer argument is only evaluated on the first render, so
-  // this ref permanently freezes exactly the "was it already fully done when I opened this page" snapshot.
-  const wasReadyForCompleteOnMountRef = useRef(readyForComplete);
-  const missedCompletionAwardedRef = useRef(false);
-  useEffect(() => {
-    if (missedCompletionAwardedRef.current) return;
-    if (!lesson || alreadyComplete || !wasReadyForCompleteOnMountRef.current) return;
-    missedCompletionAwardedRef.current = true;
-    completeGuwenText(lesson.id);
-    reward(completionCoinBonus, completionStarBonus, { big: true, celebrate: false });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   function clearCeremonyTimers() {
     ceremonyTimersRef.current.forEach((id) => window.clearTimeout(id));
     ceremonyTimersRef.current = [];
   }
 
-  function finishLessonCeremony() {
+  function settleLessonCeremony() {
     clearCeremonyTimers();
+    setFireworkParticles([]);
+    setCeremonyCanSkip(false);
+    setCeremonyActionReady(true);
+  }
+
+  function claimBadgeAndFinishCeremony() {
+    if (badgeClaimSubmittedRef.current) return;
+    badgeClaimSubmittedRef.current = true;
+    clearCeremonyTimers();
+    if (!alreadyComplete) {
+      completeGuwenText(lesson!.id);
+      reward(completionCoinBonus, completionStarBonus, { big: true, celebrate: false });
+    }
     setShowLessonCelebration(false);
     setCeremonyCanSkip(false);
     setCeremonyActionReady(false);
@@ -420,6 +411,7 @@ export default function GuwenLessonDecode() {
   function launchLessonCeremony() {
     clearCeremonyTimers();
     cancelSpeech();
+    badgeClaimSubmittedRef.current = false;
     const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
     setFireworkParticles(reduceMotion ? [] : buildFireworkParticles());
     setCeremonyCanSkip(reduceMotion);
@@ -433,7 +425,7 @@ export default function GuwenLessonDecode() {
         playBadgeAwardSound();
         setCeremonyActionReady(true);
       }, reduceMotion ? 100 : COMPLETION_CEREMONY_ACTION_MS),
-      window.setTimeout(() => finishLessonCeremony(), reduceMotion ? 1500 : COMPLETION_CEREMONY_TOTAL_MS),
+      window.setTimeout(() => settleLessonCeremony(), reduceMotion ? 1500 : COMPLETION_CEREMONY_TOTAL_MS),
     ];
   }
 
@@ -565,8 +557,9 @@ export default function GuwenLessonDecode() {
   // "已破解 X/Y" (they count the closing screens as things to finish too), unlike `totalSteps` above, which
   // stays word-steps-only on purpose for the "is this the last word step" button-label decision below.
   const totalGradableItems = totalGuwenLessonItems(lesson);
-  const earnedCoins = solvedIds.size * guwenCoinAmount + (alreadyComplete ? completionCoinBonus : 0);
-  const earnedStars = solvedIds.size * guwenStarAmount + (alreadyComplete ? completionStarBonus : 0);
+  const completionRewardReached = alreadyComplete || readyForComplete;
+  const earnedCoins = solvedIds.size * guwenCoinAmount + (completionRewardReached ? completionCoinBonus : 0);
+  const earnedStars = solvedIds.size * guwenStarAmount + (completionRewardReached ? completionStarBonus : 0);
   const reviewStep = reviewStepId ? lesson.steps.find((s) => s.id === reviewStepId) : undefined;
   const finalDraftLines = lesson.steps.filter((s) => s.finalDraftLine).map((s) => s.finalDraftLine!);
   // 1-based position in `guwenLessons` — stable per lesson, not tied to completion order, and never
@@ -780,8 +773,6 @@ export default function GuwenLessonDecode() {
     // never take over.
     setActiveStepId(undefined);
     if (closingStepsList.length > 0 && !allClosingSolved) return; // hand off to the closing-sequence screens
-    completeGuwenText(lesson!.id);
-    reward(completionCoinBonus, completionStarBonus, { big: true, celebrate: false });
     setPhase('complete');
   }
 
@@ -874,8 +865,6 @@ export default function GuwenLessonDecode() {
   }
 
   function handleFinishClosingSequence() {
-    completeGuwenText(lesson!.id);
-    reward(completionCoinBonus, completionStarBonus, { big: true, celebrate: false });
     setPhase('complete');
   }
 
@@ -1411,7 +1400,7 @@ export default function GuwenLessonDecode() {
           {ceremonyCanSkip && (
             <button
               type="button"
-              onClick={finishLessonCeremony}
+              onClick={settleLessonCeremony}
               className="absolute right-4 top-4 rounded-full bg-white/15 px-3 py-1.5 text-sm font-medium text-white/90 backdrop-blur hover:bg-white/25"
             >
               跳過動畫
@@ -1462,7 +1451,7 @@ export default function GuwenLessonDecode() {
             {ceremonyActionReady ? (
               <button
                 type="button"
-                onClick={finishLessonCeremony}
+                onClick={claimBadgeAndFinishCeremony}
                 className="w-full rounded-2xl bg-gradient-to-r from-amber-400 to-orange-500 py-3.5 text-lg font-black text-white shadow-xl transition-transform hover:scale-[1.02]"
                 style={{ animation: 'ceremony-rise 0.35s ease-out both' }}
               >
