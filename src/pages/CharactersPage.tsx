@@ -43,7 +43,6 @@ export default function CharactersPage() {
       const ownedA = heartsA !== undefined;
       const ownedB = heartsB !== undefined;
 
-      // When sorting by missing hearts, collected characters come first; locked/uncollected slots stay at the end.
       if (sortBy === 'missing-desc' || sortBy === 'missing-asc') {
         if (ownedA !== ownedB) return ownedA ? -1 : 1;
         if (!ownedA || !ownedB) return a - b;
@@ -99,31 +98,38 @@ export default function CharactersPage() {
         })}
       </div>
 
-      <div className="bg-white rounded-2xl border border-orange-100 p-3 space-y-3">
+      <div className="rounded-2xl border-2 border-pink-200 bg-pink-50 p-4 shadow-sm space-y-3">
         <div className="flex items-center justify-between gap-3">
-          <label className="flex items-center gap-2 text-sm font-medium text-gray-700 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={onlyNeedsHearts}
-              onChange={(event) => setOnlyNeedsHearts(event.target.checked)}
-              className="h-4 w-4 accent-pink-500"
-            />
-            只顯示愛心未填滿
-          </label>
-          <span className="text-xs text-gray-400">共 {needsHeartsCount} 隻待補</span>
+          <div>
+            <p className="font-bold text-pink-700">快速補愛心</p>
+            <p className="text-xs text-pink-500">篩選待補角色，再決定排列順序</p>
+          </div>
+          <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-pink-600 shadow-sm">
+            {needsHeartsCount} 隻待補
+          </span>
         </div>
 
-        <label className="flex items-center gap-2 text-sm text-gray-600">
-          <span className="shrink-0">排序：</span>
+        <label className="flex items-center gap-3 rounded-xl bg-white px-3 py-3 text-sm font-semibold text-gray-700 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={onlyNeedsHearts}
+            onChange={(event) => setOnlyNeedsHearts(event.target.checked)}
+            className="h-5 w-5 accent-pink-500"
+          />
+          只顯示愛心未填滿的角色
+        </label>
+
+        <label className="block text-sm font-semibold text-gray-700">
+          <span className="mb-1 block">角色排序</span>
           <select
             value={sortBy}
             onChange={(event) => setSortBy(event.target.value as CharacterSort)}
-            className="min-w-0 flex-1 rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700"
+            className="w-full rounded-xl border border-pink-200 bg-white px-3 py-3 text-sm text-gray-700"
           >
             <option value="exponent-asc">次方：小到大</option>
             <option value="exponent-desc">次方：大到小</option>
-            <option value="missing-desc">愛心缺最多的在前</option>
-            <option value="missing-asc">最接近填滿的在前</option>
+            <option value="missing-desc">愛心缺最多的在最上面</option>
+            <option value="missing-asc">愛心最接近填滿的在最上面</option>
           </select>
         </label>
       </div>
