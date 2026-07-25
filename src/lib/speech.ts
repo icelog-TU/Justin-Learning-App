@@ -68,10 +68,10 @@
  *   守株待兔's「冀復得兔」/「不可復得」"hoping to get another rabbit", and 幾死，眾救得活's「得活」"survived") should
  *   read ㄉㄜˊ (dé, "to obtain") — voices default to the far more common neutral-tone ㄉㄜ˙ (de) grammatical-
  *   particle reading instead (as in 覺得/記得/值得/使得/顯得/V得+complement). The user caught this directly:
- *   "得鐘唸成的中了。應該是德中" (得鐘 is being read like 的中, should sound like 德中 instead). Substituted with
- *   德 (unambiguously dé) right before 鐘/兔/活 specifically, optionally allowing a 「 quote mark in between
- *   (as in 得「鐘」者) since punctuation doesn't stop the mispronunciation — this app's only "得 = obtain"
- *   uses are these three, so this stays scoped well clear of every particle use of 得 elsewhere.
+ *   "得鐘唸成的中了。應該是德中" (得鐘 is being read like 的中, should sound like 德中 instead). Some Android
+ *   voices still normalize the uncommon pair 德鐘 back to the familiar phrase 的鐘, so 得鐘 gets the
+ *   whole-pair phonetic stand-in 德宗: 德宗 is a familiar fixed reading and forces the exact desired sounds
+ *   ㄉㄜˊ ㄓㄨㄥ. Displayed text remains 得鐘. The narrower 德 substitution remains for 得兔/得活.
  */
 function ttsSafe(text: string): string {
   return text
@@ -86,7 +86,9 @@ function ttsSafe(text: string): string {
     .replace(/卡/g, '佧')
     .replace(/(?<=[不苗生助])長|長(?=[高得])/g, '掌')
     .replace(/(?<!給)予/g, '於')
-    .replace(/得(?=「?[鐘兔活])/g, '德');
+    .replace(/得鐘/g, '德宗')
+    .replace(/得「鐘」/g, '德「宗」')
+    .replace(/得(?=「?[兔活])/g, '德');
 }
 
 /** Reads text aloud using the browser's built-in text-to-speech (no API cost, works offline once voices are installed). */
