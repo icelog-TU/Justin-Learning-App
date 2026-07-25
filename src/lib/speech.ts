@@ -89,7 +89,26 @@ function ttsSafe(text: string): string {
     .replace(/(?<=[不苗生助])長|長(?=[高得])/g, '掌')
     .replace(/(?<!給)予/g, '於')
     .replace(/得(?=「?鐘)/g, '德\u200B')
-    .replace(/得(?=「?[兔活])/g, '德');
+    .replace(/得(?=「?[兔活履])/g, '德')
+    .replace(/著(?=遠遊履)/g, '濁')
+    .replace(/(?<=輕)重/g, '仲')
+    .replace(/度(?=其足|身而衣|，然後知長短|唸作墮|」當作「測量)/g, '墮')
+    .replace(/(?<=[持信])度|度(?=唸作肚|」當作「尺寸)/g, '肚')
+    .replace(/量(?=腹而食)/g, '亮')
+    .replace(/量(?=自己的腳|腳|好的尺寸|得的尺寸|過自己的腳|過腳|測量)/g, '良')
+    .replace(/(?<=日)中(?=如|，|。)/g, '鐘')
+    .replace(/(?<=挑)中/g, '種')
+    .replace(/(?<=[市歌曲])罷|罷(?=唸作爸)/g, '爸')
+    .replace(/寧(?=信|可|唸作濘)/g, '濘')
+    .replace(/(?<=以)為(?=神明|有神)/g, '圍')
+    .replace(/杓/g, '勺')
+    .replace(/食(?=無肉)|(?<=而)食/g, '十')
+    .replace(/曲(?=罷)/g, '取')
+    .replace(/朝(?=向)/g, '潮')
+    .replace(/(?<=相)當(?=於)|當(?=作)/g, '蕩')
+    .replace(/(?<=進)行/g, '形')
+    .replace(/(?<=玉)斗/g, '抖')
+    .replace(/(?<=太丘)舍(?=去)/g, '捨');
 }
 
 function queueSpeech(texts: string[], onDone?: () => void) {
