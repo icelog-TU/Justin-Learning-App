@@ -25,6 +25,18 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
+      - name: Write deployment version file
+        run: |
+          mkdir -p public
+          cat > public/version.json <<EOF
+          {
+            "sha": "${{ github.sha }}",
+            "run_id": "${{ github.run_id }}",
+            "run_attempt": "${{ github.run_attempt }}",
+            "ref": "${{ github.ref_name }}",
+            "built_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          }
+          EOF
       - run: npm run build
       - uses: actions/configure-pages@v5
         with:
