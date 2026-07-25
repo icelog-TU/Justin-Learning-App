@@ -80,8 +80,8 @@ export const BASE_EMOJI: Record<number, string> = {
   6: '🔴',
   7: '🟣',
   11: '🟡',
-  12: '🩵',
-  15: '🩷',
+  12: '🟤',
+  15: '⚪',
 };
 
 export interface CharacterInfo {
