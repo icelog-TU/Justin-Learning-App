@@ -1,3 +1,5 @@
+import { zhengRenMaiLuLesson } from './zhengRenMaiLuLesson';
+
 /**
  * 古文破譯家 — "Lesson" format: a stricter evidence-based methodology than the original GuwenWord model in
  * guwen.ts. Cross-text clues here must be REAL classical excerpts (never modern-Chinese sentences), each
@@ -3762,6 +3764,7 @@ export const guwenLessons: GuwenLesson[] = [
   shouZhuDaiTuLesson,
   yaMiaoZhuZhangLesson,
   yanErDaoZhongLesson,
+  zhengRenMaiLuLesson,
 ].map(distributeCorrectAnswerPositions);
 
 export function findGuwenLesson(id: string): GuwenLesson | undefined {
