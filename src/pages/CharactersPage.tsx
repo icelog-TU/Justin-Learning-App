@@ -46,8 +46,8 @@ export default function CharactersPage() {
       if (sortBy === 'missing-desc' || sortBy === 'missing-asc') {
         if (ownedA !== ownedB) return ownedA ? -1 : 1;
         if (!ownedA || !ownedB) return a - b;
-        const missingA = a - heartsA;
-        const missingB = b - heartsB;
+        const missingA = a - (heartsA ?? 0);
+        const missingB = b - (heartsB ?? 0);
         const difference = sortBy === 'missing-desc' ? missingB - missingA : missingA - missingB;
         return difference || a - b;
       }
@@ -145,7 +145,8 @@ export default function CharactersPage() {
             const id = characterId(selectedBase, exp);
             const hearts = data.characters[id];
             const owned = hearts !== undefined;
-            const isFull = owned && hearts >= exp;
+            const currentHearts = hearts ?? 0;
+            const isFull = owned && currentHearts >= exp;
             const canGiveHeart = owned && !isFull && data.stars >= HEART_COST_STARS;
 
             return (
@@ -169,12 +170,12 @@ export default function CharactersPage() {
                         {formatBigNumber(characterValue(selectedBase, exp))}
                       </p>
                       <p className="text-xs text-gray-600">
-                        好感度：{hearts > 0 ? formatCharacterLabel(selectedBase, hearts) : '尚未培養'}
+                        好感度：{currentHearts > 0 ? formatCharacterLabel(selectedBase, currentHearts) : '尚未培養'}
                       </p>
                       <p className="text-[11px] text-gray-400">
-                        {hearts} / {exp} 顆愛心{isFull && ' 💯'}
+                        {currentHearts} / {exp} 顆愛心{isFull && ' 💯'}
                       </p>
-                      {!isFull && <p className="text-[11px] font-medium text-pink-500">還缺 {exp - hearts} 顆</p>}
+                      {!isFull && <p className="text-[11px] font-medium text-pink-500">還缺 {exp - currentHearts} 顆</p>}
                     </Link>
                     <button
                       type="button"
