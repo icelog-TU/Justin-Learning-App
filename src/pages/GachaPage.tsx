@@ -13,6 +13,7 @@ import {
   characterValue,
   characterId,
   characterColor,
+  TOTAL_CHARACTER_SLOTS,
 } from '../lib/rewards';
 import type { GachaResult } from '../lib/rewards';
 import { playGachaSpinSound, playGachaRevealSound } from '../lib/sound';
@@ -22,11 +23,6 @@ export default function GachaPage() {
   const { data, rollGacha } = useAppDataContext();
   const [lastResult, setLastResult] = useState<GachaResult | null>(null);
   const [rolling, setRolling] = useState(false);
-  // A plain ref, checked/set synchronously — `rolling` (React state) only updates the disabled attribute
-  // once React actually commits the re-render, which is not guaranteed to happen before a second rapid
-  // tap/click is dispatched (fast double-taps, key-repeat, or a flaky touchscreen can fire two click events
-  // in the same tick). Guarding on state alone let two overlapping rolls slip through — this ref closes
-  // that gap, since ref writes take effect immediately, not on the next render.
   const rollingRef = useRef(false);
 
   const activeBase = currentUnlockedBase(data.characters);
@@ -43,9 +39,6 @@ export default function GachaPage() {
       setLastResult(result);
       setRolling(false);
       rollingRef.current = false;
-      // Speaking the result is purely cosmetic feedback — it happens after rollGacha() has already
-      // committed the coin/character change and after rollingRef is cleared, so a slow or misbehaving
-      // speech engine can never delay or block the next roll from being allowed.
       if (result) {
         playGachaRevealSound(!result.isDupe);
         speak(result.isDupe ? '喔！你轉到已經有的角色了，再接再厲！' : '恭喜！轉到新角色了！');
@@ -57,7 +50,7 @@ export default function GachaPage() {
     <div className="space-y-4">
       <div>
         <h2 className="text-xl font-bold text-gray-800">轉蛋</h2>
-        <p className="text-sm text-gray-500">用金幣轉蛋，收集 2 的 n 次方角色！</p>
+        <p className="text-sm text-gray-500">用金幣轉蛋，依序收集 2、3、5、6、7、11、12、15 的次方角色，共 {TOTAL_CHARACTER_SLOTS} 隻！</p>
       </div>
 
       <div className="bg-white rounded-2xl shadow p-6 text-center space-y-4">
@@ -68,7 +61,7 @@ export default function GachaPage() {
         </div>
 
         {activeBase === null ? (
-          <p className="text-emerald-600 font-bold py-6">🎉 恭喜！你已經收集了全部角色！</p>
+          <p className="text-emerald-600 font-bold py-6">🎉 恭喜！你已經收集了全部 {TOTAL_CHARACTER_SLOTS} 隻角色！</p>
         ) : (
           <>
             <p className="text-sm text-gray-500">
