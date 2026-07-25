@@ -16,6 +16,8 @@ import {
 } from '../lib/rewards';
 import { playHeartSound } from '../lib/sound';
 
+type CharacterSort = 'exponent-asc' | 'exponent-desc' | 'missing-desc' | 'missing-asc';
+
 export default function CharactersPage() {
   const { data, giveHeart } = useAppDataContext();
   const activeBase = currentUnlockedBase(data.characters);
@@ -25,9 +27,39 @@ export default function CharactersPage() {
     ? baseFromUrl
     : (activeBase ?? GACHA_BASES[0]);
   const [selectedBase, setSelectedBase] = useState<number>(initialBase);
+  const [onlyNeedsHearts, setOnlyNeedsHearts] = useState(false);
+  const [sortBy, setSortBy] = useState<CharacterSort>('exponent-asc');
 
   const selectedBaseMaxExponent = maxExponentForBase(selectedBase);
-  const exponents = Array.from({ length: selectedBaseMaxExponent }, (_, i) => i + 1);
+  const exponents = Array.from({ length: selectedBaseMaxExponent }, (_, i) => i + 1)
+    .filter((exp) => {
+      if (!onlyNeedsHearts) return true;
+      const hearts = data.characters[characterId(selectedBase, exp)];
+      return hearts !== undefined && hearts < exp;
+    })
+    .sort((a, b) => {
+      const heartsA = data.characters[characterId(selectedBase, a)];
+      const heartsB = data.characters[characterId(selectedBase, b)];
+      const ownedA = heartsA !== undefined;
+      const ownedB = heartsB !== undefined;
+
+      // When sorting by missing hearts, collected characters come first; locked/uncollected slots stay at the end.
+      if (sortBy === 'missing-desc' || sortBy === 'missing-asc') {
+        if (ownedA !== ownedB) return ownedA ? -1 : 1;
+        if (!ownedA || !ownedB) return a - b;
+        const missingA = a - heartsA;
+        const missingB = b - heartsB;
+        const difference = sortBy === 'missing-desc' ? missingB - missingA : missingA - missingB;
+        return difference || a - b;
+      }
+
+      return sortBy === 'exponent-desc' ? b - a : a - b;
+    });
+
+  const needsHeartsCount = Array.from({ length: selectedBaseMaxExponent }, (_, i) => i + 1).filter((exp) => {
+    const hearts = data.characters[characterId(selectedBase, exp)];
+    return hearts !== undefined && hearts < exp;
+  }).length;
 
   return (
     <div className="space-y-4">
@@ -67,63 +99,100 @@ export default function CharactersPage() {
         })}
       </div>
 
+      <div className="bg-white rounded-2xl border border-orange-100 p-3 space-y-3">
+        <div className="flex items-center justify-between gap-3">
+          <label className="flex items-center gap-2 text-sm font-medium text-gray-700 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={onlyNeedsHearts}
+              onChange={(event) => setOnlyNeedsHearts(event.target.checked)}
+              className="h-4 w-4 accent-pink-500"
+            />
+            只顯示愛心未填滿
+          </label>
+          <span className="text-xs text-gray-400">共 {needsHeartsCount} 隻待補</span>
+        </div>
+
+        <label className="flex items-center gap-2 text-sm text-gray-600">
+          <span className="shrink-0">排序：</span>
+          <select
+            value={sortBy}
+            onChange={(event) => setSortBy(event.target.value as CharacterSort)}
+            className="min-w-0 flex-1 rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700"
+          >
+            <option value="exponent-asc">次方：小到大</option>
+            <option value="exponent-desc">次方：大到小</option>
+            <option value="missing-desc">愛心缺最多的在前</option>
+            <option value="missing-asc">最接近填滿的在前</option>
+          </select>
+        </label>
+      </div>
+
       <p className="text-xs text-gray-400">
         {ownedCountForBase(data.characters, selectedBase)} / {selectedBaseMaxExponent} 已收集
+        {onlyNeedsHearts && `・目前顯示 ${exponents.length} 隻待補愛心角色`}
       </p>
 
-      <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
-        {exponents.map((exp) => {
-          const id = characterId(selectedBase, exp);
-          const hearts = data.characters[id];
-          const owned = hearts !== undefined;
-          const isFull = owned && hearts >= exp;
-          const canGiveHeart = owned && !isFull && data.stars >= HEART_COST_STARS;
+      {exponents.length > 0 ? (
+        <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+          {exponents.map((exp) => {
+            const id = characterId(selectedBase, exp);
+            const hearts = data.characters[id];
+            const owned = hearts !== undefined;
+            const isFull = owned && hearts >= exp;
+            const canGiveHeart = owned && !isFull && data.stars >= HEART_COST_STARS;
 
-          return (
-            <div
-              key={id}
-              className={`rounded-xl border p-3 text-center space-y-1 ${
-                owned ? 'bg-white border-orange-100' : 'bg-gray-50 border-gray-100'
-              }`}
-            >
-              {owned ? (
-                <>
-                  <Link to={`/characters/${encodeURIComponent(id)}`} className="block">
-                    <div
-                      className="mx-auto w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm"
-                      style={{ backgroundColor: characterColor(exp, selectedBaseMaxExponent) }}
+            return (
+              <div
+                key={id}
+                className={`rounded-xl border p-3 text-center space-y-1 ${
+                  owned ? 'bg-white border-orange-100' : 'bg-gray-50 border-gray-100'
+                }`}
+              >
+                {owned ? (
+                  <>
+                    <Link to={`/characters/${encodeURIComponent(id)}`} className="block">
+                      <div
+                        className="mx-auto w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm"
+                        style={{ backgroundColor: characterColor(exp, selectedBaseMaxExponent) }}
+                      >
+                        {exp}
+                      </div>
+                      <p className="text-lg font-extrabold text-orange-600 mt-1">{formatCharacterLabel(selectedBase, exp)}</p>
+                      <p className="text-[11px] text-gray-400 leading-tight">
+                        {formatBigNumber(characterValue(selectedBase, exp))}
+                      </p>
+                      <p className="text-xs text-gray-600">
+                        好感度：{hearts > 0 ? formatCharacterLabel(selectedBase, hearts) : '尚未培養'}
+                      </p>
+                      <p className="text-[11px] text-gray-400">
+                        {hearts} / {exp} 顆愛心{isFull && ' 💯'}
+                      </p>
+                      {!isFull && <p className="text-[11px] font-medium text-pink-500">還缺 {exp - hearts} 顆</p>}
+                    </Link>
+                    <button
+                      type="button"
+                      disabled={!canGiveHeart}
+                      onClick={() => {
+                        if (giveHeart(id)) playHeartSound();
+                      }}
+                      className="mt-1 w-full text-xs font-medium rounded-full py-1 bg-pink-500 disabled:bg-gray-200 disabled:text-gray-400 text-white"
                     >
-                      {exp}
-                    </div>
-                    <p className="text-lg font-extrabold text-orange-600 mt-1">{formatCharacterLabel(selectedBase, exp)}</p>
-                    <p className="text-[11px] text-gray-400 leading-tight">
-                      {formatBigNumber(characterValue(selectedBase, exp))}
-                    </p>
-                    <p className="text-xs text-gray-600">
-                      好感度：{hearts > 0 ? formatCharacterLabel(selectedBase, hearts) : '尚未培養'}
-                    </p>
-                    <p className="text-[11px] text-gray-400">
-                      {hearts} / {exp} 顆愛心{isFull && ' 💯'}
-                    </p>
-                  </Link>
-                  <button
-                    type="button"
-                    disabled={!canGiveHeart}
-                    onClick={() => {
-                      if (giveHeart(id)) playHeartSound();
-                    }}
-                    className="mt-1 w-full text-xs font-medium rounded-full py-1 bg-pink-500 disabled:bg-gray-200 disabled:text-gray-400 text-white"
-                  >
-                    {isFull ? '已滿 ❤️' : `給愛心 (${HEART_COST_STARS}⭐)`}
-                  </button>
-                </>
-              ) : (
-                <p className="text-2xl text-gray-300 py-3">？</p>
-              )}
-            </div>
-          );
-        })}
-      </div>
+                      {isFull ? '已滿 ❤️' : `給愛心 (${HEART_COST_STARS}⭐)`}
+                    </button>
+                  </>
+                ) : (
+                  <p className="text-2xl text-gray-300 py-3">？</p>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="rounded-2xl bg-emerald-50 p-6 text-center text-sm font-medium text-emerald-700">
+          🎉 這一組已收集角色的愛心都填滿了！
+        </div>
+      )}
     </div>
   );
 }
