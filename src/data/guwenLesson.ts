@@ -3687,6 +3687,74 @@ export const yanErDaoZhongLesson: GuwenLesson = {
   },
 };
 
+/**
+ * Give every three-option question a stable, well-balanced answer position.
+ *
+ * The source lessons intentionally keep their approved option wording and correct answer together. At
+ * runtime, this adapter moves only the correct option. Each block of three questions uses positions 1, 2,
+ * and 3 exactly once, while a lesson/id-based permutation prevents a visible repeating pattern. Because the
+ * result is calculated once when this module loads, options never jump around during retries or rerenders.
+ */
+function stableHash(value: string): number {
+  let hash = 2166136261;
+  for (let i = 0; i < value.length; i += 1) {
+    hash ^= value.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
+}
+
+const answerPositionPermutations = [
+  [0, 1, 2],
+  [0, 2, 1],
+  [1, 0, 2],
+  [1, 2, 0],
+  [2, 0, 1],
+  [2, 1, 0],
+] as const;
+
+function targetAnswerPosition(lessonId: string, questionOrdinal: number): number {
+  const block = Math.floor(questionOrdinal / 3);
+  const permutation =
+    answerPositionPermutations[stableHash(lessonId + ':answer-position-block:' + block) % answerPositionPermutations.length];
+  return permutation[questionOrdinal % 3];
+}
+
+function repositionCorrectOption(
+  options: string[],
+  correctIndex: number,
+  targetIndex: number,
+): { options: string[]; correctIndex: number } {
+  const correctOption = options[correctIndex];
+  const distractors = options.filter((_, index) => index !== correctIndex);
+  const repositionedOptions = [...distractors];
+  repositionedOptions.splice(targetIndex, 0, correctOption);
+  return { options: repositionedOptions, correctIndex: targetIndex };
+}
+
+function distributeCorrectAnswerPositions(lesson: GuwenLesson): GuwenLesson {
+  let questionOrdinal = 0;
+  const steps = lesson.steps.map((step): LessonStep => {
+    if (step.type === 'reveal') return step;
+    const position = targetAnswerPosition(lesson.id, questionOrdinal);
+    questionOrdinal += 1;
+    return { ...step, ...repositionCorrectOption(step.options, step.correctIndex, position) };
+  });
+
+  const causalChainClosing = lesson.causalChainClosing
+    ? {
+        ...lesson.causalChainClosing,
+        ...repositionCorrectOption(
+          lesson.causalChainClosing.options,
+          lesson.causalChainClosing.correctIndex,
+          targetAnswerPosition(lesson.id, questionOrdinal),
+        ),
+      }
+    : undefined;
+
+  return { ...lesson, steps, causalChainClosing };
+}
+
 export const guwenLessons: GuwenLesson[] = [
   wangRongLesson,
   simaGuangLesson,
@@ -3694,7 +3762,7 @@ export const guwenLessons: GuwenLesson[] = [
   shouZhuDaiTuLesson,
   yaMiaoZhuZhangLesson,
   yanErDaoZhongLesson,
-];
+].map(distributeCorrectAnswerPositions);
 
 export function findGuwenLesson(id: string): GuwenLesson | undefined {
   return guwenLessons.find((l) => l.id === id);
