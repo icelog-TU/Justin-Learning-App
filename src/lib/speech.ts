@@ -70,9 +70,10 @@
  *   particle reading instead (as in 覺得/記得/值得/使得/顯得/V得+complement). The user caught this directly:
  *   "得鐘唸成的中了。應該是德中" (得鐘 is being read like 的中, should sound like 德中 instead). Some Android
  *   voices still turn the first syllable into neutral-tone de even when the pair is replaced with 德鐘 or
- *   德宗. 得鐘 is therefore handled below as separate queued utterances: the standalone homophone 德 forces
- *   ㄉㄜˊ, while the following 鐘 stays ㄓㄨㄥ. Displayed text remains 得鐘. The narrower 德 substitution
- *   remains for 得兔/得活.
+ *   德宗. For 得鐘, insert a zero-width word boundary after the homophone 德. This keeps the whole sentence
+ *   in one utterance (and therefore preserves natural prosody) while preventing the Android tokenizer from
+ *   treating 德鐘 as one ambiguous unit. Displayed text remains 得鐘. The narrower 德 substitution remains
+ *   for 得兔/得活.
  */
 function ttsSafe(text: string): string {
   return text
@@ -87,39 +88,16 @@ function ttsSafe(text: string): string {
     .replace(/卡/g, '佧')
     .replace(/(?<=[不苗生助])長|長(?=[高得])/g, '掌')
     .replace(/(?<!給)予/g, '於')
+    .replace(/得(?=「?鐘)/g, '德\u200B')
     .replace(/得(?=「?[兔活])/g, '德');
 }
 
-/**
- * Android's built-in Chinese voice can reinterpret 德 as neutral-tone de when it is adjacent to 鐘,
- * regardless of which two-character homophone is supplied. Isolating 德 in its own utterance prevents
- * cross-word parsing while keeping the speech continuous through the browser's queue.
- */
-function ttsSafeSegments(text: string): string[] {
-  const segments: string[] = [];
-  const forcedReading = /得(?=「?鐘)/g;
-  let cursor = 0;
-
-  for (const match of text.matchAll(forcedReading)) {
-    const index = match.index;
-    const before = ttsSafe(text.slice(cursor, index));
-    if (before) segments.push(before);
-    segments.push('德');
-    cursor = index + 1;
-  }
-
-  const after = ttsSafe(text.slice(cursor));
-  if (after) segments.push(after);
-  return segments;
-}
-
 function queueSpeech(texts: string[], onDone?: () => void) {
-  const segments = texts.flatMap(ttsSafeSegments);
-  segments.forEach((text, i) => {
+  texts.map(ttsSafe).forEach((text, i) => {
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = 'zh-TW';
     utterance.rate = 0.95;
-    if (i === segments.length - 1 && onDone) utterance.onend = onDone;
+    if (i === texts.length - 1 && onDone) utterance.onend = onDone;
     window.speechSynthesis.speak(utterance);
   });
 }
