@@ -30,6 +30,7 @@ import {
   GUWEN_TEXT_COMPLETE_BONUS_STARS,
   guwenRedoMultiplier,
 } from '../lib/rewards';
+import { numberToChineseWords } from '../lib/chineseNumber';
 
 type Phase = 'intro' | 'listening' | 'steps' | 'complete';
 /** Which closing screen is showing. Not every lesson has all three (see closingStepsList below). */
@@ -66,6 +67,7 @@ const FIREWORK_PARTICLE_DURATION_S = 0.95;
 const COMPLETION_CEREMONY_TOTAL_MS = 4500;
 const COMPLETION_CEREMONY_SKIP_MS = 900;
 const COMPLETION_CEREMONY_ACTION_MS = 2100;
+const BADGE_CLAIM_CELEBRATION_MS = 2300;
 
 interface FireworkParticle {
   id: number;
@@ -259,6 +261,7 @@ export default function GuwenLessonDecode() {
   const [fireworkParticles, setFireworkParticles] = useState<FireworkParticle[]>([]);
   const [ceremonyCanSkip, setCeremonyCanSkip] = useState(false);
   const [ceremonyActionReady, setCeremonyActionReady] = useState(false);
+  const [badgeClaiming, setBadgeClaiming] = useState(false);
   const ceremonyTimersRef = useRef<number[]>([]);
   const badgeClaimSubmittedRef = useRef(false);
   const celebrationTimeoutRef = useRef<number | null>(null);
@@ -395,23 +398,40 @@ export default function GuwenLessonDecode() {
     setCeremonyActionReady(true);
   }
 
-  function claimBadgeAndFinishCeremony() {
+  function finishBadgeClaimCelebration() {
+    clearCeremonyTimers();
+    cancelSpeech();
+    setFireworkParticles([]);
+    setBadgeClaiming(false);
+    setShowLessonCelebration(false);
+    setCeremonyCanSkip(false);
+    setCeremonyActionReady(false);
+  }
+
+  function claimBadge() {
     if (badgeClaimSubmittedRef.current) return;
     badgeClaimSubmittedRef.current = true;
     clearCeremonyTimers();
+    const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
     if (!alreadyComplete) {
       completeGuwenText(lesson!.id);
       reward(completionCoinBonus, completionStarBonus, { big: true, celebrate: false });
     }
-    setShowLessonCelebration(false);
+    setBadgeClaiming(true);
     setCeremonyCanSkip(false);
-    setCeremonyActionReady(false);
+    setFireworkParticles(reduceMotion ? [] : buildFireworkParticles());
+    playBadgeAwardSound();
+    speak(`恭喜你得到第${numberToChineseWords(badgeNumber)}枚徽章！`);
+    ceremonyTimersRef.current = [
+      window.setTimeout(finishBadgeClaimCelebration, reduceMotion ? 1700 : BADGE_CLAIM_CELEBRATION_MS),
+    ];
   }
 
   function launchLessonCeremony() {
     clearCeremonyTimers();
     cancelSpeech();
     badgeClaimSubmittedRef.current = false;
+    setBadgeClaiming(false);
     const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
     setFireworkParticles(reduceMotion ? [] : buildFireworkParticles());
     setCeremonyCanSkip(reduceMotion);
@@ -422,7 +442,6 @@ export default function GuwenLessonDecode() {
       ...(!reduceMotion ? [window.setTimeout(() => playTwinkleSound(), 700)] : []),
       window.setTimeout(() => setCeremonyCanSkip(true), reduceMotion ? 0 : COMPLETION_CEREMONY_SKIP_MS),
       window.setTimeout(() => {
-        playBadgeAwardSound();
         setCeremonyActionReady(true);
       }, reduceMotion ? 100 : COMPLETION_CEREMONY_ACTION_MS),
       window.setTimeout(() => settleLessonCeremony(), reduceMotion ? 1500 : COMPLETION_CEREMONY_TOTAL_MS),
@@ -1397,7 +1416,7 @@ export default function GuwenLessonDecode() {
             ))}
           </div>
 
-          {ceremonyCanSkip && (
+          {ceremonyCanSkip && !badgeClaiming && (
             <button
               type="button"
               onClick={settleLessonCeremony}
@@ -1439,19 +1458,49 @@ export default function GuwenLessonDecode() {
             </div>
 
             <div
-              className="mx-auto pt-1"
-              style={{ animation: 'ceremony-badge 0.7s cubic-bezier(.2,.9,.3,1.3) 1.65s both' }}
+              className="relative mx-auto pt-1"
+              style={{
+                animation: badgeClaiming
+                  ? 'ceremony-claim-badge 1.05s cubic-bezier(.2,.9,.3,1.3) both'
+                  : 'ceremony-badge 0.7s cubic-bezier(.2,.9,.3,1.3) 1.65s both',
+              }}
             >
-              <p className="text-6xl drop-shadow-[0_0_18px_rgba(253,224,71,0.9)]">🏅</p>
+              {badgeClaiming && (
+                <>
+                  <span
+                    aria-hidden="true"
+                    className="absolute left-1/2 top-1/2 h-20 w-20 rounded-full border-2 border-yellow-200"
+                    style={{ animation: 'ceremony-sparkle-ring 1.2s ease-out both' }}
+                  />
+                  <span
+                    aria-hidden="true"
+                    className="absolute left-1/2 top-1/2 h-20 w-20 rounded-full border border-white"
+                    style={{ animation: 'ceremony-sparkle-ring 1.2s ease-out 0.25s both' }}
+                  />
+                </>
+              )}
+              <p className="relative z-10 text-6xl drop-shadow-[0_0_18px_rgba(253,224,71,0.9)]">🏅</p>
               <p className="mt-1 font-bold text-amber-100">
                 第 {badgeNumber} 枚徽章：{lesson.title}
               </p>
             </div>
 
-            {ceremonyActionReady ? (
+            {badgeClaiming ? (
+              <div
+                role="status"
+                aria-live="assertive"
+                className="rounded-2xl border border-amber-200/70 bg-amber-300/20 px-4 py-3 shadow-[0_0_28px_rgba(253,224,71,0.35)]"
+                style={{ animation: 'ceremony-claim-message 0.45s cubic-bezier(.2,.9,.3,1.2) both' }}
+              >
+                <p className="text-xl font-black text-yellow-100">
+                  恭喜你得到第 {badgeNumber} 枚徽章！
+                </p>
+                <p className="mt-1 text-sm font-medium text-cyan-100">徽章已加入你的收藏</p>
+              </div>
+            ) : ceremonyActionReady ? (
               <button
                 type="button"
-                onClick={claimBadgeAndFinishCeremony}
+                onClick={claimBadge}
                 className="w-full rounded-2xl bg-gradient-to-r from-amber-400 to-orange-500 py-3.5 text-lg font-black text-white shadow-xl transition-transform hover:scale-[1.02]"
                 style={{ animation: 'ceremony-rise 0.35s ease-out both' }}
               >

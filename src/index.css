@@ -117,6 +117,51 @@ body {
   }
 }
 
+@keyframes ceremony-claim-badge {
+  0% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+  30% {
+    transform: scale(1.38) rotate(-5deg);
+    filter: brightness(1.45);
+  }
+  55% {
+    transform: scale(1.18) rotate(4deg);
+    filter: brightness(1.2);
+  }
+  78% {
+    transform: scale(1.28) rotate(-2deg);
+    filter: brightness(1.35);
+  }
+  100% {
+    transform: scale(1.18) rotate(0deg);
+    filter: brightness(1.2);
+  }
+}
+
+@keyframes ceremony-sparkle-ring {
+  from {
+    transform: translate(-50%, -50%) scale(0.45);
+    opacity: 0.95;
+  }
+  to {
+    transform: translate(-50%, -50%) scale(2.15);
+    opacity: 0;
+  }
+}
+
+@keyframes ceremony-claim-message {
+  from {
+    transform: translateY(12px) scale(0.88);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
 @keyframes ceremony-progress {
   from {
     transform: scaleX(0);
