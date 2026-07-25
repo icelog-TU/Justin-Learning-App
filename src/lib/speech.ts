@@ -69,9 +69,10 @@
  *   read ㄉㄜˊ (dé, "to obtain") — voices default to the far more common neutral-tone ㄉㄜ˙ (de) grammatical-
  *   particle reading instead (as in 覺得/記得/值得/使得/顯得/V得+complement). The user caught this directly:
  *   "得鐘唸成的中了。應該是德中" (得鐘 is being read like 的中, should sound like 德中 instead). Some Android
- *   voices still normalize the uncommon pair 德鐘 back to the familiar phrase 的鐘, so 得鐘 gets the
- *   whole-pair phonetic stand-in 德宗: 德宗 is a familiar fixed reading and forces the exact desired sounds
- *   ㄉㄜˊ ㄓㄨㄥ. Displayed text remains 得鐘. The narrower 德 substitution remains for 得兔/得活.
+ *   voices still turn the first syllable into neutral-tone de even when the pair is replaced with 德鐘 or
+ *   德宗. 得鐘 is therefore handled below as separate queued utterances: the standalone homophone 德 forces
+ *   ㄉㄜˊ, while the following 鐘 stays ㄓㄨㄥ. Displayed text remains 得鐘. The narrower 德 substitution
+ *   remains for 得兔/得活.
  */
 function ttsSafe(text: string): string {
   return text
@@ -86,9 +87,41 @@ function ttsSafe(text: string): string {
     .replace(/卡/g, '佧')
     .replace(/(?<=[不苗生助])長|長(?=[高得])/g, '掌')
     .replace(/(?<!給)予/g, '於')
-    .replace(/得鐘/g, '德宗')
-    .replace(/得「鐘」/g, '德「宗」')
     .replace(/得(?=「?[兔活])/g, '德');
+}
+
+/**
+ * Android's built-in Chinese voice can reinterpret 德 as neutral-tone de when it is adjacent to 鐘,
+ * regardless of which two-character homophone is supplied. Isolating 德 in its own utterance prevents
+ * cross-word parsing while keeping the speech continuous through the browser's queue.
+ */
+function ttsSafeSegments(text: string): string[] {
+  const segments: string[] = [];
+  const forcedReading = /得(?=「?鐘)/g;
+  let cursor = 0;
+
+  for (const match of text.matchAll(forcedReading)) {
+    const index = match.index;
+    const before = ttsSafe(text.slice(cursor, index));
+    if (before) segments.push(before);
+    segments.push('德');
+    cursor = index + 1;
+  }
+
+  const after = ttsSafe(text.slice(cursor));
+  if (after) segments.push(after);
+  return segments;
+}
+
+function queueSpeech(texts: string[], onDone?: () => void) {
+  const segments = texts.flatMap(ttsSafeSegments);
+  segments.forEach((text, i) => {
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'zh-TW';
+    utterance.rate = 0.95;
+    if (i === segments.length - 1 && onDone) utterance.onend = onDone;
+    window.speechSynthesis.speak(utterance);
+  });
 }
 
 /** Reads text aloud using the browser's built-in text-to-speech (no API cost, works offline once voices are installed). */
@@ -98,11 +131,7 @@ export function speak(text: string, onEnd?: () => void) {
     return;
   }
   window.speechSynthesis.cancel();
-  const utterance = new SpeechSynthesisUtterance(ttsSafe(text));
-  utterance.lang = 'zh-TW';
-  utterance.rate = 0.95;
-  if (onEnd) utterance.onend = onEnd;
-  window.speechSynthesis.speak(utterance);
+  queueSpeech([text], onEnd);
 }
 
 /**
@@ -117,13 +146,7 @@ export function speakSequence(texts: string[], onDone?: () => void) {
     return;
   }
   window.speechSynthesis.cancel();
-  texts.forEach((text, i) => {
-    const utterance = new SpeechSynthesisUtterance(ttsSafe(text));
-    utterance.lang = 'zh-TW';
-    utterance.rate = 0.95;
-    if (i === texts.length - 1 && onDone) utterance.onend = onDone;
-    window.speechSynthesis.speak(utterance);
-  });
+  queueSpeech(texts, onDone);
 }
 
 export function pauseSpeech() {
