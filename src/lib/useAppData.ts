@@ -136,8 +136,11 @@ export function useAppData() {
     setData((prev) => ({ ...recordSentence({ ...prev }, entry) }));
   }, []);
 
-  const reward = useCallback((coins: number, stars: number, opts?: { big?: boolean }) => {
+  const reward = useCallback((coins: number, stars: number, opts?: { big?: boolean; celebrate?: boolean }) => {
     setData((prev) => ({ ...earnRewards({ ...prev }, coins, stars) }));
+    // A feature-specific completion ceremony can suppress only this generic overlay while still awarding
+    // and persisting the currency above. This prevents two banners and two sound sequences from stacking.
+    if (opts?.celebrate === false) return;
     celebrationCounter.current += 1;
     setCelebration({ coins, stars, nonce: celebrationCounter.current, big: opts?.big });
   }, []);

@@ -58,16 +58,14 @@ interface CelebrationState {
   stage: 'rolling' | 'settled';
 }
 
-/** Spoken once, right when the whole lesson finishes — the biggest moment in this feature, so it gets its
- * own grand line rather than reusing one of the per-step PRAISE_LINES. */
-const LESSON_COMPLETE_PRAISE_LINE = '恭喜你，把整篇古文都破解成功了！讓我們一起把整段古文，還有你自己拼出來的故事，再讀一次。';
-
 const FIREWORK_EMOJI = ['🎉', '🎆', '🎇', '✨', '⭐', '🌟', '🎊'];
-const FIREWORK_WAVE_COUNT = 6;
-const FIREWORK_WAVE_GAP_S = 0.8;
-const FIREWORK_PARTICLE_DURATION_S = 1.3;
-/** Total time the overlay stays mounted — last wave's start + its own animation + a little settle time. */
-const FIREWORK_TOTAL_MS = (FIREWORK_WAVE_COUNT - 1) * FIREWORK_WAVE_GAP_S * 1000 + FIREWORK_PARTICLE_DURATION_S * 1000 + 700;
+const FIREWORK_WAVE_COUNT = 4;
+const FIREWORK_WAVE_GAP_S = 0.55;
+const FIREWORK_PARTICLE_DURATION_S = 0.95;
+/** Hard timing limit: the child can skip after 0.9s, and the ceremony auto-finishes at 4.5s. */
+const COMPLETION_CEREMONY_TOTAL_MS = 4500;
+const COMPLETION_CEREMONY_SKIP_MS = 900;
+const COMPLETION_CEREMONY_ACTION_MS = 2100;
 
 interface FireworkParticle {
   id: number;
@@ -80,26 +78,24 @@ interface FireworkParticle {
   delay: number;
 }
 
-/** Several staggered "waves" of particles across a few seconds — reuses the same `burst-particle` keyframe
- * as the app-wide reward burst (see CelebrationOverlay.tsx), just spread over a much longer, repeated
- * timeline and launched from random spots across the top of the screen instead of one fixed point, so it
- * reads as sustained fireworks rather than one quick burst. */
+/** Four compact waves spread across the whole viewport. The previous six-wave version launched mainly from
+ * the top third and lasted too long, which felt sparse on a tablet and delayed the result page. */
 function buildFireworkParticles(): FireworkParticle[] {
   const particles: FireworkParticle[] = [];
   let id = 0;
   for (let wave = 0; wave < FIREWORK_WAVE_COUNT; wave++) {
     const waveDelay = wave * FIREWORK_WAVE_GAP_S;
-    const count = 7 + Math.floor(Math.random() * 3);
+    const count = 8 + Math.floor(Math.random() * 3);
     for (let i = 0; i < count; i++) {
       particles.push({
         id: id++,
         emoji: FIREWORK_EMOJI[Math.floor(Math.random() * FIREWORK_EMOJI.length)],
         left: `${5 + Math.random() * 90}%`,
-        top: `${10 + Math.random() * 35}%`,
-        tx: (Math.random() - 0.5) * 320,
-        ty: -(100 + Math.random() * 220),
+        top: `${18 + Math.random() * 62}%`,
+        tx: (Math.random() - 0.5) * 260,
+        ty: (Math.random() - 0.58) * 260,
         rot: (Math.random() - 0.5) * 480,
-        delay: waveDelay + Math.random() * 0.3,
+        delay: waveDelay + Math.random() * 0.18,
       });
     }
   }
@@ -252,27 +248,18 @@ export default function GuwenLessonDecode() {
   const [isPaused, setIsPaused] = useState(false);
   const [reviewStepId, setReviewStepId] = useState<string | null>(null);
   const [confirmReset, setConfirmReset] = useState(false);
-  // Whether the child has tapped the final "🏅 恭喜完成，取得徽章" button on the completion screen. Starts
-  // true when reopening an already-completed lesson (per the user's spec, the badge is already theirs from
-  // a past visit — no need to reclaim), and flips true for the rest of this page view once clicked, so the
-  // button becomes a static badge display rather than replaying its confetti/sound on every re-render.
-  const [badgeClaimed, setBadgeClaimed] = useState(alreadyComplete);
   const [playbackId, setPlaybackId] = useState<string | null>(null);
   const [playbackPaused, setPlaybackPaused] = useState(false);
   const explainTimeoutRef = useRef<number | null>(null);
   const [celebration, setCelebration] = useState<CelebrationState | null>(null);
   const [celebrationPaused, setCelebrationPaused] = useState(false);
-  // The grand, sustained "you finished the whole lesson" celebration — distinct from (and much bigger than)
-  // the per-step roll-up above. Fireworks particles are pre-built for the whole timeline up front (see
-  // buildFireworkParticles) rather than pushed wave-by-wave into state, so a single unmount/cleanup covers
-  // the entire multi-second sequence.
+  // Short full-screen completion ceremony. Effects stop automatically at 4.5 seconds, and the child can
+  // skip after 0.9 seconds, so the result page is never trapped behind a long animation.
   const [showLessonCelebration, setShowLessonCelebration] = useState(false);
   const [fireworkParticles, setFireworkParticles] = useState<FireworkParticle[]>([]);
-  // Shared burst-overlay banner text — the same particle/overlay system is reused for two different
-  // moments (finishing the whole classical text, and claiming the completion badge at the very bottom of
-  // the page), so the text needs to change with whichever one is currently firing rather than being a fixed
-  // string baked into the JSX.
-  const [celebrationBannerText, setCelebrationBannerText] = useState('');
+  const [ceremonyCanSkip, setCeremonyCanSkip] = useState(false);
+  const [ceremonyActionReady, setCeremonyActionReady] = useState(false);
+  const ceremonyTimersRef = useRef<number[]>([]);
   const celebrationTimeoutRef = useRef<number | null>(null);
   const celebrationPraiseFallbackRef = useRef<number | null>(null);
   // Which step is on screen right now — deliberately its own state (not derived fresh from solvedIds on
@@ -414,50 +401,55 @@ export default function GuwenLessonDecode() {
     if (!lesson || alreadyComplete || !wasReadyForCompleteOnMountRef.current) return;
     missedCompletionAwardedRef.current = true;
     completeGuwenText(lesson.id);
-    reward(completionCoinBonus, completionStarBonus, { big: true });
+    reward(completionCoinBonus, completionStarBonus, { big: true, celebrate: false });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // The grand completion celebration — fireworks, a bright fanfare, and one continuous narration: the praise
-  // line, the full classical text, the child's own reconstructed 破譯稿 lines, and then the reference
-  // translation + completion encouragement. All of this is shown on screen at once now (no second "打開白話
-  // 驗證卷軸" gate — the translation used to be hidden behind its own button and its own separate delayed
-  // speakSequence call, but that second call would `cancel()` and cut off whichever sentence of *this*
-  // narration was still playing, since both were literally the same underlying speechSynthesis queue).
-  // Reading it as one array avoids that race entirely and means the two moments can never step on each
-  // other. Fires exactly once, only for a completion that happens *during this visit* (freshly finishing the
-  // last step/closing screen, or the missed-completion retroactive grant right above) — never when simply
-  // reopening a lesson finished in a past session, which would make the fanfare feel like it fires at random
-  // on every revisit. Frozen at mount for the same reason `wasReadyForCompleteOnMountRef` is above:
-  // `alreadyComplete` itself flips to true reactively the moment `completeGuwenText` lands, so checking it
-  // live inside the effect would always see "already complete" and never fire.
+  function clearCeremonyTimers() {
+    ceremonyTimersRef.current.forEach((id) => window.clearTimeout(id));
+    ceremonyTimersRef.current = [];
+  }
+
+  function finishLessonCeremony() {
+    clearCeremonyTimers();
+    setShowLessonCelebration(false);
+    setCeremonyCanSkip(false);
+    setCeremonyActionReady(false);
+  }
+
+  function launchLessonCeremony() {
+    clearCeremonyTimers();
+    cancelSpeech();
+    const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+    setFireworkParticles(reduceMotion ? [] : buildFireworkParticles());
+    setCeremonyCanSkip(reduceMotion);
+    setCeremonyActionReady(reduceMotion);
+    setShowLessonCelebration(true);
+    playGuwenLessonCompleteFanfare();
+    ceremonyTimersRef.current = [
+      ...(!reduceMotion ? [window.setTimeout(() => playTwinkleSound(), 700)] : []),
+      window.setTimeout(() => setCeremonyCanSkip(true), reduceMotion ? 0 : COMPLETION_CEREMONY_SKIP_MS),
+      window.setTimeout(() => {
+        playBadgeAwardSound();
+        setCeremonyActionReady(true);
+      }, reduceMotion ? 100 : COMPLETION_CEREMONY_ACTION_MS),
+      window.setTimeout(() => finishLessonCeremony(), reduceMotion ? 1500 : COMPLETION_CEREMONY_TOTAL_MS),
+    ];
+  }
+
+  // Fires exactly once for a completion earned during this visit, never when reopening an old lesson.
+  // The single coordinated ceremony replaces the generic reward burst. Long automatic TTS is deliberately
+  // absent here: the result page offers separate listen buttons, while forcing the ancient text, draft and
+  // translation to play in one queue lasted far beyond the visual climax.
   const wasAlreadyCompleteOnMountRef = useRef(alreadyComplete);
   const lessonCelebrationFiredRef = useRef(false);
   useEffect(() => {
     if (phase !== 'complete' || !lesson) return;
     if (wasAlreadyCompleteOnMountRef.current || lessonCelebrationFiredRef.current) return;
     lessonCelebrationFiredRef.current = true;
-    setFireworkParticles(buildFireworkParticles());
-    setCelebrationBannerText('🏆 全文破譯成功！太厲害了！');
-    setShowLessonCelebration(true);
-    playGuwenLessonCompleteFanfare();
-    const twinkleTimers: number[] = [];
-    for (let wave = 1; wave < FIREWORK_WAVE_COUNT; wave++) {
-      twinkleTimers.push(window.setTimeout(() => playTwinkleSound(), wave * FIREWORK_WAVE_GAP_S * 1000));
-    }
-    const finalDraftLines = lesson.steps.filter((s) => s.finalDraftLine).map((s) => s.finalDraftLine!);
-    speakSequence([
-      LESSON_COMPLETE_PRAISE_LINE,
-      lesson.fullText,
-      ...finalDraftLines,
-      lesson.finalVerification.translation,
-      lesson.finalVerification.completionFeedback,
-    ]);
-    const hideTimer = window.setTimeout(() => setShowLessonCelebration(false), FIREWORK_TOTAL_MS);
+    launchLessonCeremony();
     return () => {
-      window.clearTimeout(hideTimer);
-      twinkleTimers.forEach((id) => window.clearTimeout(id));
-      cancelSpeech();
+      clearCeremonyTimers();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase]);
@@ -576,6 +568,7 @@ export default function GuwenLessonDecode() {
   const earnedCoins = solvedIds.size * guwenCoinAmount + (alreadyComplete ? completionCoinBonus : 0);
   const earnedStars = solvedIds.size * guwenStarAmount + (alreadyComplete ? completionStarBonus : 0);
   const reviewStep = reviewStepId ? lesson.steps.find((s) => s.id === reviewStepId) : undefined;
+  const finalDraftLines = lesson.steps.filter((s) => s.finalDraftLine).map((s) => s.finalDraftLine!);
   // 1-based position in `guwenLessons` — stable per lesson, not tied to completion order, and never
   // hardcoded against a fixed total (see ProgressPage.tsx's 徽章蒐集區, which sizes itself the same way).
   const badgeNumber = guwenLessons.findIndex((l) => l.id === lesson.id) + 1;
@@ -788,8 +781,7 @@ export default function GuwenLessonDecode() {
     setActiveStepId(undefined);
     if (closingStepsList.length > 0 && !allClosingSolved) return; // hand off to the closing-sequence screens
     completeGuwenText(lesson!.id);
-    reward(completionCoinBonus, completionStarBonus, { big: true });
-    setBadgeClaimed(false);
+    reward(completionCoinBonus, completionStarBonus, { big: true, celebrate: false });
     setPhase('complete');
   }
 
@@ -883,32 +875,13 @@ export default function GuwenLessonDecode() {
 
   function handleFinishClosingSequence() {
     completeGuwenText(lesson!.id);
-    reward(completionCoinBonus, completionStarBonus, { big: true });
-    setBadgeClaimed(false);
+    reward(completionCoinBonus, completionStarBonus, { big: true, celebrate: false });
     setPhase('complete');
   }
 
-  /** The very last action on a completed lesson: claiming the numbered badge. Reuses the same fireworks
-   * particle system as the lesson-complete celebration above (just a fresh batch + a different banner
-   * line), but a distinct, shorter "achievement unlocked" sound (`playBadgeAwardSound`) rather than
-   * replaying the long fanfare that already played once when the text itself was finished — this is a
-   * separate, smaller celebratory beat, not a repeat of the first one. No new persisted field is needed for
-   * "is the badge claimed" — `completedAt` already marks the lesson done, and the badge collection page
-   * derives ownership straight from that; this button/state only controls whether *this page view* still
-   * shows the "claim" button or the resulting badge. */
-  function handleClaimBadge() {
-    setBadgeClaimed(true);
-    setFireworkParticles(buildFireworkParticles());
-    setCelebrationBannerText(`🏅 收下第 ${badgeNumber} 枚徽章！`);
-    setShowLessonCelebration(true);
-    playBadgeAwardSound();
-    // speak() cancels whatever's still reading (e.g. the translation scroll's narration) before starting this line.
-    speak(`恭喜你，取得第 ${badgeNumber} 枚徽章！`);
-    const twinkleTimers: number[] = [];
-    for (let wave = 1; wave < FIREWORK_WAVE_COUNT; wave++) {
-      twinkleTimers.push(window.setTimeout(() => playTwinkleSound(), wave * FIREWORK_WAVE_GAP_S * 1000));
-    }
-    window.setTimeout(() => setShowLessonCelebration(false), FIREWORK_TOTAL_MS);
+  /** Replays the short ceremony without awarding currency or completion a second time. */
+  function handleReplayCelebration() {
+    launchLessonCeremony();
   }
 
   function handleResetProgress() {
@@ -923,7 +896,6 @@ export default function GuwenLessonDecode() {
     setReviewStepId(null);
     setIsPlaying(false);
     setIsPaused(false);
-    setBadgeClaimed(false);
     setActiveStepId(lesson ? findCurrentStep(lesson, new Set())?.id : undefined);
     setClosingStage(closingStepsList[0]?.kind ?? 'ordering');
     setOrderingArrangement(lesson?.sequenceOrderingClosing ? lesson.sequenceOrderingClosing.cards.map((c) => c.id) : []);
@@ -1408,30 +1380,104 @@ export default function GuwenLessonDecode() {
   return (
     <div className="space-y-4">
       {showLessonCelebration && (
-        <div className="fixed inset-0 z-50 pointer-events-none overflow-hidden">
-          {fireworkParticles.map((p) => (
-            <span
-              key={p.id}
-              className="absolute text-3xl"
-              style={
-                {
-                  left: p.left,
-                  top: p.top,
-                  '--tx': `${p.tx}px`,
-                  '--ty': `${p.ty}px`,
-                  '--rot': `${p.rot}deg`,
-                  animation: `burst-particle ${FIREWORK_PARTICLE_DURATION_S}s ease-out ${p.delay}s forwards`,
-                } as React.CSSProperties
-              }
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label={`全文破譯成功：${lesson.title}`}
+          className="fixed inset-0 z-[60] overflow-hidden bg-[radial-gradient(circle_at_center,_#155e75_0%,_#164e63_42%,_#082f49_100%)] text-white flex items-center justify-center p-5"
+          style={{ animation: 'ceremony-backdrop 0.35s ease-out both' }}
+        >
+          <div className="absolute inset-0 pointer-events-none">
+            {fireworkParticles.map((p) => (
+              <span
+                key={p.id}
+                className="absolute text-3xl"
+                style={
+                  {
+                    left: p.left,
+                    top: p.top,
+                    '--tx': `${p.tx}px`,
+                    '--ty': `${p.ty}px`,
+                    '--rot': `${p.rot}deg`,
+                    animation: `burst-particle ${FIREWORK_PARTICLE_DURATION_S}s ease-out ${p.delay}s forwards`,
+                  } as React.CSSProperties
+                }
+              >
+                {p.emoji}
+              </span>
+            ))}
+          </div>
+
+          {ceremonyCanSkip && (
+            <button
+              type="button"
+              onClick={finishLessonCeremony}
+              className="absolute right-4 top-4 rounded-full bg-white/15 px-3 py-1.5 text-sm font-medium text-white/90 backdrop-blur hover:bg-white/25"
             >
-              {p.emoji}
-            </span>
-          ))}
-          <div
-            className="absolute left-1/2 top-[16%] -translate-x-1/2 whitespace-nowrap text-xl sm:text-2xl font-extrabold text-white bg-gradient-to-r from-amber-500 via-orange-500 to-pink-500 px-6 py-3 rounded-full shadow-2xl"
-            style={{ animation: `pop-text ${FIREWORK_TOTAL_MS / 1000}s ease-out forwards` }}
-          >
-            {celebrationBannerText}
+              跳過動畫
+            </button>
+          )}
+
+          <div className="relative z-10 w-full max-w-md text-center space-y-3">
+            <div
+              className="mx-auto flex h-20 w-20 items-center justify-center rounded-full border-4 border-amber-300 bg-amber-500/20 text-4xl shadow-[0_0_45px_rgba(251,191,36,0.75)]"
+              style={{ animation: 'ceremony-seal 0.7s cubic-bezier(.2,.9,.25,1.25) both' }}
+            >
+              🏆
+            </div>
+            <div style={{ animation: 'ceremony-rise 0.55s ease-out 0.35s both' }}>
+              <p className="text-xs font-bold tracking-[0.28em] text-amber-200">古文破譯家</p>
+              <h2 className="mt-1 text-3xl font-black text-white drop-shadow-lg">全文破譯成功！</h2>
+              <p className="mt-1 text-xl font-bold text-amber-200">《{lesson.title}》</p>
+            </div>
+
+            <div
+              className="mx-auto grid max-w-sm grid-cols-3 gap-2 rounded-2xl border border-white/20 bg-white/10 p-3 backdrop-blur"
+              style={{ animation: 'ceremony-rise 0.5s ease-out 0.85s both' }}
+            >
+              <div>
+                <p className="text-xl font-black">{totalGradableItems}</p>
+                <p className="text-[11px] text-cyan-100">道密碼</p>
+              </div>
+              <div>
+                <p className="text-xl font-black text-amber-200">🪙 {earnedCoins}</p>
+                <p className="text-[11px] text-cyan-100">金幣</p>
+              </div>
+              <div>
+                <p className="text-xl font-black text-yellow-200">⭐ {earnedStars}</p>
+                <p className="text-[11px] text-cyan-100">星星</p>
+              </div>
+            </div>
+
+            <div
+              className="mx-auto pt-1"
+              style={{ animation: 'ceremony-badge 0.7s cubic-bezier(.2,.9,.3,1.3) 1.65s both' }}
+            >
+              <p className="text-6xl drop-shadow-[0_0_18px_rgba(253,224,71,0.9)]">🏅</p>
+              <p className="mt-1 font-bold text-amber-100">
+                第 {badgeNumber} 枚徽章：{lesson.title}
+              </p>
+            </div>
+
+            {ceremonyActionReady ? (
+              <button
+                type="button"
+                onClick={finishLessonCeremony}
+                className="w-full rounded-2xl bg-gradient-to-r from-amber-400 to-orange-500 py-3.5 text-lg font-black text-white shadow-xl transition-transform hover:scale-[1.02]"
+                style={{ animation: 'ceremony-rise 0.35s ease-out both' }}
+              >
+                🏅 收下徽章，查看我的破譯成果
+              </button>
+            ) : (
+              <p className="h-[52px] pt-3 text-sm font-medium text-cyan-100">正在鑄造你的破譯徽章……</p>
+            )}
+          </div>
+
+          <div className="absolute inset-x-0 bottom-0 h-1.5 bg-white/15">
+            <div
+              className="h-full origin-left bg-gradient-to-r from-amber-300 to-pink-400"
+              style={{ animation: `ceremony-progress ${COMPLETION_CEREMONY_TOTAL_MS}ms linear both` }}
+            />
           </div>
         </div>
       )}
@@ -1647,6 +1693,13 @@ export default function GuwenLessonDecode() {
               🪙 共得 {earnedCoins} 金幣　⭐ 共得 {earnedStars} 星星
             </p>
             {renderPassage()}
+            <button
+              type="button"
+              onClick={() => togglePlayback('complete-full-text', lesson.fullText)}
+              className="text-sm font-medium text-sky-600"
+            >
+              {playbackLabel('complete-full-text', '🔊 聽古文全文', '⏸ 暫停播放', '▶️ 重新播放')}
+            </button>
           </div>
 
           {/* 我的破譯稿 and 白話驗證 are always shown together now — no "打開白話驗證卷軸" gate button in
@@ -1655,7 +1708,16 @@ export default function GuwenLessonDecode() {
               near-identically-labeled button here to reveal content that's already earned was redundant and
               self-contradictory, and the user caught it via screenshot ("居然出現兩次"). */}
           <div className="bg-white rounded-2xl shadow p-5 space-y-3">
-            <p className="text-xs font-semibold text-gray-500">📜 我的破譯稿</p>
+            <div className="flex items-start justify-between gap-2">
+              <p className="text-xs font-semibold text-gray-500">📜 我的破譯稿</p>
+              <button
+                type="button"
+                onClick={() => togglePlayback('complete-draft', finalDraftLines)}
+                className="text-xs font-medium text-sky-600"
+              >
+                {playbackLabel('complete-draft', '🔊 聽破譯稿', '⏸ 暫停播放', '▶️ 重新播放')}
+              </button>
+            </div>
             <div className="space-y-1.5">
               {lesson.steps
                 .filter((s) => s.finalDraftLine)
@@ -1708,28 +1770,23 @@ export default function GuwenLessonDecode() {
             </div>
           </div>
 
-          {/* The real final action of the whole lesson: claiming a numbered, persistent badge — one per
-              completed 古文, collected in 學習紀錄's 徽章蒐集區. Badge number is this lesson's 1-based
-              position in `guwenLessons`, not tied to completion order, so it stays stable as more lessons
-              are added over time (never hardcoded to a fixed total like 100 — the collection page sizes
-              itself to however many lessons actually exist). */}
-          {badgeClaimed ? (
-            <div className="bg-white rounded-2xl shadow p-6 text-center space-y-2">
-              <p className="text-5xl">🏅</p>
-              <p className="font-bold text-gray-800">
-                第 {badgeNumber} 枚徽章：{lesson.title}
-              </p>
-              <p className="text-xs text-gray-400">已經收進「學習紀錄」的古文徽章蒐集區了</p>
-            </div>
-          ) : (
+          {/* Badge ownership already comes from completedAt, so the first-time ceremony and the badge claim
+              are one climax instead of two celebrations separated by a long report. Reopening a completed
+              lesson shows the owned badge immediately and offers a replay that awards nothing twice. */}
+          <div className="bg-white rounded-2xl shadow p-6 text-center space-y-2">
+            <p className="text-5xl">🏅</p>
+            <p className="font-bold text-gray-800">
+              第 {badgeNumber} 枚徽章：{lesson.title}
+            </p>
+            <p className="text-xs text-gray-400">已經收進「學習紀錄」的古文徽章蒐集區了</p>
             <button
               type="button"
-              onClick={handleClaimBadge}
-              className="w-full bg-gradient-to-br from-amber-400 to-pink-500 hover:scale-[1.02] transition-transform text-white text-lg font-bold rounded-2xl py-4 shadow-lg"
+              onClick={handleReplayCelebration}
+              className="mt-2 text-sm font-semibold text-amber-600 hover:text-amber-700"
             >
-              🏅 恭喜完成，取得徽章
+              🎉 再看一次完成慶祝
             </button>
-          )}
+          </div>
 
           <div className="flex items-center justify-between">
             <Link to="/guwen" className="text-teal-600 font-medium text-sm">
