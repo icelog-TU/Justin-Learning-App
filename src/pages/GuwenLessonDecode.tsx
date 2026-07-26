@@ -14,6 +14,7 @@ import {
   guwenLessons,
   totalGuwenLessonItems,
   type GuwenLesson,
+  type ClassicalClue,
   type LessonStep,
   type RevealStep,
   type SequenceCard,
@@ -149,7 +150,9 @@ function stepIntroLeadIn(step: LessonStep): string {
 function stepAutoPlayLines(step: LessonStep): string[] {
   const lines: string[] = [step.targetSentence, step.intro];
   if (step.type === 'evidence') {
-    step.clues.forEach((c) => lines.push(c.text, c.unlockedMeaning ?? ''));
+    step.clues.forEach((c) =>
+      lines.push(c.text, c.pronunciationCue?.speechText ?? '', c.unlockedMeaning ?? ''),
+    );
   } else if (step.type === 'reconstruction') {
     step.keys.forEach((k) => {
       lines.push(k.code, k.decodedEvidence);
@@ -220,7 +223,11 @@ export default function GuwenLessonDecode() {
   const lesson = lessonId ? findGuwenLesson(lessonId) : undefined;
   const { data, reward, recordGuwenWord, completeGuwenText, resetGuwenText } = useAppDataContext();
 
-  const progress = lesson ? data.guwenProgress[lesson.id] : undefined;
+  const storedProgress = lesson ? data.guwenProgress[lesson.id] : undefined;
+  const progress =
+    lesson?.contentRevision && storedProgress?.contentRevision !== lesson.contentRevision
+      ? undefined
+      : storedProgress;
   const solvedIds = useMemo(() => new Set(progress?.decodedWordIds ?? []), [progress]);
   const alreadyComplete = Boolean(progress?.completedAt);
   // Every step can be solved without `completedAt` ever being recorded — that field is only set when the
@@ -434,7 +441,7 @@ export default function GuwenLessonDecode() {
     clearCeremonyTimers();
     const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
     if (!alreadyComplete) {
-      completeGuwenText(lesson!.id);
+      completeGuwenText(lesson!.id, lesson!.contentRevision);
       reward(completionCoinBonus, completionStarBonus, { big: true, celebrate: false });
     }
     setBadgeClaiming(true);
@@ -468,6 +475,12 @@ export default function GuwenLessonDecode() {
     ];
   }
 
+  function claimBadgeFromVerificationScroll() {
+    if (alreadyComplete) return;
+    launchLessonCeremony();
+    claimBadge();
+  }
+
   // Fires exactly once for a completion earned during this visit, never when reopening an old lesson.
   // The single coordinated ceremony replaces the generic reward burst. Long automatic TTS is deliberately
   // absent here: the result page offers separate listen buttons, while forcing the ancient text, draft and
@@ -475,7 +488,7 @@ export default function GuwenLessonDecode() {
   const wasAlreadyCompleteOnMountRef = useRef(alreadyComplete);
   const lessonCelebrationFiredRef = useRef(false);
   useEffect(() => {
-    if (phase !== 'complete' || !lesson) return;
+    if (phase !== 'complete' || !lesson || lesson.badgeClaimMode === 'scroll-end') return;
     if (wasAlreadyCompleteOnMountRef.current || lessonCelebrationFiredRef.current) return;
     lessonCelebrationFiredRef.current = true;
     launchLessonCeremony();
@@ -604,6 +617,7 @@ export default function GuwenLessonDecode() {
   // 1-based position in `guwenLessons` — stable per lesson, not tied to completion order, and never
   // hardcoded against a fixed total (see ProgressPage.tsx's 徽章蒐集區, which sizes itself the same way).
   const badgeNumber = guwenLessons.findIndex((l) => l.id === lesson.id) + 1;
+  const nextLesson = guwenLessons[badgeNumber];
 
   /** One circle per word/phrase step, PLUS one more for each closing screen this lesson actually has
    * (ordering/causal/multiselect) — the closing screens are their own locks to unlock too, not something
@@ -727,7 +741,7 @@ export default function GuwenLessonDecode() {
 
   function markStepSolved(step: LessonStep) {
     setFeedback('correct');
-    recordGuwenWord(lesson!.id, step.id);
+    recordGuwenWord(lesson!.id, step.id, lesson!.contentRevision);
     reward(guwenCoinAmount, guwenStarAmount);
     playSuccessChime();
     const praiseLine = PRAISE_LINES[Math.floor(Math.random() * PRAISE_LINES.length)];
@@ -901,7 +915,7 @@ export default function GuwenLessonDecode() {
       setOrderingWrong(true);
       return;
     }
-    recordGuwenWord(lesson!.id, closing.id);
+    recordGuwenWord(lesson!.id, closing.id, lesson!.contentRevision);
     reward(guwenCoinAmount, guwenStarAmount);
     playSuccessChime();
     // Auto-plays the encouragement line the instant the child gets the order right — called directly here
@@ -924,7 +938,7 @@ export default function GuwenLessonDecode() {
       setCausalWrong(true);
       return;
     }
-    recordGuwenWord(lesson!.id, closing.id);
+    recordGuwenWord(lesson!.id, closing.id, lesson!.contentRevision);
     reward(guwenCoinAmount, guwenStarAmount);
     playSuccessChime();
     // Called directly here (a real user action), not via a useEffect keyed on causalSolved — same
@@ -958,7 +972,7 @@ export default function GuwenLessonDecode() {
       setMultiSelectWrong(true);
       return;
     }
-    recordGuwenWord(lesson!.id, closing.id);
+    recordGuwenWord(lesson!.id, closing.id, lesson!.contentRevision);
     reward(guwenCoinAmount, guwenStarAmount);
     playSuccessChime();
     // Called directly here (a real user action), not via a useEffect keyed on multiSelectSolved — same
@@ -979,7 +993,7 @@ export default function GuwenLessonDecode() {
   }
 
   function handleResetProgress() {
-    resetGuwenText(lesson!.id);
+    resetGuwenText(lesson!.id, lesson!.contentRevision);
     // resetGuwenText doesn't touch timesCompleted (that's the point — it's meant to survive resets), so
     // re-reading it here is exactly "how many times was this cleared before *this* fresh attempt begins."
     setAttemptMultiplier(guwenRedoMultiplier(progress?.timesCompleted ?? 0));
@@ -1005,7 +1019,7 @@ export default function GuwenLessonDecode() {
     setPhase('intro');
   }
 
-  function renderClue(clue: { text: string; highlight: string; unlockedMeaning?: string; source: string }, i: number) {
+  function renderClue(clue: ClassicalClue, i: number) {
     return (
       <div key={i} className="rounded-xl border-2 border-gray-200 bg-gray-50 px-4 py-3 space-y-1.5">
         <div className="flex items-start gap-2">
@@ -1014,6 +1028,19 @@ export default function GuwenLessonDecode() {
           </button>
           <p className="text-gray-800 font-medium">{highlightPhrase(clue.text, clue.highlight)}</p>
         </div>
+        {clue.pronunciationCue && (
+          <div className="flex items-start gap-2 rounded-lg bg-amber-50 px-2.5 py-2 text-amber-800">
+            <button
+              type="button"
+              onClick={() => speak(clue.pronunciationCue!.speechText)}
+              aria-label="聽發音提示"
+              className="shrink-0 text-xs text-sky-600"
+            >
+              🔊
+            </button>
+            <p className="text-xs font-medium">{clue.pronunciationCue.displayText}</p>
+          </div>
+        )}
         {/* Some clues deliberately omit unlockedMeaning — the child is meant to compare bare clues and
             induce the pattern themselves, so translating one here would hand over the answer. */}
         {clue.unlockedMeaning && (
@@ -1394,7 +1421,7 @@ export default function GuwenLessonDecode() {
             onClick={handleSubmitMultiSelect}
             className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl py-2.5"
           >
-            提交判斷
+            {closing.submitButtonLabel ?? '提交判斷'}
           </button>
         )}
         {multiSelectSolved && (
@@ -1593,7 +1620,7 @@ export default function GuwenLessonDecode() {
               )}
               <p className="relative z-10 text-6xl drop-shadow-[0_0_18px_rgba(253,224,71,0.9)]">🏅</p>
               <p className="mt-1 font-bold text-amber-100">
-                第 {badgeNumber} 枚徽章：{lesson.title}
+                第 {badgeNumber} 枚徽章：{lesson.badgeName ?? lesson.title}
               </p>
             </div>
 
@@ -1639,9 +1666,12 @@ export default function GuwenLessonDecode() {
       {phase === 'intro' && (
         <div className="space-y-4">
           <div className="bg-white rounded-2xl shadow p-5 space-y-3">
+            {lesson.introHeadline && (
+              <p className="font-bold text-teal-700">{lesson.introHeadline}</p>
+            )}
             <h2 className="text-xl font-bold text-gray-800">{lesson.title}</h2>
             <p className="text-xs text-gray-400">{lesson.source}</p>
-            <p className="text-gray-600">{lesson.introSpokenLine}</p>
+            <p className="text-gray-600 whitespace-pre-line">{lesson.introSpokenLine}</p>
             {renderPassage()}
             <p className="text-sm text-gray-400">{INTRO_HINT}</p>
           </div>
@@ -1653,7 +1683,7 @@ export default function GuwenLessonDecode() {
             }}
             className="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-xl py-3"
           >
-            🏺 開始破譯
+            🏺 {lesson.acceptMissionLabel ?? '開始破譯'}
           </button>
         </div>
       )}
@@ -1891,9 +1921,10 @@ export default function GuwenLessonDecode() {
                 {playbackLabel('translation', '🔊', '⏸', '▶️')}
               </button>
             </div>
-            <p className="text-gray-700 leading-relaxed">{lesson.finalVerification.translation}</p>
-            <p className="text-xs text-gray-400">{lesson.finalVerification.guideLine}</p>
+            <p className="text-xs text-gray-500 whitespace-pre-line">{lesson.finalVerification.guideLine}</p>
+            <p className="text-gray-700 leading-relaxed whitespace-pre-line">{lesson.finalVerification.translation}</p>
 
+            {lesson.finalVerification.comparisonRows.length > 0 && (
             <div className="overflow-x-auto">
               <table className="w-full text-xs border-collapse">
                 <thead>
@@ -1914,19 +1945,45 @@ export default function GuwenLessonDecode() {
                 </tbody>
               </table>
             </div>
+            )}
+
+            {lesson.finalVerification.evidenceBoundary && (
+              <div className="rounded-xl bg-amber-50 p-4">
+                <p className="mb-2 text-sm font-bold text-amber-800">白話文證據邊界</p>
+                <ul className="list-disc space-y-1 pl-5 text-xs text-amber-900">
+                  {lesson.finalVerification.evidenceBoundary.map((note) => (
+                    <li key={note}>{note}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
 
             <div className="bg-emerald-50 rounded-xl p-4">
-              <p className="text-sm font-bold text-emerald-700">{lesson.finalVerification.completionFeedback}</p>
+              <p className="text-sm font-bold text-emerald-700 whitespace-pre-line">
+                {lesson.finalVerification.completionFeedback}
+              </p>
             </div>
+
+            {lesson.badgeClaimMode === 'scroll-end' && (
+              <button
+                type="button"
+                onClick={claimBadgeFromVerificationScroll}
+                disabled={alreadyComplete}
+                className="w-full rounded-2xl bg-gradient-to-r from-amber-400 to-orange-500 py-3.5 text-lg font-black text-white shadow-lg disabled:cursor-default disabled:from-gray-300 disabled:to-gray-400"
+              >
+                🏅 {alreadyComplete ? '已收集' : lesson.badgeClaimLabel ?? '收集破譯徽章'}
+              </button>
+            )}
           </div>
 
           {/* Badge ownership already comes from completedAt, so the first-time ceremony and the badge claim
               are one climax instead of two celebrations separated by a long report. Reopening a completed
               lesson shows the owned badge immediately and offers a replay that awards nothing twice. */}
+          {(lesson.badgeClaimMode !== 'scroll-end' || alreadyComplete) && (
           <div className="bg-white rounded-2xl shadow p-6 text-center space-y-2">
             <p className="text-5xl">🏅</p>
             <p className="font-bold text-gray-800">
-              第 {badgeNumber} 枚徽章：{lesson.title}
+              第 {badgeNumber} 枚徽章：{lesson.badgeName ?? lesson.title}
             </p>
             <p className="text-xs text-gray-400">已經收進「學習紀錄」的古文徽章蒐集區了</p>
             <button
@@ -1937,11 +1994,17 @@ export default function GuwenLessonDecode() {
               🎉 再看一次完成慶祝
             </button>
           </div>
+          )}
 
           <div className="flex items-center justify-between">
             <Link to="/guwen" className="text-teal-600 font-medium text-sm">
-              回古文破譯家
+              返回文章列表
             </Link>
+            {alreadyComplete && nextLesson && (
+              <Link to={`/guwen-lesson/${nextLesson.id}`} className="text-teal-600 font-medium text-sm">
+                挑戰下一篇
+              </Link>
+            )}
             {confirmReset ? (
               <div className="flex items-center gap-2 text-sm">
                 <span className="text-gray-500">確定重來？（重來一樣有獎勵，約原本的六成）</span>

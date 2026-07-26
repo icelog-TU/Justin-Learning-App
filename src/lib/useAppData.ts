@@ -203,21 +203,34 @@ export function useAppData() {
     }));
   }, []);
 
-  const recordGuwenWord = useCallback((textId: string, wordId: string) => {
+  const recordGuwenWord = useCallback((textId: string, wordId: string, contentRevision?: string) => {
     setData((prev) => ({
-      ...recordGuwenWordDecodedMutation({ ...prev, guwenProgress: { ...prev.guwenProgress } }, textId, wordId),
+      ...recordGuwenWordDecodedMutation(
+        { ...prev, guwenProgress: { ...prev.guwenProgress } },
+        textId,
+        wordId,
+        contentRevision,
+      ),
     }));
   }, []);
 
-  const completeGuwenText = useCallback((textId: string) => {
+  const completeGuwenText = useCallback((textId: string, contentRevision?: string) => {
     setData((prev) => ({
-      ...recordGuwenTextCompletedMutation({ ...prev, guwenProgress: { ...prev.guwenProgress } }, textId),
+      ...recordGuwenTextCompletedMutation(
+        { ...prev, guwenProgress: { ...prev.guwenProgress } },
+        textId,
+        contentRevision,
+      ),
     }));
   }, []);
 
-  const resetGuwenText = useCallback((textId: string) => {
+  const resetGuwenText = useCallback((textId: string, contentRevision?: string) => {
     setData((prev) => ({
-      ...resetGuwenProgressMutation({ ...prev, guwenProgress: { ...prev.guwenProgress } }, textId),
+      ...resetGuwenProgressMutation(
+        { ...prev, guwenProgress: { ...prev.guwenProgress } },
+        textId,
+        contentRevision,
+      ),
     }));
   }, []);
 

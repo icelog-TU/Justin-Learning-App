@@ -28,7 +28,11 @@ export default function GuwenHome() {
 
       <div className="space-y-3">
         {guwenLessons.map((lesson, index) => {
-          const progress = data.guwenProgress[lesson.id];
+          const storedProgress = data.guwenProgress[lesson.id];
+          const progress =
+            lesson.contentRevision && storedProgress?.contentRevision !== lesson.contentRevision
+              ? undefined
+              : storedProgress;
           const decodedCount = progress?.decodedWordIds.length ?? 0;
           const total = totalGuwenLessonItems(lesson);
           const completed = Boolean(progress?.completedAt);
@@ -69,7 +73,7 @@ export default function GuwenHome() {
                       <button
                         type="button"
                         onClick={() => {
-                          resetGuwenText(lesson.id);
+                          resetGuwenText(lesson.id, lesson.contentRevision);
                           setConfirmResetId(null);
                         }}
                         className="bg-red-500 hover:bg-red-600 text-white text-xs font-semibold rounded-lg px-2.5 py-1"
