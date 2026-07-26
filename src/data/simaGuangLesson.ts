@@ -3,8 +3,8 @@
 import type { GuwenLesson, PronunciationCue } from './guwenLesson';
 
 const DE_HUO_CUE: PronunciationCue = {
-  displayText: '得，這裡念作德（ㄉㄜˊ）。',
-  speechText: '這裡的得，念作道德的德。',
+  displayText: '「得活」的得，發音同道德的德（ㄉㄜˊ）。',
+  speechText: '得活的得，發音同道德的德。',
 };
 
 const ZHONG_CUE: PronunciationCue = {
