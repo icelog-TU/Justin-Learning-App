@@ -6,9 +6,11 @@ import {
   type PronunciationVerification,
 } from '../data/guwenPronunciationAudit';
 import { db, ensureSignedIn } from './firebase';
+import { isMatchingAuditFingerprint } from './ttsAuditFingerprint';
 
 const INDEX_DOC_ID = 'GUWENTTS-INDEX-V1';
 const DATABASE_KIND = 'guwen-tts-audit-database';
+const SCHEMA_VERSION = 2;
 const MAX_SUBMISSIONS_PER_LESSON = 200;
 const MAX_RESULTS_PER_ITEM = 20;
 
@@ -17,6 +19,13 @@ export type AuditEnvironment = {
   userAgent: string;
   language: string;
   zhTwVoiceNames: string[];
+  selectedVoice?: {
+    name: string;
+    voiceURI: string;
+    lang: string;
+    default: boolean;
+    selection: 'explicit' | 'unresolved_default';
+  };
 };
 
 export type AuditResultInput = {
@@ -34,6 +43,11 @@ export type CloudAuditResult = {
   receivedAt: number;
   environment: AuditEnvironment;
   source: 'web_audit' | 'editor_confirmation';
+  auditRevision?: number;
+  utteranceFingerprint?: string;
+  targetFingerprint?: string;
+  displayText?: string;
+  ttsInput?: string;
 };
 
 export type CloudAuditItem = Omit<PronunciationAuditCatalogItem, 'initialVerifications'> & {
@@ -43,7 +57,7 @@ export type CloudAuditItem = Omit<PronunciationAuditCatalogItem, 'initialVerific
 
 export type CloudLessonAudit = {
   kind: typeof DATABASE_KIND;
-  schemaVersion: 1;
+  schemaVersion: 1 | typeof SCHEMA_VERSION;
   lessonId: string;
   lessonNumber: number;
   lessonTitle: string;
@@ -52,6 +66,7 @@ export type CloudLessonAudit = {
     submissionId: string;
     receivedAt: number;
     itemIds: string[];
+    itemFingerprints?: Record<string, string>;
     environment: AuditEnvironment;
   }>;
   updatedAt: number;
@@ -59,7 +74,7 @@ export type CloudLessonAudit = {
 
 type CloudAuditIndex = {
   kind: typeof DATABASE_KIND;
-  schemaVersion: 1;
+  schemaVersion: 1 | typeof SCHEMA_VERSION;
   lessonDocs: Array<{
     lessonId: string;
     lessonNumber: number;
@@ -73,6 +88,27 @@ export type CloudAuditDatabase = {
   lessons: CloudLessonAudit[];
   updatedAt: number;
 };
+
+export function isAuditResultCurrent(
+  item: Pick<
+    PronunciationAuditCatalogItem,
+    'auditRevision' | 'utteranceFingerprint' | 'targetFingerprint' | 'displayText' | 'ttsInput'
+  >,
+  result: CloudAuditResult,
+): boolean {
+  return isMatchingAuditFingerprint(item, result);
+}
+
+export function latestCurrentAuditResult(
+  item: PronunciationAuditCatalogItem,
+  results: CloudAuditResult[],
+): CloudAuditResult | null {
+  return (
+    results
+      .filter((result) => isAuditResultCurrent(item, result))
+      .sort((a, b) => b.receivedAt - a.receivedAt)[0] ?? null
+  );
+}
 
 function lessonDocId(lessonId: string): string {
   return `GUWENTTS-${lessonId.toUpperCase()}`;
@@ -112,6 +148,11 @@ function initialResult(
       zhTwVoiceNames: [],
     },
     source: 'editor_confirmation',
+    auditRevision: item.auditRevision,
+    utteranceFingerprint: item.utteranceFingerprint,
+    targetFingerprint: item.targetFingerprint,
+    displayText: item.displayText,
+    ttsInput: item.ttsInput,
   };
 }
 
@@ -125,6 +166,11 @@ function catalogFields(item: PronunciationAuditCatalogItem): Omit<CloudAuditItem
     speechUnitId: item.speechUnitId,
     source: item.source,
     text: item.text,
+    displayText: item.displayText,
+    ttsInput: item.ttsInput,
+    auditRevision: item.auditRevision,
+    targetFingerprint: item.targetFingerprint,
+    utteranceFingerprint: item.utteranceFingerprint,
     target: item.target,
     intendedReading: item.intendedReading,
     targets: item.targets,
@@ -146,6 +192,7 @@ async function ensureCentralCatalog(): Promise<void> {
   const grouped = groupByLesson(GUWEN_PRONUNCIATION_AUDIT_CATALOG);
   const now = Date.now();
   const lessonDocs: CloudAuditIndex['lessonDocs'] = [];
+  let catalogChanged = false;
 
   for (const [lessonId, catalogItems] of grouped) {
     const first = catalogItems[0];
@@ -163,7 +210,7 @@ async function ensureCentralCatalog(): Promise<void> {
       const items = Object.fromEntries(catalogItems.map((item) => [item.id, catalogItemToCloud(item)]));
       const lesson: CloudLessonAudit = {
         kind: DATABASE_KIND,
-        schemaVersion: 1,
+        schemaVersion: SCHEMA_VERSION,
         lessonId,
         lessonNumber: first.lessonNumber,
         lessonTitle: first.lessonTitle,
@@ -172,6 +219,7 @@ async function ensureCentralCatalog(): Promise<void> {
         updatedAt: now,
       };
       await setDoc(ref, lesson);
+      catalogChanged = true;
       continue;
     }
 
@@ -191,7 +239,16 @@ async function ensureCentralCatalog(): Promise<void> {
         changed = true;
       }
     });
-    if (changed) await setDoc(ref, { ...current, items, updatedAt: now });
+    if (changed || current.schemaVersion !== SCHEMA_VERSION) {
+      await setDoc(ref, {
+        ...current,
+        kind: DATABASE_KIND,
+        schemaVersion: SCHEMA_VERSION,
+        items,
+        updatedAt: now,
+      });
+      catalogChanged = true;
+    }
   }
 
   const indexRef = familyDoc(INDEX_DOC_ID);
@@ -203,11 +260,16 @@ async function ensureCentralCatalog(): Promise<void> {
 
   const nextIndex: CloudAuditIndex = {
     kind: DATABASE_KIND,
-    schemaVersion: 1,
+    schemaVersion: SCHEMA_VERSION,
     lessonDocs: [...merged.values()].sort((a, b) => a.lessonNumber - b.lessonNumber),
     updatedAt: now,
   };
-  if (JSON.stringify(existingIndex?.lessonDocs ?? []) !== JSON.stringify(nextIndex.lessonDocs)) {
+  if (
+    existingIndex?.kind !== DATABASE_KIND ||
+    existingIndex.schemaVersion !== SCHEMA_VERSION ||
+    catalogChanged ||
+    JSON.stringify(existingIndex?.lessonDocs ?? []) !== JSON.stringify(nextIndex.lessonDocs)
+  ) {
     await setDoc(indexRef, nextIndex);
   }
 }
@@ -262,9 +324,16 @@ export async function submitAuditResults(
           receivedAt,
           environment,
           source: 'web_audit',
+          auditRevision: item.auditRevision,
+          utteranceFingerprint: item.utteranceFingerprint,
+          targetFingerprint: item.targetFingerprint,
+          displayText: item.displayText,
+          ttsInput: item.ttsInput,
         };
         const otherEnvironments = current.results.filter(
-          (entry) => entry.environment.deviceId !== environment.deviceId,
+          (entry) =>
+            entry.environment.deviceId !== environment.deviceId ||
+            entry.environment.selectedVoice?.voiceURI !== environment.selectedVoice?.voiceURI,
         );
         items[item.id] = {
           ...current,
@@ -279,13 +348,16 @@ export async function submitAuditResults(
           submissionId,
           receivedAt,
           itemIds: lessonInputs.map(({ item }) => item.id),
+          itemFingerprints: Object.fromEntries(
+            lessonInputs.map(({ item }) => [item.id, item.utteranceFingerprint]),
+          ),
           environment,
         },
       ].slice(-MAX_SUBMISSIONS_PER_LESSON);
 
       const next: CloudLessonAudit = {
         kind: DATABASE_KIND,
-        schemaVersion: 1,
+        schemaVersion: SCHEMA_VERSION,
         lessonId,
         lessonNumber: existing?.lessonNumber ?? first.lessonNumber,
         lessonTitle: existing?.lessonTitle ?? first.lessonTitle,

@@ -176,6 +176,9 @@ type FinalVerification = {
 - 實聽台選擇「念對／念錯」後必須寫入獨立的 Firestore 多音字資料庫並顯示回傳成功或失敗；localStorage 只作離線備份，不得當成唯一結果來源。
 - App 實作或教材交付前執行 `npm run tts:audit:pull`。中央確認念對者不建立孩子端提示；中央確認念錯者才建立就近提示與讀音控制。
 - 完整語音文字、TTS 輸入或目標字出現位置改變時，舊實測紀錄失效，必須重新建檔與實聽。
+- catalog 與 result 必須保存 exact `displayText`、`ttsInput`、`auditRevision`、`targetFingerprint` 與 `utteranceFingerprint`；只有全部相符的結果才可產生教材結論，舊結果保留但列為待複驗。
+- 正式 App 與實聽台必須共用同一個 zh-TW voice 選擇函式；result 保存實際 voice name、voiceURI、lang 與 default。瀏覽器未提供 voice 清單時必須標記為未解析系統預設。
+- 臨時貼入實聽台的「待分類」句子只作本機測試，不得寫入中央正式 catalog；先加入 `src/data/guwenPronunciationAudit.ts` 才能中央回傳。
 
 ## 6. 互動狀態與解鎖順序
 

@@ -344,6 +344,8 @@ Firebase Web 設定不是伺服器密鑰；真正存取控制必須由 Firebase 
 - 獨立 localStorage key `guwen-tts-audit-v1` 只作離線備份與舊版資料遷移；它不是正式資料庫，也不得同步到孩子的 Firestore 學習資料。
 - 編輯代理開始多音字工作時先執行 `npm run tts:audit:pull`，讀回中央資料庫後再更新教材主檔與孩子端提示。
 - `getTtsInput()` 只供成人測試頁查看實際送入語音引擎的文字；正式孩子畫面仍顯示原文。
+- 中央資料庫 schema v2 會把 `displayText`、`ttsInput`、`auditRevision`、目標指紋與語音單元指紋同時保存在 catalog/result；只有完全相符的 result 才能產生有效結論，舊結果保留但顯示待複驗。
+- 正式 App 與實聽台共用 `selectZhTwVoice()`；若瀏覽器提供 zh-TW voice，會明確設定並回傳 name／voiceURI／lang／default，否則標記為 `unresolved_default`。
 
 ### 音效
 

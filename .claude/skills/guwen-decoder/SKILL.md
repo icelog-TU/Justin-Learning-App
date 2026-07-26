@@ -205,6 +205,19 @@ A real bug the user hit: "沒應該唸莫，他唸梅" — in "足跌沒水中"/
 
 **Do not show a pronunciation cue merely because a character is polyphonic.** First add every candidate utterance to `src/data/guwenPronunciationAudit.ts` with a stable lesson/question/speech-unit ID and exact target occurrence, then test it through `/#/tts-audit` on the child's real device. Clicking `念對` or `念錯` must write to the separate Firestore audit database and show a receipt; localStorage is only an offline backup. At the start of future pronunciation work, run `npm run tts:audit:pull` and reconcile the cloud result with the catalog and lesson master. A cloud-confirmed correct utterance gets no child-facing cue. Only a cloud-confirmed incorrect utterance gets the nearby cue described above. If the utterance text, `ttsSafe()` input, or target occurrence changes, invalidate the old result and retest instead of granting a character-wide exemption.
 
+**Central audit validity is exact and versioned (schema v2).** Every catalog item and submitted result carries
+`displayText`, the exact `ttsInput`, `auditRevision`, `targetFingerprint`, and `utteranceFingerprint`.
+Only a result whose five values all match the current catalog can produce a correct/incorrect conclusion.
+Legacy or changed-text results stay in `results[]` for audit history but render and print as `stale／待複驗`.
+`npm run tts:audit:pull` also reports local items missing from cloud and cloud orphan records. Temporary
+`待分類` lines are local-only and must never be submitted to the central catalog.
+
+**The production app and audit page now select the voice through the same function.**
+`selectZhTwVoice()` deterministically prefers a default/local zh-TW voice and assigns it to
+`SpeechSynthesisUtterance.voice`; submissions save name, voiceURI, lang, and default. If the browser exposes
+no voice list, save `unresolved_default` rather than claiming a specific voice. A voice or device change still
+requires real-device listening; code and browser automation cannot mark an item correct by sound.
+
 Two more hit while building 刻舟求劍's 涉 clue ("子惠思我，褰裳涉溱"，《詩經．鄭風．褰裳》): 溱 (the river name) defaulted to its rarer ㄑㄧㄣˊ (qín) reading instead of ㄓㄣ (zhēn) — fixed with a blanket `溱→真` swap, safe because this app only ever uses 溱 as this one river name; and 裳 in 褰裳/衣裳 defaulted to ㄔㄤˊ (cháng, the reading 裳 takes elsewhere in classical Chinese as a standalone "skirt" noun, e.g. 裳裳者華) instead of the neutral-tone ㄕㄤ it needs here — fixed with a lookbehind scoped to right after 褰/衣 specifically (`(?<=[褰衣])裳→傷`), *not* a blanket swap, since some future lesson could genuinely quote 裳 in a cháng context. This is exactly the "scope it as tightly as the actual ambiguity, not just copy the previous fix's shape" judgment call the rule above asks for — 溱 got a blanket fix because it has no other use in this app, 裳 didn't because it does.
 
 A fourth hit on the very next clue in the same lesson (柳宗元〈蝜蝂傳〉「又好上高，極其力不已，至墜地死」, used for 墜): 好 in 好上高 ("loves to climb high") defaulted to ㄏㄠˇ (hǎo, "good") instead of ㄏㄠˋ (hào, "to be fond of"). Fixed with `好(?=上高)→耗`, tightly scoped — 好=hǎo is one of the single most common characters in this app's modern-Chinese glosses, so this is the opposite end of the scoping spectrum from 溱: a blanket swap here would have broken far more than it fixed. **Pattern worth naming explicitly: sourcing real classical clues from actual pre-Tang/Tang/Song poetry and prose surfaces far more multi-reading characters (多音字) than the invented-sentence corpus the old GuwenWord model used — check every new clue's less-common characters against a dictionary reading before shipping, don't wait for the user to catch each one by ear.**

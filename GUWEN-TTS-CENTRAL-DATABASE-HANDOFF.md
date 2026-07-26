@@ -9,6 +9,10 @@
 > 中央資料庫工程基準：`5689cd4a164ae9e3cda3d347c910ec747a8d1e71`  
 > 本交接已納入其後的第二篇並行更新：`0a4656f`
 
+> 2026-07-26 Codex 接手更新：中央 schema 已升級為 v2，catalog 與 result 已加入
+> exact display text／TTS input／target fingerprint。原有七筆沒有提交時指紋的 v1
+> 結果完整保留作歷史證據，但不再產生教材結論；目前七筆均為「待複驗」。
+
 ---
 
 <a id="start-task"></a>
@@ -186,7 +190,23 @@ npm run tts:audit:pull
 
 - 這是 7 個語音單元；最後一個單元同時有「中、地」兩個目標。
 - 其中一筆已有真正網頁回傳的瀏覽器環境；其餘多數是把使用者先前明確確認「七項全部念對」遷入中央庫的 `editor_confirmation`。
-- 這些遷入資料的裝置／實際聲音名稱仍是占位說明。中央結論目前可用，但若要完成最嚴格的環境追溯，應請使用者在中央回傳版實聽台上用孩子的實際裝置重測這 7 項一次。
+- 這些遷入資料的裝置／實際聲音名稱仍是占位說明。它們在 v1 時點曾被視為可用；v2 指紋機制上線後已改列待複驗，必須由使用者在中央回傳版實聽台上用孩子的實際裝置重測這 7 項。
+
+### 6.1 指紋機制上線後的有效狀態
+
+2026-07-26 接手實作後再次執行 `npm run tts:audit:pull`：
+
+- 中央 schema：v2
+- 正式候選：7
+- 有效念對：0
+- 有效念錯：0
+- 待複驗（中央只有無指紋的 v1 舊結果）：7
+- 中央缺少：0
+- 中央孤兒紀錄：0
+
+這不是刪除或否定舊實聽紀錄。舊結果仍保存在每個 item 的 `results[]` 中供追溯；
+只是 v1 結果沒有提交當時的 exact TTS input 與 target fingerprint，不能滿足新的有效性標準。
+請在孩子實際裝置重新播放並勾選，取得包含 v2 指紋與實際 voice 的新回傳編號。
 
 ---
 
@@ -211,6 +231,8 @@ families/GUWENTTS-03-KEZHOUQIUJIAN
 
 ### 7.2 目前 schema
 
+目前為 `schemaVersion: 2`；讀取端仍相容 v1 歷史資料。
+
 中央索引保存：
 
 - `kind`
@@ -233,6 +255,11 @@ families/GUWENTTS-03-KEZHOUQIUJIAN
 - `targets[]`
 - `initialVerifications[]`
 - `results[]`
+- `displayText`
+- `ttsInput`
+- `auditRevision`
+- `targetFingerprint`
+- `utteranceFingerprint`
 
 每個 result 保存：
 
@@ -243,6 +270,7 @@ families/GUWENTTS-03-KEZHOUQIUJIAN
 - `receivedAt`
 - `environment`
 - `source`：`web_audit` 或 `editor_confirmation`
+- 提交當時的 `displayText`、`ttsInput`、`auditRevision`、`targetFingerprint`、`utteranceFingerprint`
 
 目前保留上限：
 
@@ -330,23 +358,14 @@ families/GUWENTTS-03-KEZHOUQIUJIAN
 - 第一篇 App 尚未實作新版；測試文字必須與未來實際送入 `speak()` 的完整文字一致。
 - `GUWEN-PROJECT-STATUS.md` 在 `0a4656f` 後尚未同步第二篇的最新題數；目前應以第二篇教材主檔的「任務開場＋第一至三題草稿待審」為準，接手後先核對並修正共用進度表。
 
-### 11.2 現行程式尚未自動使舊結果失效
+### 11.2 已完成：舊結果自動失效
 
-規範要求：文字、TTS 輸入或目標位置改動後要重測。
+已加入 `displayText`、`ttsInput`、`auditRevision`、`targetFingerprint` 與
+`utteranceFingerprint`。result 會保存提交時的完整指紋資料；UI 與 CLI 只有在五項完全相符時
+才採用結果。文字、`ttsSafe()` 輸出、目標位置／注音或 revision 改動後，舊結果保留但自動列為
+「待複驗」。
 
-但目前 `ensureCentralCatalog()` 在 catalog 欄位改動時會更新 item，同時保留舊 `results`。也就是說，若沿用相同 ID 改了文字，舊的「念對」仍可能被當成最新結果。
-
-應新增可驗證版本，例如：
-
-- `utteranceFingerprint`
-- `displayText`
-- `ttsInput`
-- `targetFingerprint`
-- 或明確 `auditRevision`
-
-每個 result 必須保存提交當時的 fingerprint；只有 fingerprint 與目前 catalog 完全相同的結果才算有效。這是最高優先的正確性缺口。
-
-### 11.3 尚未鎖定實際使用的 TTS 聲音
+### 11.3 已完成程式補強，待真實裝置重測
 
 目前 `SpeechSynthesisUtterance` 只設定 `lang = 'zh-TW'`，沒有指定 `utterance.voice`。
 
@@ -355,7 +374,9 @@ families/GUWENTTS-03-KEZHOUQIUJIAN
 - 不同裝置或系統更新後，結果可能改變。
 - 即使同一裝置同時有多個 zh-TW 聲音，也無法精確追溯實際使用者。
 
-建議建立共用的語音選擇函式，由正式 App 與實聽台共同使用，明確設定 voice，並把實際 voice name／voiceURI／lang 寫入 result。若產品仍要跟隨裝置預設，也要在資料中明確標記「unresolved default voice」，不能假稱已知道實際聲音。
+正式 App 與實聽台現共用確定性的 `selectZhTwVoice()`，並明確設定
+`SpeechSynthesisUtterance.voice`。result 保存實際 voice name／voiceURI／lang／default；
+瀏覽器若未提供 voice 清單，會明確保存 `unresolved_default`，不假稱已解析聲音。
 
 ### 11.4 舊七項多數缺少完整裝置資訊
 
@@ -395,10 +416,10 @@ Repository 中沒有看到 Firestore Security Rules 檔案。現有匿名讀寫�
 
 ### P1｜補強資料有效性，避免錯用舊結果
 
-- [ ] 為 catalog 與 result 加入 exact utterance／TTS input fingerprint 或 revision。
-- [ ] 只有 fingerprint 相符的 result 才能產生「念對免加註／念錯需處理」結論。
-- [ ] 文字或 `ttsSafe()` 輸出改動時，自動顯示「待複驗」。
-- [ ] `npm run tts:audit:pull` 明確列出 stale／missing／orphan records。
+- [x] 為 catalog 與 result 加入 exact utterance／TTS input fingerprint 或 revision。
+- [x] 只有 fingerprint 相符的 result 才能產生「念對免加註／念錯需處理」結論。
+- [x] 文字或 `ttsSafe()` 輸出改動時，自動顯示「待複驗」。
+- [x] `npm run tts:audit:pull` 明確列出 stale／missing／orphan records。
 
 ### P1｜把第一、二篇正式遷入中央流程
 
@@ -411,9 +432,9 @@ Repository 中沒有看到 Firestore Security Rules 檔案。現有匿名讀寫�
 
 ### P1｜補齊實際聲音環境
 
-- [ ] 決定是鎖定一個明確的 zh-TW voice，或繼續使用系統預設。
-- [ ] 正式 App 與實聽台共用同一語音選擇函式。
-- [ ] result 保存實際 voice name、voiceURI、lang 與是否 default。
+- [x] 決定以確定性規則選取瀏覽器提供的 zh-TW voice；無清單時明確標為未解析系統預設。
+- [x] 正式 App 與實聽台共用同一語音選擇函式。
+- [x] result 保存實際 voice name、voiceURI、lang 與是否 default。
 - [ ] 用孩子的真實裝置重測第三篇既有七項，取代／補充占位環境。
 
 ### P2｜提升中央庫可靠性

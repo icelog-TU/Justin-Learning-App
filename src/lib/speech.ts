@@ -116,11 +116,61 @@ export function getTtsInput(text: string): string {
   return ttsSafe(text);
 }
 
+export type SelectedSpeechVoice = {
+  name: string;
+  voiceURI: string;
+  lang: string;
+  default: boolean;
+  selection: 'explicit' | 'unresolved_default';
+};
+
+export function selectZhTwVoice(
+  voices: SpeechSynthesisVoice[] = typeof window !== 'undefined' && window.speechSynthesis
+    ? window.speechSynthesis.getVoices()
+    : [],
+): SpeechSynthesisVoice | null {
+  return (
+    voices
+      .filter((voice) => voice.lang.toLowerCase() === 'zh-tw')
+      .sort(
+        (a, b) =>
+          Number(b.default) - Number(a.default) ||
+          Number(b.localService) - Number(a.localService) ||
+          a.name.localeCompare(b.name, 'zh-TW') ||
+          a.voiceURI.localeCompare(b.voiceURI),
+      )[0] ?? null
+  );
+}
+
+export function getSelectedSpeechVoiceDetails(
+  voices?: SpeechSynthesisVoice[],
+): SelectedSpeechVoice {
+  const voice = selectZhTwVoice(voices);
+  if (!voice) {
+    return {
+      name: '系統預設聲音（瀏覽器未提供實際名稱）',
+      voiceURI: '',
+      lang: 'zh-TW',
+      default: true,
+      selection: 'unresolved_default',
+    };
+  }
+  return {
+    name: voice.name,
+    voiceURI: voice.voiceURI,
+    lang: voice.lang,
+    default: voice.default,
+    selection: 'explicit',
+  };
+}
+
 function queueSpeech(texts: string[], onDone?: () => void) {
+  const selectedVoice = selectZhTwVoice();
   texts.map(ttsSafe).forEach((text, i) => {
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = 'zh-TW';
     utterance.rate = 0.95;
+    if (selectedVoice) utterance.voice = selectedVoice;
     if (i === texts.length - 1 && onDone) utterance.onend = onDone;
     window.speechSynthesis.speak(utterance);
   });

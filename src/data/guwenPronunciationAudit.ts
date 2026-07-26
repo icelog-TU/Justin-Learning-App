@@ -1,3 +1,9 @@
+import { getTtsInput } from '../lib/speech';
+import {
+  buildTargetFingerprint,
+  buildUtteranceFingerprint,
+} from '../lib/ttsAuditFingerprint';
+
 export type PronunciationAuditStatus = 'pending' | 'correct' | 'incorrect';
 
 export type PronunciationTarget = {
@@ -24,11 +30,38 @@ export type PronunciationAuditCatalogItem = {
   speechUnitId: string;
   source: string;
   text: string;
+  displayText: string;
+  ttsInput: string;
+  auditRevision: number;
+  targetFingerprint: string;
+  utteranceFingerprint: string;
   target: string;
   intendedReading: string;
   targets: PronunciationTarget[];
   initialVerifications: PronunciationVerification[];
 };
+
+type PronunciationAuditCatalogSource = Omit<
+  PronunciationAuditCatalogItem,
+  'displayText' | 'ttsInput' | 'targetFingerprint' | 'utteranceFingerprint'
+>;
+
+function defineCatalogItem(item: PronunciationAuditCatalogSource): PronunciationAuditCatalogItem {
+  const displayText = item.text;
+  const ttsInput = getTtsInput(displayText);
+  return {
+    ...item,
+    displayText,
+    ttsInput,
+    targetFingerprint: buildTargetFingerprint(item.targets),
+    utteranceFingerprint: buildUtteranceFingerprint({
+      displayText,
+      ttsInput,
+      targets: item.targets,
+      auditRevision: item.auditRevision,
+    }),
+  };
+}
 
 const USER_CONFIRMED_CORRECT: PronunciationVerification[] = [
   {
@@ -47,69 +80,74 @@ const USER_CONFIRMED_CORRECT: PronunciationVerification[] = [
  * 瀏覽器 localStorage。
  */
 export const GUWEN_PRONUNCIATION_AUDIT_CATALOG: PronunciationAuditCatalogItem[] = [
-  {
+  defineCatalogItem({
     id: 'kezhou-q3-nan',
     lessonId: '03-kezhouqiujian',
     lessonNumber: 3,
     lessonTitle: '刻舟求劍',
     questionId: 'question-3',
     speechUnitId: 'q3-intro-nan',
+    auditRevision: 1,
     source: '《刻舟求劍》第三題｜App 引導語',
     text: '下一句出現了其劍，這真的很難懂：它該怎麼接回前面的故事？',
     target: '難',
     intendedReading: '南（ㄋㄢˊ）',
     targets: [{ character: '難', occurrence: 1, zhuyin: 'ㄋㄢˊ', homophoneCue: '南', usage: '不容易' }],
     initialVerifications: USER_CONFIRMED_CORRECT,
-  },
-  {
+  }),
+  defineCatalogItem({
     id: 'kezhou-q3-yi-classical',
     lessonId: '03-kezhouqiujian',
     lessonNumber: 3,
     lessonTitle: '刻舟求劍',
     questionId: 'question-3',
     speechUnitId: 'q3-clue-1-classical',
+    auditRevision: 1,
     source: '《刻舟求劍》第三題｜古文線索一',
     text: '楊布換黑衣而歸，其狗不知而吠之。',
     target: '衣',
     intendedReading: '一（ㄧ）',
     targets: [{ character: '衣', occurrence: 1, zhuyin: 'ㄧ', homophoneCue: '一', usage: '衣服' }],
     initialVerifications: USER_CONFIRMED_CORRECT,
-  },
-  {
+  }),
+  defineCatalogItem({
     id: 'kezhou-q3-yi-modern',
     lessonId: '03-kezhouqiujian',
     lessonNumber: 3,
     lessonTitle: '刻舟求劍',
     questionId: 'question-3',
     speechUnitId: 'q3-clue-1-unlocked',
+    auditRevision: 1,
     source: '《刻舟求劍》第三題｜線索一已破解白話',
     text: '楊布換穿黑衣回家，其狗沒有認出自己的主人，就向他叫。',
     target: '衣',
     intendedReading: '一（ㄧ）',
     targets: [{ character: '衣', occurrence: 1, zhuyin: 'ㄧ', homophoneCue: '一', usage: '衣服' }],
     initialVerifications: USER_CONFIRMED_CORRECT,
-  },
-  {
+  }),
+  defineCatalogItem({
     id: 'kezhou-q3-yu',
     lessonId: '03-kezhouqiujian',
     lessonNumber: 3,
     lessonTitle: '刻舟求劍',
     questionId: 'question-3',
     speechUnitId: 'q3-clue-2-classical',
+    auditRevision: 1,
     source: '《刻舟求劍》第三題｜古文線索二',
     text: '楚人賣盾與矛，又譽其矛曰：「吾矛之利，於物無不陷也。」',
     target: '與',
     intendedReading: '雨（ㄩˇ）',
     targets: [{ character: '與', occurrence: 1, zhuyin: 'ㄩˇ', homophoneCue: '雨', usage: '和' }],
     initialVerifications: USER_CONFIRMED_CORRECT,
-  },
-  {
+  }),
+  defineCatalogItem({
     id: 'kezhou-q3-jia',
     lessonId: '03-kezhouqiujian',
     lessonNumber: 3,
     lessonTitle: '刻舟求劍',
     questionId: 'question-3',
     speechUnitId: 'q3-question-jia',
+    auditRevision: 1,
     source: '《刻舟求劍》第三題｜推理提問',
     text: '古文破譯家，哪一個假說能同時解開兩條線索中的其？',
     target: '假',
@@ -118,28 +156,30 @@ export const GUWEN_PRONUNCIATION_AUDIT_CATALOG: PronunciationAuditCatalogItem[] 
       { character: '假', occurrence: 1, zhuyin: 'ㄐㄧㄚˇ', homophoneCue: '甲', usage: '根據證據提出的解法' },
     ],
     initialVerifications: USER_CONFIRMED_CORRECT,
-  },
-  {
+  }),
+  defineCatalogItem({
     id: 'kezhou-q4-zhong-original',
     lessonId: '03-kezhouqiujian',
     lessonNumber: 3,
     lessonTitle: '刻舟求劍',
     questionId: 'question-4',
     speechUnitId: 'q4-target-sentence',
+    auditRevision: 1,
     source: '《刻舟求劍》第四題｜待破解目標句',
     text: '其劍自舟中墜於水。',
     target: '中',
     intendedReading: '鐘（ㄓㄨㄥ）',
     targets: [{ character: '中', occurrence: 1, zhuyin: 'ㄓㄨㄥ', homophoneCue: '鐘', usage: '裡面' }],
     initialVerifications: USER_CONFIRMED_CORRECT,
-  },
-  {
+  }),
+  defineCatalogItem({
     id: 'kezhou-q4-zhong-di',
     lessonId: '03-kezhouqiujian',
     lessonNumber: 3,
     lessonTitle: '刻舟求劍',
     questionId: 'question-4',
     speechUnitId: 'q4-clue-1-classical',
+    auditRevision: 1,
     source: '《刻舟求劍》第四題｜古文線索一',
     text: '椀自手中墜地。',
     target: '中、地',
@@ -149,5 +189,5 @@ export const GUWEN_PRONUNCIATION_AUDIT_CATALOG: PronunciationAuditCatalogItem[] 
       { character: '地', occurrence: 1, zhuyin: 'ㄉㄧˋ', homophoneCue: '弟', usage: '地面' },
     ],
     initialVerifications: USER_CONFIRMED_CORRECT,
-  },
+  }),
 ];

@@ -4,9 +4,19 @@ import {
   type PronunciationAuditCatalogItem,
   type PronunciationAuditStatus,
 } from '../data/guwenPronunciationAudit';
-import { cancelSpeech, getTtsInput, speak } from '../lib/speech';
+import {
+  cancelSpeech,
+  getSelectedSpeechVoiceDetails,
+  getTtsInput,
+  speak,
+} from '../lib/speech';
+import {
+  buildTargetFingerprint,
+  buildUtteranceFingerprint,
+} from '../lib/ttsAuditFingerprint';
 import {
   fetchCentralAuditDatabase,
+  latestCurrentAuditResult,
   submitAuditResults,
   type AuditEnvironment,
   type CloudAuditDatabase,
@@ -22,7 +32,7 @@ type AuditItem = PronunciationAuditCatalogItem & {
 };
 
 type StoredAudit = {
-  version: 2;
+  version: 3;
   items: AuditItem[];
 };
 
@@ -61,16 +71,21 @@ function cloneCatalog(): AuditItem[] {
 function legacyItemToAudit(item: Partial<AuditItem> & { id: string; source: string; text: string }): AuditItem {
   const catalogItem = GUWEN_PRONUNCIATION_AUDIT_CATALOG.find((candidate) => candidate.id === item.id);
   if (catalogItem) {
+    const fingerprintMatches = item.utteranceFingerprint === catalogItem.utteranceFingerprint;
     return {
       ...catalogItem,
-      status: item.status ?? 'pending',
-      note: item.note ?? '',
-      checkedAt: item.checkedAt,
-      cloudSyncedAt: item.cloudSyncedAt,
-      cloudReceiptId: item.cloudReceiptId,
+      status: fingerprintMatches ? (item.status ?? 'pending') : 'pending',
+      note: fingerprintMatches ? (item.note ?? '') : '',
+      checkedAt: fingerprintMatches ? item.checkedAt : undefined,
+      cloudSyncedAt: fingerprintMatches ? item.cloudSyncedAt : undefined,
+      cloudReceiptId: fingerprintMatches ? item.cloudReceiptId : undefined,
     };
   }
 
+  const targets = item.targets ?? [];
+  const auditRevision = item.auditRevision ?? 1;
+  const displayText = item.displayText ?? item.text;
+  const ttsInput = getTtsInput(displayText);
   return {
     id: item.id,
     lessonId: item.lessonId ?? 'unassigned',
@@ -80,6 +95,16 @@ function legacyItemToAudit(item: Partial<AuditItem> & { id: string; source: stri
     speechUnitId: item.speechUnitId ?? item.id,
     source: item.source,
     text: item.text,
+    displayText,
+    ttsInput,
+    auditRevision,
+    targetFingerprint: buildTargetFingerprint(targets),
+    utteranceFingerprint: buildUtteranceFingerprint({
+      displayText,
+      ttsInput,
+      targets,
+      auditRevision,
+    }),
     target: item.target ?? '',
     intendedReading: item.intendedReading ?? '',
     targets: item.targets ?? [],
@@ -114,10 +139,9 @@ function formatStatus(status: PronunciationAuditStatus): string {
   return '待實聽';
 }
 
-function latestResult(database: CloudAuditDatabase | null, itemId: string): CloudAuditResult | null {
-  if (!database) return null;
-  const results = database.lessons.flatMap((lesson) => lesson.items[itemId]?.results ?? []);
-  return results.sort((a, b) => b.receivedAt - a.receivedAt)[0] ?? null;
+function allResults(database: CloudAuditDatabase | null, itemId: string): CloudAuditResult[] {
+  if (!database) return [];
+  return database.lessons.flatMap((lesson) => lesson.items[itemId]?.results ?? []);
 }
 
 export default function TtsAuditPage() {
@@ -138,6 +162,7 @@ export default function TtsAuditPage() {
     () => voices.filter((voice) => voice.lang.toLowerCase() === 'zh-tw'),
     [voices],
   );
+  const selectedVoice = useMemo(() => getSelectedSpeechVoiceDetails(voices), [voices]);
 
   const environment = useCallback(
     (): AuditEnvironment => ({
@@ -145,8 +170,9 @@ export default function TtsAuditPage() {
       userAgent: navigator.userAgent,
       language: navigator.language,
       zhTwVoiceNames: zhTwVoices.map((voice) => voice.name),
+      selectedVoice,
     }),
-    [zhTwVoices],
+    [selectedVoice, zhTwVoices],
   );
 
   const refreshDatabase = useCallback(async () => {
@@ -162,7 +188,7 @@ export default function TtsAuditPage() {
   }, []);
 
   useEffect(() => {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: 2, items } satisfies StoredAudit));
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: 3, items } satisfies StoredAudit));
   }, [items]);
 
   useEffect(() => {
@@ -193,18 +219,32 @@ export default function TtsAuditPage() {
   );
 
   const centralCounts = useMemo(() => {
-    if (!database) return { correct: 0, incorrect: 0, items: 0 };
-    const cloudItems = database.lessons.flatMap((lesson) => Object.values(lesson.items));
-    return cloudItems.reduce(
+    if (!database) return { correct: 0, incorrect: 0, stale: 0, missing: 0, orphan: 0, items: 0 };
+    const cloudItems = new Map(
+      database.lessons.flatMap((lesson) =>
+        Object.values(lesson.items).map((item) => [item.id, item] as const),
+      ),
+    );
+    const catalogIds = new Set(GUWEN_PRONUNCIATION_AUDIT_CATALOG.map((item) => item.id));
+    const result = GUWEN_PRONUNCIATION_AUDIT_CATALOG.reduce(
       (result, item) => {
-        const latest = [...item.results].sort((a, b) => b.receivedAt - a.receivedAt)[0];
+        const cloudItem = cloudItems.get(item.id);
+        if (!cloudItem) {
+          result.missing += 1;
+          result.items += 1;
+          return result;
+        }
+        const latest = latestCurrentAuditResult(item, cloudItem.results);
         if (latest?.status === 'correct') result.correct += 1;
-        if (latest?.status === 'incorrect') result.incorrect += 1;
+        else if (latest?.status === 'incorrect') result.incorrect += 1;
+        else if (cloudItem.results.length) result.stale += 1;
         result.items += 1;
         return result;
       },
-      { correct: 0, incorrect: 0, items: 0 },
+      { correct: 0, incorrect: 0, stale: 0, missing: 0, orphan: 0, items: 0 },
     );
+    result.orphan = [...cloudItems.keys()].filter((id) => !catalogIds.has(id)).length;
+    return result;
   }, [database]);
 
   const updateItem = (id: string, patch: Partial<AuditItem>) => {
@@ -215,7 +255,14 @@ export default function TtsAuditPage() {
     async (testedItems: AuditItem[]) => {
       const eligible = testedItems.filter(
         (item): item is AuditItem & { status: 'correct' | 'incorrect'; checkedAt: string } =>
-          item.status !== 'pending' && Boolean(item.checkedAt),
+          item.lessonId !== 'unassigned' &&
+          GUWEN_PRONUNCIATION_AUDIT_CATALOG.some(
+            (catalogItem) =>
+              catalogItem.id === item.id &&
+              catalogItem.utteranceFingerprint === item.utteranceFingerprint,
+          ) &&
+          item.status !== 'pending' &&
+          Boolean(item.checkedAt),
       );
       if (!eligible.length) return;
 
@@ -227,7 +274,10 @@ export default function TtsAuditPage() {
       try {
         const receipt = await submitAuditResults(
           eligible.map((item) => ({
-            item,
+            item:
+              GUWEN_PRONUNCIATION_AUDIT_CATALOG.find(
+                (catalogItem) => catalogItem.id === item.id,
+              ) ?? item,
             status: item.status,
             note: item.note,
             checkedAt: item.checkedAt,
@@ -282,8 +332,12 @@ export default function TtsAuditPage() {
       cloudReceiptId: undefined,
     };
     updateItem(id, updated);
-    setSyncStates((current) => ({ ...current, [id]: status === 'pending' ? 'idle' : 'saving' }));
-    if (status !== 'pending') void syncTestedItems([updated]);
+    const canSync = updated.lessonId !== 'unassigned';
+    setSyncStates((current) => ({
+      ...current,
+      [id]: status === 'pending' || !canSync ? 'idle' : 'saving',
+    }));
+    if (status !== 'pending' && canSync) void syncTestedItems([updated]);
   };
 
   const playOne = (item: AuditItem, onEnd?: () => void) => {
@@ -326,6 +380,9 @@ export default function TtsAuditPage() {
       ...current,
       ...lines.map((text, index): AuditItem => {
         const id = `${createId()}-${index}`;
+        const targets: PronunciationAuditCatalogItem['targets'] = [];
+        const ttsInput = getTtsInput(text);
+        const auditRevision = 1;
         return {
           id,
           lessonId: 'unassigned',
@@ -335,9 +392,19 @@ export default function TtsAuditPage() {
           speechUnitId: id,
           source: '自行新增',
           text,
+          displayText: text,
+          ttsInput,
+          auditRevision,
+          targetFingerprint: buildTargetFingerprint(targets),
+          utteranceFingerprint: buildUtteranceFingerprint({
+            displayText: text,
+            ttsInput,
+            targets,
+            auditRevision,
+          }),
           target: '',
           intendedReading: '',
-          targets: [],
+          targets,
           initialVerifications: [],
           status: 'pending',
           note: '',
@@ -425,8 +492,9 @@ export default function TtsAuditPage() {
         {databaseState === 'ready' && (
           <>
             <p className="mt-1">
-              已連線｜共 {centralCounts.items} 個語音單元｜目前念對 {centralCounts.correct}｜念錯{' '}
-              {centralCounts.incorrect}
+              已連線｜正式候選 {centralCounts.items}｜有效念對 {centralCounts.correct}｜有效念錯{' '}
+              {centralCounts.incorrect}｜待複驗 {centralCounts.stale}｜中央缺少 {centralCounts.missing}
+              {centralCounts.orphan > 0 ? `｜孤兒紀錄 ${centralCounts.orphan}` : ''}
             </p>
             {lastReceipt && <p className="mt-1 break-all text-xs">本次回傳編號：{lastReceipt}</p>}
             {database && database.lessons.length > 0 && (
@@ -438,18 +506,26 @@ export default function TtsAuditPage() {
                     .sort((a, b) => a.lessonNumber - b.lessonNumber)
                     .map((lesson) => {
                       const lessonItems = Object.values(lesson.items);
-                      const correct = lessonItems.filter((item) => {
-                        const latest = [...item.results].sort((a, b) => b.receivedAt - a.receivedAt)[0];
-                        return latest?.status === 'correct';
-                      }).length;
-                      const incorrect = lessonItems.filter((item) => {
-                        const latest = [...item.results].sort((a, b) => b.receivedAt - a.receivedAt)[0];
-                        return latest?.status === 'incorrect';
+                      const lessonCatalog = GUWEN_PRONUNCIATION_AUDIT_CATALOG.filter(
+                        (item) => item.lessonId === lesson.lessonId,
+                      );
+                      const effective = lessonCatalog.map((item) => {
+                        const cloudItem = lesson.items[item.id];
+                        return cloudItem ? latestCurrentAuditResult(item, cloudItem.results) : null;
+                      });
+                      const correct = effective.filter((result) => result?.status === 'correct').length;
+                      const incorrect = effective.filter((result) => result?.status === 'incorrect').length;
+                      const stale = lessonCatalog.filter((item) => {
+                        const cloudItem = lesson.items[item.id];
+                        return (
+                          Boolean(cloudItem?.results.length) &&
+                          !latestCurrentAuditResult(item, cloudItem.results)
+                        );
                       }).length;
                       return (
                         <p key={lesson.lessonId} className="text-xs">
                           第 {lesson.lessonNumber} 篇《{lesson.lessonTitle}》：{lessonItems.length} 個語音單元；
-                          念對 {correct}，念錯 {incorrect}
+                          有效念對 {correct}，有效念錯 {incorrect}，待複驗 {stale}
                         </p>
                       );
                     })}
@@ -470,7 +546,12 @@ export default function TtsAuditPage() {
 
       <section className="rounded-2xl border border-teal-100 bg-teal-50 p-4 text-sm text-teal-900">
         <p className="font-bold">目前語音環境</p>
-        <p className="mt-1">語言：zh-TW｜聲音：由系統自動選擇，與正式 App 相同</p>
+        <p className="mt-1">
+          語言：zh-TW｜實際選擇：
+          {selectedVoice.selection === 'explicit'
+            ? selectedVoice.name
+            : '瀏覽器未提供名稱，使用未解析的系統預設'}
+        </p>
         <p className="mt-1 break-words text-xs text-teal-700">
           這台裝置可見的臺灣中文聲音：
           {zhTwVoices.length ? zhTwVoices.map((voice) => voice.name).join('、') : '尚未讀取到名稱'}
@@ -527,7 +608,9 @@ export default function TtsAuditPage() {
 
       <section className="space-y-3">
         {items.map((item, index) => {
-          const central = latestResult(database, item.id);
+          const centralResults = allResults(database, item.id);
+          const central = latestCurrentAuditResult(item, centralResults);
+          const hasStaleCentralResult = !central && centralResults.length > 0;
           const syncState = syncStates[item.id] ?? (item.cloudSyncedAt ? 'saved' : 'idle');
           return (
             <article
@@ -559,8 +642,9 @@ export default function TtsAuditPage() {
                     type="text"
                     value={item.target}
                     onChange={(event) => updateItem(item.id, { target: event.target.value })}
+                    readOnly={item.lessonId !== 'unassigned'}
                     placeholder="例如：中"
-                    className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm font-normal text-slate-800 outline-none focus:border-teal-400"
+                    className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm font-normal text-slate-800 outline-none read-only:bg-slate-50 focus:border-teal-400"
                   />
                 </label>
                 <label className="text-xs font-semibold text-slate-600">
@@ -569,8 +653,9 @@ export default function TtsAuditPage() {
                     type="text"
                     value={item.intendedReading}
                     onChange={(event) => updateItem(item.id, { intendedReading: event.target.value })}
+                    readOnly={item.lessonId !== 'unassigned'}
                     placeholder="例如：鐘（ㄓㄨㄥ）"
-                    className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm font-normal text-slate-800 outline-none focus:border-teal-400"
+                    className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm font-normal text-slate-800 outline-none read-only:bg-slate-50 focus:border-teal-400"
                   />
                 </label>
               </div>
@@ -604,8 +689,22 @@ export default function TtsAuditPage() {
                 {syncState === 'saving' && '正在回傳中央資料庫……'}
                 {syncState === 'saved' && '已回傳中央資料庫'}
                 {syncState === 'error' && '回傳失敗；可再點一次結果或使用「重新同步全部結果」'}
-                {syncState === 'idle' && central && `中央最新紀錄：${formatStatus(central.status)}`}
-                {syncState === 'idle' && !central && '尚無中央紀錄'}
+                {syncState === 'idle' &&
+                  item.lessonId === 'unassigned' &&
+                  '待分類句只保存在本機；加入正式候選檔後才可回傳'}
+                {syncState === 'idle' &&
+                  item.lessonId !== 'unassigned' &&
+                  central &&
+                  `中央有效紀錄：${formatStatus(central.status)}`}
+                {syncState === 'idle' &&
+                  item.lessonId !== 'unassigned' &&
+                  hasStaleCentralResult &&
+                  '中央只有舊版本結果；文字、TTS 輸入或目標位置已無法核對，待複驗'}
+                {syncState === 'idle' &&
+                  item.lessonId !== 'unassigned' &&
+                  !central &&
+                  !hasStaleCentralResult &&
+                  '尚無中央紀錄'}
               </p>
 
               <label className="mt-3 block text-xs font-semibold text-slate-600">
@@ -621,7 +720,12 @@ export default function TtsAuditPage() {
 
               <details className="mt-3 text-xs text-slate-500">
                 <summary className="cursor-pointer font-semibold">查看實際送入 TTS 的文字</summary>
-                <p className="mt-2 break-words rounded-lg bg-slate-50 p-2">{getTtsInput(item.text)}</p>
+                <div className="mt-2 space-y-1 break-words rounded-lg bg-slate-50 p-2">
+                  <p>{item.ttsInput}</p>
+                  <p className="font-mono text-[10px] text-slate-400">
+                    指紋：{item.utteranceFingerprint}
+                  </p>
+                </div>
               </details>
 
               <button
