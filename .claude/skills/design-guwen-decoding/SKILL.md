@@ -43,6 +43,10 @@ Never make the primary task:
 - infer from one clue when two short, independent clues are available;
 - explain all possible meanings of a character before resolving the current sentence.
 
+## Pronunciation workflow boundary
+
+Starting with lesson 4, curriculum-design work only marks which fields are playable and which are display-only. Do not build or extend a per-question polyphonic-character table, pre-add pronunciation cues, or upload partial audit candidates while the lesson is still being written or reviewed. After the complete lesson is approved, the separate formal audit workflow extracts the exact playable whitelist, finds every polyphonic character, deduplicates pronunciation groups, and sends the smallest representative batch for the user's real-device listening. Existing lesson 1–3 tables remain untouched historical records and are not a template for later lessons.
+
 ## Required workflow
 
 ### 1. Establish the original text
