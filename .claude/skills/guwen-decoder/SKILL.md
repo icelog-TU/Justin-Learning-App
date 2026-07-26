@@ -134,6 +134,7 @@ The user reviewed the first text after building it and judged several things ins
 AI is never the teacher handing over an answer — it's a research assistant supplying **corpus evidence** the child compares against. Every design decision in this feature gets checked against one question: *does this make the child do the reasoning, or does it do the reasoning for them?* If a UI element reveals the answer before the child has engaged with evidence, it's wrong, no matter how polished it looks.
 
 Concretely this means:
+- Child-facing copy must preserve a **specialist being asked for help** relationship. The AI first says exactly what it still cannot understand after finding the clues, then asks the child—as the 古文破譯家—to judge, trace, or reconstruct it. Do not write the AI as a teacher, commander, or headquarters assigning a quiz; mechanically adding `請` before an instruction is not enough. Opening copy must not say `新任務來了`; it should bring an unread text to the child's expertise. The entry button remains the formal `接受破譯任務`, because a specialist can accept a commission without becoming subordinate to the AI.
 - Modern-language translation (`modernTranslation`) is revealed **only after** every word is decoded — it's the reward for solving the puzzle, not the entry point.
 - Explanations name the plausible-but-wrong meanings too, and argue for the right one from context — not "here's the definition."
 - A puzzle never opens by stating the character's meaning. It opens with evidence to compare.
