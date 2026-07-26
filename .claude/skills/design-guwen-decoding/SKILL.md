@@ -94,6 +94,8 @@ Provide three options because the app requires a closed response. Design them as
 
 Vary the correct-answer position. Do not make incorrect options silly.
 
+Before submitting a new question, write out the current lesson's full correct-position sequence and check it as a whole. Do not habitually place the answer first, repeat one position for a long run, or create a predictable odd/even, rotation, or ascending pattern. After reordering options, update the answer number, retry hint, per-option explanation, implementation data, tests, and unlock conditions together.
+
 ### 6. Explain through evidence
 
 Write the explanation in this order:
@@ -154,6 +156,7 @@ Do not prepare implementation code while core educational content is still await
 - Let difficulty come from reasoning, not from long instructions or obscure clue sentences.
 - Never claim the AI already knows the answer while role-playing uncertainty. Say that it found clues and needs the child to compare them.
 - Keep punctuation and segmentation analysis out of the App-facing content unless explicitly requested.
+- For a non-target polyphonic character, use the child-facing form `度，當作「測量」時，念作墮（ㄉㄨㄛˋ）。`; when the character or phrase is the unresolved target, use only `度，這裡念作墮（ㄉㄨㄛˋ）。` before the answer. Keep Zhuyin visible, but prepare TTS text that removes the parenthesized Zhuyin and reads only the Chinese-character portion of the cue.
 - **Never pre-reveal the answer shape before the question.** This has recurred three times across this lesson, so treat it as a standing rule, not a one-off fix:
   - **Intro/prompt text must stay neutral.** Ask what a word/phrase or action *is*, never phrase it as a yes/no or either/or check against specific candidate readings. Real examples the user caught: 足跌's intro asked "這表示他已經整個摔倒了嗎？" (does this mean he's already fully fallen down?) — essentially distractor option 1 read aloud as yes/no; de_huo's intro offered "這是得到一樣東西，還是危險之後出現的新結果？" — directly presenting two of the three options as a binary choice; chi_shi_ji_weng's intro asked "到底是拿石頭敲甕，還是拿甕敲石頭？" — stating the correct reading and its reverse-direction distractor as the only two candidates, before the child had seen either clue. All three were fixed to a neutral "這是甚麼意思呢？" / "這到底是什麼動作？" form. When drafting or reviewing an intro line, check it doesn't echo the wording of *any* option (correct or distractor); if it does, generalize it.
   - **Never render a pre-answer breakdown table.** chi_shi_ji_weng's source lesson included a "線索零件表" (clue breakdown: clue → tool used → target hit) positioned *before* the question — if shown to the child at that point it hands over exactly the relationship the question is testing. This app never encoded that table as its own rendered field; the same tool/target breakdown only appears inside `explanation`, which the UI already gates to after a correct answer. Keep it that way: any "here's how the evidence breaks down" table belongs in `explanation` (or a post-solve review), never in `intro`/`clues`/`question`.
