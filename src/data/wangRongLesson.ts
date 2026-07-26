@@ -865,6 +865,5 @@ export const wangRongLesson: GuwenLesson = {
   },
   "badgeName": "王戎不取道旁李破譯徽章",
   "badgeClaimLabel": "收集破譯徽章",
-  "badgeClaimMode": "scroll-end",
   "preserveAuthoredOptionOrder": true
 };
