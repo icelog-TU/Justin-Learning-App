@@ -27,8 +27,8 @@ export const simaGuangLesson: GuwenLesson = {
     '我找到一篇古文。開頭是一群孩子在一起，後來有個孩子突然遇到了危險。可是有些古老的字詞，我還看不明白。\n\n我找到了幾條其他古文線索，但要怎麼解讀，得請你這位專家來判斷。你願意幫我把事情經過一點一點讀回來嗎？',
   introPronunciationCues: [
     {
-      displayText: '得，在「得請」裡念作得要的得（ㄉㄟˇ）。',
-      speechText: '這裡的得，念作得要的得。',
+      displayText: '得，當作「必須要...」時，念作「ㄉㄟˇ」。',
+      speechText: '這個字，當作必須要的意思時，念第四聲。',
     },
   ],
   acceptMissionLabel: '接受破譯任務',
