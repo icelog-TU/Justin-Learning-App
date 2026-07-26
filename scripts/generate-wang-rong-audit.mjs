@@ -310,6 +310,43 @@ while (uncoveredGroupKeys.size > 0) {
   selectedUnits.push({ ...chosen.unit, targets: retainedTargets });
 }
 
+// 使用者在正式 App 回聽後確認：同為「年紀小」用法時，
+// 「少年時，嘗過一村院。」念對，但「陳涉少時，嘗與人傭耕。」念成三聲。
+// 這兩個 exact 語音單元不可繼續共用代表結果。
+const chenSheShaoShiUnit = exactTextUnits.find(
+  (unit) => unit.text === '陳涉少時，嘗與人傭耕。',
+);
+if (!chenSheShaoShiUnit) {
+  throw new Error('找不到「陳涉少時，嘗與人傭耕。」正式語音單元');
+}
+const chenSheShaoTarget = chenSheShaoShiUnit.targets.find(
+  (target) => target.character === '少' && target.zhuyin === 'ㄕㄠˋ',
+);
+if (!chenSheShaoTarget) {
+  throw new Error('找不到「陳涉少時」的少（ㄕㄠˋ）target');
+}
+const {
+  groupTtsBehavior: _chenSheGroupTtsBehavior,
+  ...chenSheBaseCatalogTarget
+} = chenSheShaoTarget;
+const chenSheCatalogTarget = {
+  ...chenSheBaseCatalogTarget,
+  homophoneCue: '紹',
+  usage: '年輕',
+};
+selectedUnits.push({
+  ...chenSheShaoShiUnit,
+  targets: [chenSheCatalogTarget],
+  initialVerifications: [
+    {
+      status: 'incorrect',
+      verifiedDate: '2026-07-26',
+      environmentLabel: '使用者於正式 App 的實際裝置回聽確認',
+      evidence: '使用者回聽「陳涉少時，嘗與人傭耕。」後，確認「少」被念成三聲，應念四聲。',
+    },
+  ],
+});
+
 selectedUnits.sort((left, right) => left.id.localeCompare(right.id));
 
 const emittedRows = selectedUnits
@@ -327,6 +364,7 @@ import {
 import type {
   PronunciationAuditCatalogItem,
   PronunciationTarget,
+  PronunciationVerification,
 } from './guwenPronunciationAudit';
 
 type WangRongAuditRow = {
@@ -336,6 +374,7 @@ type WangRongAuditRow = {
   source: string;
   text: string;
   targets: PronunciationTarget[];
+  initialVerifications?: PronunciationVerification[];
 };
 
 const rows: WangRongAuditRow[] = [
@@ -368,7 +407,7 @@ export const WANG_RONG_PRONUNCIATION_AUDIT_CATALOG: PronunciationAuditCatalogIte
       utteranceFingerprint: buildUtteranceFingerprint(fingerprintInput),
       target,
       intendedReading,
-      initialVerifications: [],
+      initialVerifications: row.initialVerifications ?? [],
     };
   });
 `;

@@ -43,7 +43,11 @@ export const wangRongLesson: GuwenLesson = {
           "text": "陳涉少時，嘗與人傭耕。",
           "highlight": "嘗",
           "unlockedMeaning": "陳涉年少時，【嘗】和別人一起耕田。",
-          "source": "真實古文線索（節錄）：司馬遷《史記．陳涉世家》。"
+          "source": "真實古文線索（節錄）：司馬遷《史記．陳涉世家》。",
+          "pronunciationCue": {
+            "displayText": "少，當作「年輕」時，念作紹（ㄕㄠˋ）。",
+            "speechText": "少，當作年輕時，念作紹。"
+          }
         },
         {
           "text": "少年時，嘗過一村院。",
