@@ -28,7 +28,7 @@ export const simaGuangLesson: GuwenLesson = {
   introPronunciationCues: [
     {
       displayText: '得，當作「必須要...」時，念作「ㄉㄟˇ」。',
-      speechText: '這個字，當作必須要的意思時，念第四聲。',
+      speechText: '這個字，當作必須要的意思時，念第三聲。',
     },
   ],
   acceptMissionLabel: '接受破譯任務',
