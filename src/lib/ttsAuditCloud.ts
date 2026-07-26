@@ -240,6 +240,13 @@ async function ensureCentralCatalog(): Promise<void> {
     const current = existing.data() as CloudLessonAudit;
     const items = { ...current.items };
     let changed = false;
+    const currentCatalogIds = new Set(catalogItems.map((item) => item.id));
+    Object.entries(items).forEach(([itemId, saved]) => {
+      if (!currentCatalogIds.has(itemId) && (saved.results?.length ?? 0) === 0) {
+        delete items[itemId];
+        changed = true;
+      }
+    });
     catalogItems.forEach((item) => {
       const saved = items[item.id];
       if (!saved) {

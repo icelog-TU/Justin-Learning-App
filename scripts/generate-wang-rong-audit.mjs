@@ -9,11 +9,26 @@ const polyphonicCharacters = new Set(
   [...'與看折著答少和過都還幾為卒數中重好只當供得便長處結會落行省'],
 );
 
-const includedHeading =
-  /任務開場|播放本篇原文|本輪處理句子|密碼鑰匙|畫面鑰匙|關係鑰匙|App 引導語|古文線索|仿古線索|混種古文線索|真實古文線索|線索一$|線索二$|已破解為|比較任務|重建任務|麻煩古文|選項$|答對回饋|答錯提示|詳解|放回|故事畫面|故事證據|證據邊界|已取得|本題取得|本篇已破解|待判斷|畫面初始|卷軸開場|古文原文|完整白話文|白話文證據邊界|App 顯示文案|完成訊息/;
-
-const excludedHeading =
-  /成人|學習目標|語音校對|來源核對|線索類型|選項位置|編輯|正解$|完成條件|解鎖條件|共同要求|修改索引|稽核|快速目錄|文件狀態|篇名與出處|^本篇原文$/;
+function isPlayableHeading(heading, part) {
+  if (part === 'opening') {
+    return heading.startsWith('任務開場') || heading === '播放本篇原文';
+  }
+  if (!part.startsWith('q')) return false;
+  return (
+    heading === '本輪處理句子' ||
+    heading === 'App 引導語' ||
+    /^(古文|仿古|混種古文|真實古文)?線索[一二]$/.test(heading) ||
+    heading === '已破解為' ||
+    heading === '比較任務' ||
+    heading === '重建任務' ||
+    heading.startsWith('麻煩古文破譯家') ||
+    heading === '選項' ||
+    heading.startsWith('答對回饋') ||
+    heading === '答錯提示' ||
+    heading.startsWith('畫面初始顯示順序') ||
+    heading.startsWith('待判斷的八張敘述')
+  );
+}
 
 function cleanMarkdown(text) {
   return text
@@ -53,7 +68,11 @@ function readingFor(character, text, characterIndex) {
     case '和':
       return known('ㄏㄜˊ', '河', '和、跟');
     case '過':
-      return known('ㄍㄨㄛˋ', '過年的過', '經過或表示動作已完成');
+      if (/經過|路過|嘗過/.test(around)) return known('ㄍㄨㄛˋ', '過年的過', '經過、路過');
+      if (/吃過|發生過|查過|摘過|去過/.test(around)) {
+        return known('ㄍㄨㄛˋ', '過年的過', '放在動作後表示已完成');
+      }
+      return known('ㄍㄨㄛˋ', '過年的過', '過去、經歷');
     case '都':
       return known('ㄉㄡ', '兜', '全部');
     case '還':
@@ -63,11 +82,13 @@ function readingFor(character, text, characterIndex) {
     case '為':
       return /為什麼|因為/.test(around)
         ? known('ㄨㄟˋ', '胃', '為什麼或因為')
-        : known('ㄨㄟˊ', '圍', '擔任、成為');
+        : known('ㄨㄟˊ', '圍', '認為、視為或成為');
     case '卒':
       return known('ㄗㄨˊ', '足', '去世');
     case '數':
-      return known('ㄕㄨˋ', '樹', '數量或好幾個');
+      return /數量|人數/.test(around)
+        ? known('ㄕㄨˋ', '樹', '數量')
+        : known('ㄕㄨˋ', '樹', '好幾個');
     case '中':
       return known('ㄓㄨㄥ', '鐘', '在範圍裡');
     case '重':
@@ -75,11 +96,16 @@ function readingFor(character, text, characterIndex) {
         ? known('ㄔㄨㄥˊ', '蟲', '重新組合或再次進行')
         : known('ㄓㄨㄥˋ', '中獎的中', '重量或重要');
     case '好':
-      return known('ㄏㄠˇ', '好人的好', '良好、味道好或完成妥當');
+      if (/好幾/.test(around)) return known('ㄏㄠˇ', '好人的好', '好幾個、相當多');
+      if (/好朋友|關係良好/.test(around)) return known('ㄏㄠˇ', '好人的好', '關係良好');
+      if (/好吃|味道好/.test(around)) return known('ㄏㄠˇ', '好人的好', '味道好');
+      return known('ㄏㄠˇ', '好人的好', '完成妥當或良好');
     case '只':
       return known('ㄓˇ', '紙', '僅僅、只有');
     case '當':
-      return known('ㄉㄤ', '噹', '當時、當作或應當');
+      if (/當時/.test(around)) return known('ㄉㄤ', '噹', '那個時間');
+      if (/當成|當作/.test(around)) return known('ㄉㄤ', '噹', '視為、當作');
+      return known('ㄉㄤ', '噹', '應當');
     case '供':
       return known('ㄍㄨㄥ', '公', '提供');
     case '得':
@@ -97,7 +123,9 @@ function readingFor(character, text, characterIndex) {
         ? known('ㄔㄨˇ', '楚', '處理、處置')
         : known('ㄔㄨˋ', '觸', '地方');
     case '結':
-      return known('ㄐㄧㄝˊ', '結果的結', '長出果實、結果或結論');
+      return /結果|結論/.test(around)
+        ? known('ㄐㄧㄝˊ', '結果的結', '結果、結論')
+        : known('ㄐㄧㄝˊ', '結果的結', '長出果實');
     case '會':
       return /一會/.test(around)
         ? known('ㄏㄨㄟˇ', '毀', '很短的一段時間')
@@ -113,6 +141,21 @@ function readingFor(character, text, characterIndex) {
     default:
       throw new Error(`沒有設定「${character}」的讀音`);
   }
+}
+
+function ttsBehaviorFor(character, text, characterIndex) {
+  const before = text[characterIndex - 1] ?? '';
+  const after = text.slice(characterIndex + 1);
+  if (character === '長' && (/[不苗生助]/.test(before) || /^[高得]/.test(after))) return '掌';
+  if (character === '得' && /^「?[鐘兔活履]/.test(after)) return '德';
+  if (character === '著' && /^[遠遊履]/.test(after)) return '濁';
+  if (character === '重' && before === '輕') return '仲';
+  if (character === '當' && (before === '相' && after.startsWith('於') || after.startsWith('作'))) {
+    return '蕩';
+  }
+  if (character === '行' && before === '進') return '形';
+  if (character === '為' && before === '以' && /^(神明|有神)/.test(after)) return '圍';
+  return '原字';
 }
 
 const speechUnits = [];
@@ -134,8 +177,8 @@ function addSpeechUnit(rawText, lineNumber) {
   const heading = currentHeading();
   if (
     !text ||
-    !includedHeading.test(heading) ||
-    excludedHeading.test(heading) ||
+    !isPlayableHeading(heading, lessonPart) ||
+    /念作[^。]*[（(][\u3105-\u3129]/.test(text) ||
     ![...text].some((character) => polyphonicCharacters.has(character))
   ) {
     return;
@@ -150,6 +193,7 @@ function addSpeechUnit(rawText, lineNumber) {
     targets.push({
       character,
       occurrence,
+      groupTtsBehavior: ttsBehaviorFor(character, text, characterIndex),
       ...readingFor(character, text, characterIndex),
     });
   });
@@ -227,7 +271,48 @@ for (let index = 0; index < lines.length; index += 1) {
 }
 flushParagraph();
 
-const emittedRows = speechUnits
+const exactTextUnits = [...new Map(speechUnits.map((unit) => [unit.text, unit])).values()];
+const pronunciationGroupKey = (target) =>
+  `${target.character}|${target.zhuyin}|${target.usage}|${target.groupTtsBehavior}`;
+const allGroupKeys = new Set(
+  exactTextUnits.flatMap((unit) => unit.targets.map(pronunciationGroupKey)),
+);
+const uncoveredGroupKeys = new Set(allGroupKeys);
+const selectedUnits = [];
+
+while (uncoveredGroupKeys.size > 0) {
+  const candidates = exactTextUnits
+    .map((unit) => {
+      const newTargets = unit.targets.filter((target) =>
+        uncoveredGroupKeys.has(pronunciationGroupKey(target)),
+      );
+      const newGroupCount = new Set(newTargets.map(pronunciationGroupKey)).size;
+      return { unit, newTargets, newGroupCount };
+    })
+    .filter((candidate) => candidate.newGroupCount > 0)
+    .sort(
+      (left, right) =>
+        right.newGroupCount - left.newGroupCount ||
+        left.unit.text.length - right.unit.text.length ||
+        left.unit.id.localeCompare(right.unit.id),
+    );
+  const chosen = candidates[0];
+  const retainedTargets = [];
+  const retainedKeys = new Set();
+  chosen.newTargets.forEach((target) => {
+    const key = pronunciationGroupKey(target);
+    if (retainedKeys.has(key)) return;
+    retainedKeys.add(key);
+    const { groupTtsBehavior: _groupTtsBehavior, ...catalogTarget } = target;
+    retainedTargets.push(catalogTarget);
+    uncoveredGroupKeys.delete(key);
+  });
+  selectedUnits.push({ ...chosen.unit, targets: retainedTargets });
+}
+
+selectedUnits.sort((left, right) => left.id.localeCompare(right.id));
+
+const emittedRows = selectedUnits
   .map((unit) => `  ${JSON.stringify(unit)},`)
   .join('\n');
 
@@ -289,8 +374,8 @@ export const WANG_RONG_PRONUNCIATION_AUDIT_CATALOG: PronunciationAuditCatalogIte
 `;
 
 fs.writeFileSync(outputPath, output, 'utf8');
-const targetCount = speechUnits.reduce((sum, unit) => sum + unit.targets.length, 0);
-const reportRows = speechUnits.map((unit, index) => {
+const targetCount = selectedUnits.reduce((sum, unit) => sum + unit.targets.length, 0);
+const reportRows = selectedUnits.map((unit, index) => {
   const targets = unit.targets
     .map(
       (target) =>
@@ -303,14 +388,22 @@ fs.writeFileSync(
   reportPath,
   `# 第一篇《王戎不取道旁李》多音字正式實聽第一階段清單
 
-> lessonId：\`wang-rong-bu-qu-dao-pang-li\`  
-> 教材主檔：\`lessons/01-guwen-wangrong-rewrite.md\`  
-> 完整語音單元：${speechUnits.length}  
-> target occurrence：${targetCount}  
+> lessonId：\`wang-rong-bu-qu-dao-pang-li\`
+>
+> 教材主檔：\`lessons/01-guwen-wangrong-rewrite.md\`
+>
+> 完整語音單元：${selectedUnits.length}
+>
+> target occurrence：${targetCount}
+>
+> 篩選方式：只保留任務開場、本篇／目標原文、App 引導語、古文線索、破解白話、任務／題目、選項、答對回饋與答錯提示；再依「字＋讀音＋用法」選一個代表語音單元。
+>
 > 狀態：全部待使用者本人在正式實聽台判定；本檔不記錄、也不預選任何「念對／念錯」。
 
 ${reportRows.join('\n\n')}
 `,
   'utf8',
 );
-console.log(`Generated ${speechUnits.length} Wang Rong audit units with ${targetCount} target occurrences.`);
+console.log(
+  `Scanned ${speechUnits.length} playable candidate units; selected ${selectedUnits.length} representative units covering ${targetCount} pronunciation groups.`,
+);

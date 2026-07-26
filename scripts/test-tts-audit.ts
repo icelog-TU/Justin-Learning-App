@@ -20,6 +20,9 @@ import {
 } from '../src/lib/ttsAuditDecision';
 
 const ids = new Set<string>();
+const wangRongGroupKeys = new Set<string>();
+let wangRongItemCount = 0;
+let wangRongTargetCount = 0;
 
 for (const item of GUWEN_PRONUNCIATION_AUDIT_CATALOG) {
   assert(!ids.has(item.id), `重複的正式候選 ID：${item.id}`);
@@ -44,7 +47,14 @@ for (const item of GUWEN_PRONUNCIATION_AUDIT_CATALOG) {
       target.occurrence >= 1 && target.occurrence <= occurrences,
       `${item.id} 找不到第 ${target.occurrence} 個「${target.character}」`,
     );
+    if (item.lessonId === 'wang-rong-bu-qu-dao-pang-li') {
+      const groupKey = `${target.character}|${target.zhuyin}|${target.usage}`;
+      assert(!wangRongGroupKeys.has(groupKey), `第一篇有重複讀音群組：${groupKey}`);
+      wangRongGroupKeys.add(groupKey);
+      wangRongTargetCount += 1;
+    }
   }
+  if (item.lessonId === 'wang-rong-bu-qu-dao-pang-li') wangRongItemCount += 1;
 
   const current = {
     auditRevision: item.auditRevision,
@@ -59,6 +69,9 @@ for (const item of GUWEN_PRONUNCIATION_AUDIT_CATALOG) {
     `${item.id} 的無指紋舊結果不得被視為有效`,
   );
 }
+
+assert.equal(wangRongItemCount, 21, '第一篇減量後應有 21 個代表語音單元');
+assert.equal(wangRongTargetCount, 41, '第一篇減量後應涵蓋 41 個讀音群組');
 
 const sample = GUWEN_PRONUNCIATION_AUDIT_CATALOG[0];
 const multiTargetSample = GUWEN_PRONUNCIATION_AUDIT_CATALOG.find(

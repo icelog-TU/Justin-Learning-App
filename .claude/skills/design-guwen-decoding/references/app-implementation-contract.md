@@ -173,8 +173,8 @@ type FinalVerification = {
 - `uncertainty` 必須可顯示，不能併入正解後遺失；
 - 編輯者備註不得打包成孩子端 lesson step；
 - 最終白話文必須是受條件控制的欄位，不能出現在初始畫面資料中而被 UI 提前渲染。
-- 每題編寫時先掃描多音字；全篇所有孩子端朗讀文字完成後，再做一次獨立、完整的全篇掃描。正式 catalog 必須涵蓋每個 exact playable utterance 中全部多音字的每個具體出現位置，不得只收 agent 判斷可能念錯者。
-- 全篇掃描結果要一次批次加入 `src/data/guwenPronunciationAudit.ts`；同一完整整句有多個多音字時建立一個 item、分列 `targets[]`。部署並開啟正式 `/#/tts-audit` 後，才算整批出現在網頁與中央 catalog。
+- 每題編寫時先掃描播放白名單；全篇完成後再掃一次任務開場、本篇原文、App 引導語、古文線索、破解白話、任務／題目、選項、答對回饋與答錯提示。詳解、成人／出處及純顯示文字排除；白名單內不得按風險漏掉多音字。
+- 先合併完全相同句子，再按字形、指定讀音、讀音相關用法及相同 TTS／voice 條件分組，每組留一個代表 target，以最少完整代表句覆蓋所有群組後批次加入 `src/data/guwenPronunciationAudit.ts`。
 - 每個待實聽語音單元先加入 `src/data/guwenPronunciationAudit.ts`，再交由 `/#/tts-audit` 在目標裝置播放；臨時貼入網頁的句子只算待分類，不算正式建檔。
 - 實聽台讓使用者對每個目標位置分別選擇「念對／念錯」；同句多目標全部選完後，必須把逐目標 `targetResults[]` 寫入獨立的 Firestore 多音字資料庫並顯示回傳成功或失敗。localStorage 只作離線備份，不得當成唯一結果來源。
 - 只有使用者可以在孩子實際裝置親耳聽完後選擇「念對／念錯」。Coding agent、自動測試與捕捉到的 TTS 文字都不能驗證可聽見的發音，不得代填結果。
