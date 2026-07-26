@@ -1,6 +1,7 @@
-import { doc, getDoc, runTransaction, setDoc } from 'firebase/firestore';
+import { deleteDoc, doc, getDoc, runTransaction, setDoc } from 'firebase/firestore';
 import {
   GUWEN_PRONUNCIATION_AUDIT_CATALOG,
+  RETIRED_PRONUNCIATION_AUDIT_LESSON_IDS,
   type PronunciationAuditCatalogItem,
   type PronunciationAuditStatus,
   type PronunciationVerification,
@@ -276,7 +277,16 @@ async function ensureCentralCatalog(): Promise<void> {
   const indexSnap = await getDoc(indexRef);
   const existingIndex = indexSnap.exists() ? (indexSnap.data() as Partial<CloudAuditIndex>) : null;
   const existingDocs = existingIndex?.lessonDocs ?? [];
-  const merged = new Map(existingDocs.map((entry) => [entry.lessonId, entry]));
+  const retiredDocs = existingDocs.filter((entry) =>
+    RETIRED_PRONUNCIATION_AUDIT_LESSON_IDS.has(entry.lessonId),
+  );
+  await Promise.all(retiredDocs.map((entry) => deleteDoc(familyDoc(entry.docId))));
+  if (retiredDocs.length > 0) catalogChanged = true;
+  const merged = new Map(
+    existingDocs
+      .filter((entry) => !RETIRED_PRONUNCIATION_AUDIT_LESSON_IDS.has(entry.lessonId))
+      .map((entry) => [entry.lessonId, entry]),
+  );
   lessonDocs.forEach((entry) => merged.set(entry.lessonId, entry));
 
   const nextIndex: CloudAuditIndex = {

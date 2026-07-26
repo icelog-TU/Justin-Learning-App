@@ -72,6 +72,12 @@ for (const item of GUWEN_PRONUNCIATION_AUDIT_CATALOG) {
 
 assert.equal(wangRongItemCount, 21, '第一篇減量後應有 21 個代表語音單元');
 assert.equal(wangRongTargetCount, 41, '第一篇減量後應涵蓋 41 個讀音群組');
+assert(
+  GUWEN_PRONUNCIATION_AUDIT_CATALOG.every(
+    (item) => item.lessonId === 'wang-rong-bu-qu-dao-pang-li',
+  ),
+  '正式實聽 catalog 目前只能包含第一篇《王戎不取道旁李》',
+);
 
 const sample = GUWEN_PRONUNCIATION_AUDIT_CATALOG[0];
 const multiTargetSample = GUWEN_PRONUNCIATION_AUDIT_CATALOG.find(
@@ -86,7 +92,14 @@ assert.equal(
   '多目標整句未全部判定以前不得送出',
 );
 assert.equal(
-  formatPronunciationCue(multiTargetSample.targets[0]),
+  formatPronunciationCue({
+    character: '中',
+    occurrence: 1,
+    zhuyin: 'ㄓㄨㄥ',
+    homophoneCue: '鐘',
+    usage: '裡面',
+    cueMode: 'known_usage',
+  }),
   '中，當作「裡面」時，念作鐘（ㄓㄨㄥ）。',
   '已知用法應產生完整的就近加註文字',
 );

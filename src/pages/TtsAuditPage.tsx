@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   GUWEN_PRONUNCIATION_AUDIT_CATALOG,
+  RETIRED_PRONUNCIATION_AUDIT_LESSON_IDS,
   type PronunciationAuditCatalogItem,
   type PronunciationAuditStatus,
 } from '../data/guwenPronunciationAudit';
@@ -8,6 +9,7 @@ import {
   cancelSpeech,
   getSelectedSpeechVoiceDetails,
   getTtsInput,
+  pauseSpeech,
   speak,
 } from '../lib/speech';
 import {
@@ -150,9 +152,10 @@ function loadItems(): AuditItem[] {
       .map(legacyItemToAudit)
       .filter(
         (item) =>
-          catalogIds.has(item.id) ||
-          item.lessonId === 'unassigned' ||
-          Object.values(item.targetStatuses).some((status) => status !== 'pending'),
+          !RETIRED_PRONUNCIATION_AUDIT_LESSON_IDS.has(item.lessonId) &&
+          (catalogIds.has(item.id) ||
+            item.lessonId === 'unassigned' ||
+            Object.values(item.targetStatuses).some((status) => status !== 'pending')),
       );
     const storedIds = new Set(stored.map((item) => item.id));
     return [...defaults.filter((item) => !storedIds.has(item.id)), ...stored];
@@ -177,6 +180,7 @@ export default function TtsAuditPage() {
   const [draft, setDraft] = useState('');
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
   const [playingId, setPlayingId] = useState<string | null>(null);
+  const [isPaused, setIsPaused] = useState(false);
   const [copied, setCopied] = useState(false);
   const [syncStates, setSyncStates] = useState<Record<string, SyncState>>({});
   const [database, setDatabase] = useState<CloudAuditDatabase | null>(null);
@@ -429,32 +433,55 @@ export default function TtsAuditPage() {
 
   const playOne = (item: AuditItem, onEnd?: () => void) => {
     stopSequenceRef.current = true;
+    setIsPaused(false);
     setPlayingId(item.id);
     speak(item.text, () => {
       setPlayingId(null);
+      setIsPaused(false);
       onEnd?.();
     });
+  };
+
+  const playSequenceAt = (index: number) => {
+    if (stopSequenceRef.current || index >= items.length) {
+      setPlayingId(null);
+      setIsPaused(false);
+      return;
+    }
+    const item = items[index];
+    setPlayingId(item.id);
+    speak(item.text, () => playSequenceAt(index + 1));
   };
 
   const playAll = () => {
     if (!items.length) return;
     stopSequenceRef.current = false;
-    const playAt = (index: number) => {
-      if (stopSequenceRef.current || index >= items.length) {
-        setPlayingId(null);
-        return;
-      }
-      const item = items[index];
-      setPlayingId(item.id);
-      speak(item.text, () => playAt(index + 1));
-    };
-    playAt(0);
+    setIsPaused(false);
+    playSequenceAt(0);
   };
 
   const stopPlaying = () => {
     stopSequenceRef.current = true;
     cancelSpeech();
     setPlayingId(null);
+    setIsPaused(false);
+  };
+
+  const togglePause = () => {
+    if (!playingId) return;
+    if (isPaused) {
+      const itemIndex = items.findIndex((item) => item.id === playingId);
+      if (itemIndex < 0) return;
+      // speechSynthesis.resume() 在部分瀏覽器會靜默失效；從目前句子開頭重播較可靠。
+      if (stopSequenceRef.current) playOne(items[itemIndex]);
+      else {
+        setIsPaused(false);
+        playSequenceAt(itemIndex);
+      }
+      return;
+    }
+    pauseSpeech();
+    setIsPaused(true);
   };
 
   const addLines = () => {
@@ -679,6 +706,14 @@ export default function TtsAuditPage() {
         </button>
         <button
           type="button"
+          onClick={togglePause}
+          disabled={!playingId}
+          className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-2.5 text-sm font-bold text-amber-800 hover:bg-amber-100 disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400"
+        >
+          {isPaused ? '繼續播放' : '暫停播放'}
+        </button>
+        <button
+          type="button"
           onClick={() => void syncTestedItems(items)}
           disabled={!items.some((item) => item.status !== 'pending')}
           className="rounded-xl bg-sky-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-sky-700 disabled:bg-slate-300"
@@ -693,6 +728,9 @@ export default function TtsAuditPage() {
           {copied ? '結果已複製' : '複製備份'}
         </button>
       </section>
+      <p className="text-xs leading-5 text-slate-500">
+        暫停後按「繼續」會從目前句子的開頭重新播放，避免部分瀏覽器恢復後沒有聲音。
+      </p>
 
       <section className="space-y-3">
         {items.map((item, index) => {
@@ -716,10 +754,13 @@ export default function TtsAuditPage() {
                 </div>
                 <button
                   type="button"
-                  onClick={() => playOne(item)}
+                  onClick={() => {
+                    if (playingId === item.id) togglePause();
+                    else playOne(item);
+                  }}
                   className="shrink-0 rounded-xl bg-slate-800 px-3 py-2 text-sm font-bold text-white hover:bg-slate-900"
                 >
-                  {playingId === item.id ? '播放中…' : '播放'}
+                  {playingId === item.id ? (isPaused ? '繼續' : '暫停') : '播放'}
                 </button>
               </div>
 
