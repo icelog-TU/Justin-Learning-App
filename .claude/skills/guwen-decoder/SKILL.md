@@ -369,3 +369,9 @@ As of this writing, seven lessons exist in `guwenLessons` (in display order): `w
 - `wangRongLesson` is a full GPT-collaborated rebuild ("全文核准") of the first text, replacing the old word-puzzle-format `wangRongText` — see "The word-puzzle format has been deleted" above. Uses only `evidenceMultiSelectClosing` (no ordering/causal-chain closing screens — its causal reasoning is a regular `story_reasoning` step instead).
 - The `local_inference`/`story_reasoning` step types are implemented with the exact same visual/interaction shape as `evidence` (just without a clues/keys panel) — the design-guwen-decoding contract doesn't specify a *different* look for these, so this was a reasonable default rather than a confirmed choice; revisit if the user wants them visually distinguished.
 - Whether a fourth lesson should reuse 王戎's "split a bundled 題 into evidence + local_inference/story_reasoning" pattern by default, or whether some future source markdown will need yet another structural adaptation — no rule beyond "split rather than force two question-moments into one step" has been asked for yet.
+
+## TTS 實聽台的已聽／未聽規則
+
+- `pending` 視為「還沒聽過」；`correct` 與 `incorrect` 都視為「已經聽過」。
+- 實聽台須提供「全部／還沒聽過／已經聽過」篩選，依序播放只播放目前篩選清單。
+- 真人備註若明確指出按錯 target、真正錯的是同句另一字，第二階段須保留中央原始紀錄並另做字級歸因校正；不得替其實念對的字加提示。若歸因不明才要求補聽，不可由 agent 猜測。

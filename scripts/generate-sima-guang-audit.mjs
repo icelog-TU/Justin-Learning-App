@@ -237,6 +237,8 @@ for (let index = 0; index < lines.length; index += 1) {
     continue;
   }
   if (!heading) continue;
+  // 第二階段新增的讀音提示是修正既有 TTS 的輔助語，不再遞迴送入多音字候選掃描。
+  if (/^>\s*讀音提示（(?:顯示|TTS)）/.test(line)) continue;
   if (/^>\s*\S/.test(line)) {
     addUnit(line, index + 1);
   } else if (

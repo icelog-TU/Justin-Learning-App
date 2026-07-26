@@ -18,6 +18,19 @@ import {
   summarizeTargetStatuses,
   targetDecisionKey,
 } from '../src/lib/ttsAuditDecision';
+import {
+  isTtsAuditItemHeard,
+  matchesTtsAuditListeningFilter,
+} from '../src/lib/ttsAuditListening';
+
+assert.equal(isTtsAuditItemHeard('pending'), false);
+assert.equal(isTtsAuditItemHeard('correct'), true);
+assert.equal(isTtsAuditItemHeard('incorrect'), true);
+assert.equal(matchesTtsAuditListeningFilter('pending', 'unheard'), true);
+assert.equal(matchesTtsAuditListeningFilter('correct', 'unheard'), false);
+assert.equal(matchesTtsAuditListeningFilter('incorrect', 'heard'), true);
+assert.equal(matchesTtsAuditListeningFilter('pending', 'heard'), false);
+assert.equal(matchesTtsAuditListeningFilter('pending', 'all'), true);
 
 const ids = new Set<string>();
 const wangRongGroupKeys = new Set<string>();

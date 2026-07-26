@@ -25,6 +25,10 @@ import {
   type TargetDecisionStatus,
 } from '../lib/ttsAuditDecision';
 import {
+  matchesTtsAuditListeningFilter,
+  type TtsAuditListeningFilter,
+} from '../lib/ttsAuditListening';
+import {
   fetchCentralAuditDatabase,
   latestCurrentAuditResult,
   submitAuditResults,
@@ -187,7 +191,10 @@ export default function TtsAuditPage() {
   const [databaseState, setDatabaseState] = useState<'loading' | 'ready' | 'error'>('loading');
   const [databaseError, setDatabaseError] = useState('');
   const [lastReceipt, setLastReceipt] = useState('');
+  const [listeningFilter, setListeningFilter] =
+    useState<TtsAuditListeningFilter>('all');
   const stopSequenceRef = useRef(false);
+  const sequenceItemsRef = useRef<AuditItem[]>([]);
   const migrationSyncRef = useRef(false);
 
   const zhTwVoices = useMemo(
@@ -251,6 +258,7 @@ export default function TtsAuditPage() {
           targetStatuses,
           status: summarizeTargetStatuses(item.targets, targetStatuses),
           checkedAt: central.checkedAt,
+          note: central.note,
           cloudSyncedAt: new Date(central.receivedAt).toISOString(),
           cloudReceiptId: central.resultId,
         };
@@ -279,6 +287,13 @@ export default function TtsAuditPage() {
         { pending: 0, correct: 0, incorrect: 0 },
       ),
     [items],
+  );
+  const visibleItems = useMemo(
+    () =>
+      items.filter((item) =>
+        matchesTtsAuditListeningFilter(item.status, listeningFilter),
+      ),
+    [items, listeningFilter],
   );
 
   const centralCounts = useMemo(() => {
@@ -442,22 +457,23 @@ export default function TtsAuditPage() {
     });
   };
 
-  const playSequenceAt = (index: number) => {
-    if (stopSequenceRef.current || index >= items.length) {
+  const playSequenceAt = (sequence: AuditItem[], index: number) => {
+    sequenceItemsRef.current = sequence;
+    if (stopSequenceRef.current || index >= sequence.length) {
       setPlayingId(null);
       setIsPaused(false);
       return;
     }
-    const item = items[index];
+    const item = sequence[index];
     setPlayingId(item.id);
-    speak(item.text, () => playSequenceAt(index + 1));
+    speak(item.text, () => playSequenceAt(sequence, index + 1));
   };
 
-  const playAll = () => {
-    if (!items.length) return;
+  const playVisibleItems = () => {
+    if (!visibleItems.length) return;
     stopSequenceRef.current = false;
     setIsPaused(false);
-    playSequenceAt(0);
+    playSequenceAt(visibleItems, 0);
   };
 
   const stopPlaying = () => {
@@ -470,13 +486,14 @@ export default function TtsAuditPage() {
   const togglePause = () => {
     if (!playingId) return;
     if (isPaused) {
-      const itemIndex = items.findIndex((item) => item.id === playingId);
+      const sequence = stopSequenceRef.current ? items : sequenceItemsRef.current;
+      const itemIndex = sequence.findIndex((item) => item.id === playingId);
       if (itemIndex < 0) return;
       // speechSynthesis.resume() 在部分瀏覽器會靜默失效；從目前句子開頭重播較可靠。
-      if (stopSequenceRef.current) playOne(items[itemIndex]);
+      if (stopSequenceRef.current) playOne(sequence[itemIndex]);
       else {
         setIsPaused(false);
-        playSequenceAt(itemIndex);
+        playSequenceAt(sequence, itemIndex);
       }
       return;
     }
@@ -688,14 +705,43 @@ export default function TtsAuditPage() {
         </div>
       </section>
 
+      <section className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+        <p className="mb-2 text-xs font-bold text-slate-600">實聽清單</p>
+        <div className="flex flex-wrap gap-2">
+          {(
+            [
+              ['all', `全部（${items.length}）`],
+              ['unheard', `還沒聽過（${counts.pending}）`],
+              ['heard', `已經聽過（${counts.correct + counts.incorrect}）`],
+            ] as const
+          ).map(([filter, label]) => (
+            <button
+              key={filter}
+              type="button"
+              onClick={() => {
+                stopPlaying();
+                setListeningFilter(filter);
+              }}
+              className={`rounded-xl border px-4 py-2 text-sm font-bold ${
+                listeningFilter === filter
+                  ? 'border-teal-600 bg-teal-600 text-white'
+                  : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </section>
+
       <section className="flex flex-wrap gap-2">
         <button
           type="button"
-          onClick={playAll}
-          disabled={!items.length}
+          onClick={playVisibleItems}
+          disabled={!visibleItems.length}
           className="rounded-xl bg-teal-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-teal-700 disabled:bg-slate-300"
         >
-          依序播放全部
+          依序播放目前清單（{visibleItems.length}）
         </button>
         <button
           type="button"
@@ -733,7 +779,12 @@ export default function TtsAuditPage() {
       </p>
 
       <section className="space-y-3">
-        {items.map((item, index) => {
+        {!visibleItems.length && (
+          <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-6 text-center text-sm text-slate-500">
+            這個清單目前沒有句子。
+          </div>
+        )}
+        {visibleItems.map((item, index) => {
           const centralResults = allResults(database, item.id);
           const central = latestCurrentAuditResult(item, centralResults);
           const hasStaleCentralResult = !central && centralResults.length > 0;
