@@ -93,7 +93,15 @@ export default function CharactersPage() {
   return (
     <div className="space-y-4">
       <div>
-        <h2 className="text-xl font-bold text-gray-800">角色收藏</h2>
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-xl font-bold text-gray-800">角色收藏</h2>
+          <Link
+            to="/gacha"
+            className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-r from-orange-400 to-pink-500 px-4 py-2 text-sm font-bold text-white shadow-md transition-transform hover:scale-105 active:scale-95"
+          >
+            🎁 去轉蛋
+          </Link>
+        </div>
         <p className="text-sm text-gray-500">
           用 ⭐ 星星給角色愛心，每次花 {HEART_COST_STARS} 顆星星；好感度會直接顯示已經獲得的愛心數量。
         </p>
