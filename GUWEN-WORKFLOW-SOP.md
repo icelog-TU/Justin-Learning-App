@@ -3,7 +3,7 @@
 > 文件用途：規定每一篇新對話如何開始、逐批審稿如何進行、哪些檔案要更新，以及如何避免不同對話各自產生不同版本。  
 > 適用範圍：教材選篇、內容編寫、成人審稿、密碼鑰匙管理、App 實作交接。  
 > 本文件是固定流程；即時進度另見 `GUWEN-PROJECT-STATUS.md`。  
-> 最近更新：2026-07-25
+> 最近更新：2026-07-26
 
 ---
 
@@ -58,10 +58,11 @@
 3. `GUWEN-PROJECT-STATUS.md`。
 4. `design-standard.md`。
 5. `guwen-decoder-learned-keys.md`。
-6. `src/data/guwenPronunciationAudit.ts`，並執行 `npm run tts:audit:pull` 取得中央實測結果。
-7. 本次要處理的教材主檔。
-8. 需要核對固定範例或格式時，才回查前篇主檔。
-9. 準備交付 App 實作時，再讀 `app-implementation-contract.md`。
+6. 只要本輪會新增或修改任何孩子端播放文字、TTS、讀音提示或多音字資料，完整閱讀 `GUWEN-TTS-CENTRAL-DATABASE-HANDOFF.md`。
+7. `src/data/guwenPronunciationAudit.ts`，並執行 `npm run tts:audit:pull` 取得中央實測結果。
+8. 本次要處理的教材主檔。
+9. 需要核對固定範例或格式時，才回查前篇主檔。
+10. 準備交付 App 實作時，再讀 `app-implementation-contract.md`。
 
 讀完後先向使用者確認，不立刻大量續寫：
 
@@ -75,6 +76,7 @@
 
 > 這個對話處理第○篇《○○○》。  
 > 請先閱讀專案共同指示、`GUWEN-WORKFLOW-SOP.md`、`GUWEN-PROJECT-STATUS.md`、`design-standard.md`、`guwen-decoder-learned-keys.md`，以及本篇教材主檔。  
+> 如果會新增或修改任何孩子端播放文字、TTS、讀音提示或多音字資料，也必須先完整閱讀 `GUWEN-TTS-CENTRAL-DATABASE-HANDOFF.md`，並執行 `npm run tts:audit:pull`。
 > 先告訴我目前已核准到哪裡、哪些內容仍待審、本輪準備處理哪一小段，以及會遇到哪些舊鑰匙；不要立刻大量續寫。
 
 ---
@@ -409,6 +411,16 @@ ZIP 建立後不繼續在壓縮檔內直接工作。
 3. 編輯代理負責在每次編題前執行 `npm run tts:audit:pull`，再依結果更新正式候選檔和教材主檔。
 4. 每篇至少保存：篇次、篇名、題號、語音單元 ID、完整文字、目標字與出現次序、正確注音、同音提示、句義、裝置／聲音、實聽日期、結果與回傳編號。
 5. 同一篇的新結果累積在該篇中央紀錄中；不得另建名稱相近的第二套多音字清單。
+
+### 多音字 TTS 實聽台的固定入口與用法
+
+1. 正式入口固定為 <https://icelog-tu.github.io/Justin-Learning-App/#/tts-audit>；它不在孩子主選單內，編輯者直接開啟網址。
+2. 新增或修改的語音單元必須先進入 `src/data/guwenPronunciationAudit.ts` 正式候選檔；網頁臨時貼入的「待分類」句只留在本機，不能當成中央正式資料。
+3. 在孩子實際使用的手機、平板或電腦上開啟實聽台，先確認畫面顯示中央資料庫已連線與目前實際選擇的 `zh-TW` 聲音。
+4. 逐句按「播放」，實際聽完後才按「念對」或「念錯」；不得由 agent 猜測或代替真人實聽。
+5. 每次送出都必須看到「已回傳中央資料庫」與回傳編號。若顯示失敗，只代表本機暫存，必須重送成功才算完成。
+6. 實聽完成後由 agent 再執行 `npm run tts:audit:pull`，確認有效結果、待複驗、中央缺少與孤兒紀錄；只有與目前完整文字、TTS 輸入、目標位置及 revision 指紋完全相符的結果才能形成教材結論。
+7. 完整工程說明、資料 schema、故障排除與驗收清單以 `GUWEN-TTS-CENTRAL-DATABASE-HANDOFF.md` 為唯一詳細交接文件；不得另建重複規格。
 
 ---
 
