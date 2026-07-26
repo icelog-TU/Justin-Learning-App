@@ -3,6 +3,7 @@ import {
   buildTargetFingerprint,
   buildUtteranceFingerprint,
 } from '../lib/ttsAuditFingerprint';
+import { WANG_RONG_PRONUNCIATION_AUDIT_CATALOG } from './wangRongPronunciationAudit';
 
 export type PronunciationAuditStatus = 'pending' | 'correct' | 'incorrect';
 
@@ -531,4 +532,5 @@ export const GUWEN_PRONUNCIATION_AUDIT_CATALOG: PronunciationAuditCatalogItem[] 
     targets: [{ character: '契', occurrence: 1, zhuyin: 'ㄑㄧˋ', homophoneCue: '氣', usage: '刻畫', cueMode: 'known_usage' }],
     initialVerifications: [],
   }),
+  ...WANG_RONG_PRONUNCIATION_AUDIT_CATALOG,
 ];

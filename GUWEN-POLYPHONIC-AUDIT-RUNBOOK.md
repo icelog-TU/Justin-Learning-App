@@ -58,16 +58,18 @@ lessonId：repository 內該篇既有的穩定 lessonId
 
 「已定稿」是指該篇所有孩子端可播放文字都已完成，包括原文、題目、線索、白話、選項、提示、回饋、詳解、排序、證據檢查、完成畫面及會朗讀的按鈕文字。
 
-若仍有待審文字或 App 的 exact playable utterance 尚未確定：
+若仍有待審文字，或 exact playable utterance 尚未確定：
 
 - 明確列出尚未完成之處。
 - 不得把不完整批次宣稱為全篇最終實聽。
 - 可以保留逐題候選盤點，但須等全文完成後重新做獨立全篇掃描。
 
+若使用者採用「教材主檔先定稿並完成實聽，最後才放入 App」的流程，已核准主檔就是本階段的語音規格來源，不必先實作 App。此時必須以主檔中每個孩子端可朗讀段落、選項、提示、回饋、詳解、故事畫面、卷軸與完成訊息的原文建立 exact playable utterance；未來 App 實作必須沿用同一文字與語音單元邊界，若有任何變更則依第六節使舊結果失效並重測。
+
 ### 3.2 Agent 必須完成的工作
 
 1. 更新固定分支並執行 `npm run tts:audit:pull`，先讀中央現況。
-2. 逐一列出 App 實際會送入 `speak()` 的 exact playable utterance，不只掃古文原句。
+2. 逐一列出 App 實際會送入 `speak()` 的 exact playable utterance；若採主檔先實聽流程，則逐一列出核准主檔已固定的孩子端可朗讀語音單元。不只掃古文原句。
 3. 對每個語音單元找出全部多音字的每個具體出現位置，不得依 agent 猜測「容易念錯」與否而篩除。
 4. 每個完整語音單元建立穩定 item；同句多目標放在同一 item 的 `targets[]`，同字不同位置仍分別建 target。
 5. 核對 `displayText`、`ttsInput`、正確讀音、臺灣注音、熟悉同音字、句義、`cueMode`、revision 與 fingerprints。
