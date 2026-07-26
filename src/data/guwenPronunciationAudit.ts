@@ -1,3 +1,4 @@
+import { SIMA_GUANG_PRONUNCIATION_AUDIT_CATALOG } from './simaGuangPronunciationAudit';
 import { WANG_RONG_PRONUNCIATION_AUDIT_CATALOG } from './wangRongPronunciationAudit';
 
 export type PronunciationAuditStatus = 'pending' | 'correct' | 'incorrect';
@@ -45,9 +46,10 @@ export const RETIRED_PRONUNCIATION_AUDIT_LESSON_IDS = new Set([
 /**
  * 正式多音字實聽 catalog。
  *
- * 目前只保留第一篇《王戎不取道旁李》。第三篇《刻舟求劍》曾是測試資料，
- * 已依教材編輯者指示從正式實聽流程與中央資料庫退役。
+ * 第一篇《王戎不取道旁李》與第二篇《司馬光破甕救友》使用正式 catalog。
+ * 第三篇《刻舟求劍》曾是測試資料，已依教材編輯者指示退役。
  */
 export const GUWEN_PRONUNCIATION_AUDIT_CATALOG: PronunciationAuditCatalogItem[] = [
   ...WANG_RONG_PRONUNCIATION_AUDIT_CATALOG,
+  ...SIMA_GUANG_PRONUNCIATION_AUDIT_CATALOG,
 ];

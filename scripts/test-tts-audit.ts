@@ -21,8 +21,11 @@ import {
 
 const ids = new Set<string>();
 const wangRongGroupKeys = new Set<string>();
+const simaGuangGroupKeys = new Set<string>();
 let wangRongItemCount = 0;
 let wangRongTargetCount = 0;
+let simaGuangItemCount = 0;
+let simaGuangTargetCount = 0;
 
 for (const item of GUWEN_PRONUNCIATION_AUDIT_CATALOG) {
   assert(!ids.has(item.id), `重複的正式候選 ID：${item.id}`);
@@ -53,8 +56,15 @@ for (const item of GUWEN_PRONUNCIATION_AUDIT_CATALOG) {
       wangRongGroupKeys.add(groupKey);
       wangRongTargetCount += 1;
     }
+    if (item.lessonId === 'sima-guang-po-weng') {
+      const groupKey = `${target.character}|${target.zhuyin}|${target.usage}`;
+      assert(!simaGuangGroupKeys.has(groupKey), `第二篇有重複讀音群組：${groupKey}`);
+      simaGuangGroupKeys.add(groupKey);
+      simaGuangTargetCount += 1;
+    }
   }
   if (item.lessonId === 'wang-rong-bu-qu-dao-pang-li') wangRongItemCount += 1;
+  if (item.lessonId === 'sima-guang-po-weng') simaGuangItemCount += 1;
 
   const current = {
     auditRevision: item.auditRevision,
@@ -72,11 +82,15 @@ for (const item of GUWEN_PRONUNCIATION_AUDIT_CATALOG) {
 
 assert.equal(wangRongItemCount, 21, '第一篇減量後應有 21 個代表語音單元');
 assert.equal(wangRongTargetCount, 41, '第一篇減量後應涵蓋 41 個讀音群組');
+assert.equal(simaGuangItemCount, 27, '第二篇減量後應有 27 個代表語音單元');
+assert.equal(simaGuangTargetCount, 62, '第二篇減量後應涵蓋 62 個讀音群組');
 assert(
   GUWEN_PRONUNCIATION_AUDIT_CATALOG.every(
-    (item) => item.lessonId === 'wang-rong-bu-qu-dao-pang-li',
+    (item) =>
+      item.lessonId === 'wang-rong-bu-qu-dao-pang-li' ||
+      item.lessonId === 'sima-guang-po-weng',
   ),
-  '正式實聽 catalog 目前只能包含第一篇《王戎不取道旁李》',
+  '正式實聽 catalog 只能包含目前正式建檔的第一、二篇',
 );
 
 const sample = GUWEN_PRONUNCIATION_AUDIT_CATALOG[0];
