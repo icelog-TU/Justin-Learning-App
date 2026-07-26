@@ -6,7 +6,8 @@
 > Repository：`icelog-TU/Justin-Learning-App`  
 > 固定工作分支：`claude/chinese-learning-app-justin-yjcfam`  
 > 交接基準日期：2026-07-26  
-> 交接基準提交：`5689cd4a164ae9e3cda3d347c910ec747a8d1e71`
+> 中央資料庫工程基準：`5689cd4a164ae9e3cda3d347c910ec747a8d1e71`  
+> 本交接已納入其後的第二篇並行更新：`0a4656f`
 
 ---
 
@@ -154,6 +155,7 @@ npm run tts:audit:pull
 - `6fc5d85`：第一版多音字 TTS 實聽台上線。
 - `9f13934`：建立正式候選檔、Firestore 中央實測庫、自動回傳、讀回指令與工作流程。
 - `5689cd4`：修正中央回傳資料中 `undefined` 欄位造成的 Firestore 寫入問題。
+- `0a4656f`：另一個教材對話把第二篇擴充為任務開場與第一至三題草稿；中央候選尚未隨之擴充。
 
 ---
 
@@ -271,7 +273,7 @@ families/GUWENTTS-03-KEZHOUQIUJIAN
 | `src/App.tsx` | `/#/tts-audit` 路由 |
 | `03-guwen-kezhouqiujian-decoder-content.md` | 第三篇七項實聽表與「不需加註」結論 |
 | `lessons/01-guwen-wangrong-rewrite.md` | 第一篇大量候選盤點；尚未遷入中央正式候選 |
-| `02-guwen-simaguang-decoder-content.md` | 第二篇任務開場與第一題候選盤點；尚未遷入中央正式候選 |
+| `02-guwen-simaguang-decoder-content.md` | 第二篇任務開場與第一至三題候選盤點；尚未遷入中央正式候選 |
 | `GUWEN-WORKFLOW-SOP.md` | 每題編寫、送測、回傳、讀回與教材同步流程 |
 
 ---
@@ -323,9 +325,10 @@ families/GUWENTTS-03-KEZHOUQIUJIAN
 ### 11.1 第一、二篇尚未中央化
 
 - 第一篇主檔已有第 1–12 題多音字盤點與大量讀音提示，但尚未拆成「完整語音單元」逐筆加入正式 catalog。
-- 第二篇任務開場與第一題已有候選表，但仍是草稿待審，也尚未加入正式 catalog。
+- 第二篇任務開場與第一至三題已有候選表，但仍是草稿待審，也尚未加入正式 catalog。
 - 不能把兩篇現有表格的一行直接視為一個 item；同一讀音可能分散在多個實際播放句，必須回到完整語音單元逐筆建檔。
 - 第一篇 App 尚未實作新版；測試文字必須與未來實際送入 `speak()` 的完整文字一致。
+- `GUWEN-PROJECT-STATUS.md` 在 `0a4656f` 後尚未同步第二篇的最新題數；目前應以第二篇教材主檔的「任務開場＋第一至三題草稿待審」為準，接手後先核對並修正共用進度表。
 
 ### 11.2 現行程式尚未自動使舊結果失效
 
@@ -400,7 +403,7 @@ Repository 中沒有看到 Firestore Security Rules 檔案。現有匿名讀寫�
 ### P1｜把第一、二篇正式遷入中央流程
 
 - [ ] 從第一篇目前已核准範圍的完整孩子端語音單元建立正式 catalog；待審文字若先建檔，必須標記草稿 revision，修改後自動失效。
-- [ ] 從第二篇任務開場與第一題建立候選；因內容仍待審，核准後再確認最終 exact text。
+- [ ] 從第二篇任務開場與第一至三題建立候選；因內容仍待審，核准後再確認最終 exact text。
 - [ ] 不要把主檔現有「首次位置」摘要直接當成完整 item 清單。
 - [ ] 部署後把第一、二篇候選交給使用者在實際裝置測試。
 - [ ] 確認每一筆都有中央回傳編號，並由 CLI 讀回。
