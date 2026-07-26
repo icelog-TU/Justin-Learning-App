@@ -119,9 +119,10 @@ export type LessonStep =
   | StoryReasoningStep
   | RevealStep;
 
-/** 收尾一：drag-free sequence-ordering checkpoint. The child reorders shuffled story-beat cards (via
- * up/down buttons, not true drag-and-drop — decided with the user for mobile reliability) into the order
- * they happened in the classical text. */
+/** 收尾一：touch-friendly sequence-ordering checkpoint. The child drags each shuffled story-beat card
+ * vertically and drops it into the intended position; the drag handle also supports ArrowUp/ArrowDown as
+ * a keyboard-accessible fallback. This replaced the original visible up/down buttons after real child use
+ * showed that repeated arrow tapping was inconvenient. */
 export interface SequenceCard {
   id: string;
   text: string;

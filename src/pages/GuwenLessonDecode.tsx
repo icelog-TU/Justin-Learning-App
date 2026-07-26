@@ -1,4 +1,12 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type PointerEvent as ReactPointerEvent,
+  type ReactNode,
+} from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useAppDataContext } from '../lib/AppDataContext';
 import {
@@ -57,6 +65,15 @@ interface CelebrationState {
   tick: number;
   praiseDone: boolean;
   stage: 'rolling' | 'settled';
+}
+
+interface OrderingDragState {
+  cardId: string;
+  pointerId: number;
+  startY: number;
+  currentY: number;
+  startCenterY: number;
+  targetIndex: number;
 }
 
 const FIREWORK_EMOJI = ['🎉', '🎆', '🎇', '✨', '⭐', '🌟', '🎊'];
@@ -289,6 +306,9 @@ export default function GuwenLessonDecode() {
   const [orderingArrangement, setOrderingArrangement] = useState<string[]>(() =>
     lesson?.sequenceOrderingClosing ? lesson.sequenceOrderingClosing.cards.map((c) => c.id) : [],
   );
+  const orderingCardRefs = useRef(new Map<string, HTMLDivElement>());
+  const orderingDragRef = useRef<OrderingDragState | null>(null);
+  const [orderingDrag, setOrderingDrag] = useState<OrderingDragState | null>(null);
   const [orderingWrong, setOrderingWrong] = useState(false);
   const [orderingSolved, setOrderingSolved] = useState(() =>
     Boolean(lesson?.sequenceOrderingClosing && solvedIds.has(lesson.sequenceOrderingClosing.id)),
@@ -806,6 +826,72 @@ export default function GuwenLessonDecode() {
     setOrderingWrong(false);
   }
 
+  function updateOrderingDrag(next: OrderingDragState | null) {
+    orderingDragRef.current = next;
+    setOrderingDrag(next);
+  }
+
+  function handleOrderingPointerDown(cardId: string, index: number, event: ReactPointerEvent<HTMLButtonElement>) {
+    if (orderingSolved || (event.pointerType === 'mouse' && event.button !== 0)) return;
+    const card = orderingCardRefs.current.get(cardId);
+    if (!card) return;
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    const rect = card.getBoundingClientRect();
+    updateOrderingDrag({
+      cardId,
+      pointerId: event.pointerId,
+      startY: event.clientY,
+      currentY: event.clientY,
+      startCenterY: rect.top + rect.height / 2,
+      targetIndex: index,
+    });
+    setOrderingWrong(false);
+  }
+
+  function handleOrderingPointerMove(event: ReactPointerEvent<HTMLButtonElement>) {
+    const drag = orderingDragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+    event.preventDefault();
+
+    const draggedCenterY = drag.startCenterY + (event.clientY - drag.startY);
+    const otherCards = orderingArrangement.filter((id) => id !== drag.cardId);
+    const targetIndex = otherCards.reduce((position, id) => {
+      const rect = orderingCardRefs.current.get(id)?.getBoundingClientRect();
+      return rect && draggedCenterY > rect.top + rect.height / 2 ? position + 1 : position;
+    }, 0);
+
+    updateOrderingDrag({ ...drag, currentY: event.clientY, targetIndex });
+
+    // Keep long lists usable on a phone: dragging near a viewport edge gently scrolls the page.
+    const edgeSize = 72;
+    if (event.clientY < edgeSize) window.scrollBy({ top: -12, behavior: 'auto' });
+    else if (event.clientY > window.innerHeight - edgeSize) window.scrollBy({ top: 12, behavior: 'auto' });
+  }
+
+  function finishOrderingDrag(event: ReactPointerEvent<HTMLButtonElement>, commit: boolean) {
+    const drag = orderingDragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+    if (commit) {
+      setOrderingArrangement((current) => {
+        const next = current.filter((id) => id !== drag.cardId);
+        next.splice(drag.targetIndex, 0, drag.cardId);
+        return next;
+      });
+      setOrderingWrong(false);
+    }
+    updateOrderingDrag(null);
+  }
+
+  function handleOrderingKeyDown(index: number, event: ReactKeyboardEvent<HTMLButtonElement>) {
+    if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return;
+    event.preventDefault();
+    moveOrderingCard(index, event.key === 'ArrowUp' ? -1 : 1);
+  }
+
   function handleSubmitOrdering() {
     const closing = lesson!.sequenceOrderingClosing!;
     const isCorrect =
@@ -907,6 +993,7 @@ export default function GuwenLessonDecode() {
     setActiveStepId(lesson ? findCurrentStep(lesson, new Set())?.id : undefined);
     setClosingStage(closingStepsList[0]?.kind ?? 'ordering');
     setOrderingArrangement(lesson?.sequenceOrderingClosing ? lesson.sequenceOrderingClosing.cards.map((c) => c.id) : []);
+    updateOrderingDrag(null);
     setOrderingWrong(false);
     setOrderingSolved(false);
     setCausalChoice(null);
@@ -1036,39 +1123,64 @@ export default function GuwenLessonDecode() {
           </button>
         </div>
         <p className="text-sm text-gray-600 whitespace-pre-line">{closing.intro}</p>
+        {!orderingSolved && (
+          <p className="rounded-lg bg-indigo-50 px-3 py-2 text-xs font-medium text-indigo-700">
+            按住每張卡片右側的 ⠿，上下拖曳到想放的位置，再放開手指。
+          </p>
+        )}
         <div className="space-y-2">
-          {cardsInOrder.map((card, i) => (
-            <div key={card.id} className="flex items-center gap-2 rounded-xl border-2 border-gray-200 bg-gray-50 px-3 py-2">
+          {cardsInOrder.map((card, i) => {
+            const isDragging = orderingDrag?.cardId === card.id;
+            return (
+            <div
+              key={card.id}
+              ref={(element) => {
+                if (element) orderingCardRefs.current.set(card.id, element);
+                else orderingCardRefs.current.delete(card.id);
+              }}
+              className={`flex items-center gap-2 rounded-xl border-2 px-3 py-2 select-none ${
+                isDragging
+                  ? 'relative z-20 border-indigo-400 bg-indigo-50 shadow-xl'
+                  : 'border-gray-200 bg-gray-50 transition-[transform,box-shadow,border-color]'
+              }`}
+              style={
+                isDragging
+                  ? { transform: `translateY(${orderingDrag.currentY - orderingDrag.startY}px)` }
+                  : undefined
+              }
+            >
               <span className="font-bold text-gray-400 w-5 text-center shrink-0">{i + 1}</span>
               <button type="button" onClick={() => speak(card.text)} aria-label="聽這張畫面" className="text-sky-500 shrink-0">
                 🔊
               </button>
               <p className="flex-1 text-sm text-gray-800">{card.text}</p>
               {!orderingSolved && (
-                <div className="flex flex-col gap-0.5 shrink-0">
-                  <button
-                    type="button"
-                    disabled={i === 0}
-                    onClick={() => moveOrderingCard(i, -1)}
-                    aria-label="上移"
-                    className="disabled:opacity-20 text-indigo-600 leading-none text-lg"
-                  >
-                    ▲
-                  </button>
-                  <button
-                    type="button"
-                    disabled={i === cardsInOrder.length - 1}
-                    onClick={() => moveOrderingCard(i, 1)}
-                    aria-label="下移"
-                    className="disabled:opacity-20 text-indigo-600 leading-none text-lg"
-                  >
-                    ▼
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  aria-label={`拖曳第 ${i + 1} 張卡片重新排序`}
+                  aria-keyshortcuts="ArrowUp ArrowDown"
+                  onPointerDown={(event) => handleOrderingPointerDown(card.id, i, event)}
+                  onPointerMove={handleOrderingPointerMove}
+                  onPointerUp={(event) => finishOrderingDrag(event, true)}
+                  onPointerCancel={(event) => finishOrderingDrag(event, false)}
+                  onKeyDown={(event) => handleOrderingKeyDown(i, event)}
+                  className={`flex h-11 w-11 shrink-0 touch-none items-center justify-center rounded-xl border-2 text-2xl leading-none ${
+                    isDragging
+                      ? 'cursor-grabbing border-indigo-500 bg-indigo-600 text-white'
+                      : 'cursor-grab border-indigo-200 bg-white text-indigo-600 active:bg-indigo-100'
+                  }`}
+                >
+                  ⠿
+                </button>
               )}
             </div>
-          ))}
+          )})}
         </div>
+        {!orderingSolved && orderingDrag && (
+          <p aria-live="polite" className="text-center text-sm font-bold text-indigo-600">
+            放開後會移到第 {orderingDrag.targetIndex + 1} 位
+          </p>
+        )}
         {!orderingSolved && orderingWrong && <p className="text-sm text-red-500 text-center">{closing.retryHint}</p>}
         {!orderingSolved && (
           <button
