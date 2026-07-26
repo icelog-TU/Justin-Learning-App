@@ -145,7 +145,15 @@ function loadItems(): AuditItem[] {
     const parsed = JSON.parse(raw) as { version?: number; items?: Array<Partial<AuditItem> & { id: string; source: string; text: string }> };
     if (!Array.isArray(parsed.items)) return defaults;
 
-    const stored = parsed.items.map(legacyItemToAudit);
+    const catalogIds = new Set(GUWEN_PRONUNCIATION_AUDIT_CATALOG.map((item) => item.id));
+    const stored = parsed.items
+      .map(legacyItemToAudit)
+      .filter(
+        (item) =>
+          catalogIds.has(item.id) ||
+          item.lessonId === 'unassigned' ||
+          Object.values(item.targetStatuses).some((status) => status !== 'pending'),
+      );
     const storedIds = new Set(stored.map((item) => item.id));
     return [...defaults.filter((item) => !storedIds.has(item.id)), ...stored];
   } catch {
