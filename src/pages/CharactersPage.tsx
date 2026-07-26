@@ -95,7 +95,7 @@ export default function CharactersPage() {
       <div>
         <h2 className="text-xl font-bold text-gray-800">角色收藏</h2>
         <p className="text-sm text-gray-500">
-          用 ⭐ 星星給角色愛心，每次花 {HEART_COST_STARS} 顆星星，好感度會用數字顯示（例如 2⁵ 代表已經給了 5 次愛心）。
+          用 ⭐ 星星給角色愛心，每次花 {HEART_COST_STARS} 顆星星；好感度會直接顯示已經獲得的愛心數量。
         </p>
       </div>
 
