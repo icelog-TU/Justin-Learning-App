@@ -334,14 +334,17 @@ Firebase Web 設定不是伺服器密鑰；真正存取控制必須由 Firebase 
 
 ### 多音字 TTS 實聽台
 
-- 所有涉及孩子端播放文字、TTS、讀音提示或多音字資料的 agent，除本文件外，必須在修改前完整閱讀 `GUWEN-TTS-CENTRAL-DATABASE-HANDOFF.md`；固定流程另見 `GUWEN-WORKFLOW-SOP.md` 的「逐題多音字查核流程」與「多音字 TTS 實聽台的固定入口與用法」。
+- 所有涉及孩子端播放文字、TTS、讀音提示或多音字資料的 agent，除本文件外，必須在修改前完整閱讀 `GUWEN-TTS-CENTRAL-DATABASE-HANDOFF.md`；固定流程另見 `GUWEN-WORKFLOW-SOP.md` 的「逐題掃描＋全篇批次多音字查核流程」與「多音字 TTS 實聽台的固定入口與用法」。
 - 專用路由：`/#/tts-audit`；不放入孩子的主選單，由教材編輯者直接開啟。
 - 頁面：`src/pages/TtsAuditPage.tsx`。
+- 每篇教材的全部孩子端文字完成後，必須做一次全篇最終掃描：不得只挑 agent 猜測「可能念錯」的字；每個多音字在每個實際可播放整句中的具體出現位置都要批次加入正式 catalog。同一整句有多個多音字時共用一個 item，分列在 `targets[]`。
+- Agent 負責找字、整理完整句子、批次建正式 catalog、部署與讀回；agent 和自動化測試都不能聽見 Web Speech 的實際發音，不得代替使用者按「念對／念錯」。判定權只屬於在孩子實際裝置逐句聽完的使用者。
 - 所有播放都呼叫正式 App 的 `speak()`，因此會經過同一套 `ttsSafe()` 修音規則。
 - 正式候選資料：`src/data/guwenPronunciationAudit.ts`；每筆依篇章、題號、穩定語音單元 ID 與目標字具體出現位置建檔。
 - 雲端讀寫：`src/lib/ttsAuditCloud.ts`。沿用既有匿名 Firebase Authentication，但使用獨立的 `families/GUWENTTS-*` 文件；不得併入孩子的 `AppData`。
 - 點選「念對／念錯」後立即寫入中央資料庫，畫面必須顯示成功、失敗或重送狀態；成功寫入會產生回傳編號。另提供「重新同步全部結果」作為補送入口。
 - 可一次貼入多行完整語音單元、逐句或依序播放，並複製包含裝置與可見 `zh-TW` 聲音資訊的備份。臨時加入者標為「待分類」，正式使用前要補進候選資料檔。
+- 有效「念對」只表示該 exact utterance 不加註；有效「念錯」必須在孩子端該句正下方另顯示一行正確讀音提示，不改寫原句。提示本身的 TTS 文字移除括號注音後仍要朗讀。
 - 獨立 localStorage key `guwen-tts-audit-v1` 只作離線備份與舊版資料遷移；它不是正式資料庫，也不得同步到孩子的 Firestore 學習資料。
 - 編輯代理開始多音字工作時先執行 `npm run tts:audit:pull`，讀回中央資料庫後再更新教材主檔與孩子端提示。
 - `getTtsInput()` 只供成人測試頁查看實際送入語音引擎的文字；正式孩子畫面仍顯示原文。

@@ -172,13 +172,17 @@ type FinalVerification = {
 - `uncertainty` 必須可顯示，不能併入正解後遺失；
 - 編輯者備註不得打包成孩子端 lesson step；
 - 最終白話文必須是受條件控制的欄位，不能出現在初始畫面資料中而被 UI 提前渲染。
+- 每題編寫時先掃描多音字；全篇所有孩子端朗讀文字完成後，再做一次獨立、完整的全篇掃描。正式 catalog 必須涵蓋每個 exact playable utterance 中全部多音字的每個具體出現位置，不得只收 agent 判斷可能念錯者。
+- 全篇掃描結果要一次批次加入 `src/data/guwenPronunciationAudit.ts`；同一完整整句有多個多音字時建立一個 item、分列 `targets[]`。部署並開啟正式 `/#/tts-audit` 後，才算整批出現在網頁與中央 catalog。
 - 每個待實聽語音單元先加入 `src/data/guwenPronunciationAudit.ts`，再交由 `/#/tts-audit` 在目標裝置播放；臨時貼入網頁的句子只算待分類，不算正式建檔。
 - 實聽台選擇「念對／念錯」後必須寫入獨立的 Firestore 多音字資料庫並顯示回傳成功或失敗；localStorage 只作離線備份，不得當成唯一結果來源。
-- App 實作或教材交付前執行 `npm run tts:audit:pull`。中央確認念對者不建立孩子端提示；中央確認念錯者才建立就近提示與讀音控制。
+- 只有使用者可以在孩子實際裝置親耳聽完後選擇「念對／念錯」。Coding agent、自動測試與捕捉到的 TTS 文字都不能驗證可聽見的發音，不得代填結果。
+- App 實作或教材交付前執行 `npm run tts:audit:pull`。中央確認念對者不建立孩子端提示；中央確認念錯者在每個受影響的朗讀位置，緊接完整整句另顯示一行正確讀音，不改寫原句。
 - 完整語音文字、TTS 輸入或目標字出現位置改變時，舊實測紀錄失效，必須重新建檔與實聽。
 - catalog 與 result 必須保存 exact `displayText`、`ttsInput`、`auditRevision`、`targetFingerprint` 與 `utteranceFingerprint`；只有全部相符的結果才可產生教材結論，舊結果保留但列為待複驗。
 - 正式 App 與實聽台必須共用同一個 zh-TW voice 選擇函式；result 保存實際 voice name、voiceURI、lang 與 default。瀏覽器未提供 voice 清單時必須標記為未解析系統預設。
 - 臨時貼入實聽台的「待分類」句子只作本機測試，不得寫入中央正式 catalog；先加入 `src/data/guwenPronunciationAudit.ts` 才能中央回傳。
+- 中央歷史可以日後用來統計經常念對的字、句型或 voice，但目前不得形成跨句永久白名單。只有 exact utterance、TTS input、目標位置、revision 與適用語音環境相符的有效結果才能沿用；免測政策必須另行實作並由使用者核准。
 
 ## 6. 互動狀態與解鎖順序
 
