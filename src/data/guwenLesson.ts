@@ -1,5 +1,6 @@
 import { zhengRenMaiLuLesson } from './zhengRenMaiLuLesson';
 import { wangRongLesson } from './wangRongLesson';
+import { simaGuangLesson } from './simaGuangLesson';
 
 /**
  * 古文破譯家 — "Lesson" format: a stricter evidence-based methodology than the original GuwenWord model in
@@ -9,6 +10,21 @@ import { wangRongLesson } from './wangRongLesson';
  * See .claude/skills/design-guwen-decoding/SKILL.md and .claude/skills/guwen-decoder/SKILL.md for the full
  * design contract this format follows. This is the only active classical-text lesson model in the app.
  */
+
+export interface PronunciationCue {
+  /** Exact approved visible copy, including any Zhuyin. */
+  displayText: string;
+  /** Equivalent Chinese-only wording sent to TTS so punctuation/Zhuyin are not read aloud. */
+  speechText: string;
+}
+
+export interface StepPronunciationCues {
+  targetSentence?: PronunciationCue[];
+  intro?: PronunciationCue[];
+  question?: PronunciationCue[];
+  retryHint?: PronunciationCue[];
+  correctFeedback?: PronunciationCue[];
+}
 
 /** One real classical-text excerpt used as comparison evidence for a target word/phrase. */
 export interface ClassicalClue {
@@ -35,12 +51,9 @@ export interface ClassicalClue {
   /** Traceable source (author/work), preserved verbatim from the approved lesson content. */
   source: string;
   /** Child-facing pronunciation note approved by the central TTS audit for this exact clue unit. */
-  pronunciationCue?: {
-    /** Exact approved visible copy, including any Zhuyin. */
-    displayText: string;
-    /** Equivalent Chinese-only wording sent to TTS so punctuation/Zhuyin are not read aloud. */
-    speechText: string;
-  };
+  pronunciationCue?: PronunciationCue;
+  /** Separate approved note for the playable unlocked-meaning line. */
+  unlockedMeaningPronunciationCue?: PronunciationCue;
 }
 
 /** A previously-decoded piece of meaning, reusable in a later reconstruction step's "密碼鑰匙" table. */
@@ -70,6 +83,8 @@ interface LessonStepBase {
   retryHint: string;
   /** 破譯詳解 — the full reasoning explanation. */
   explanation: string;
+  /** Target-level central TTS corrections, placed immediately after the exact affected playable line. */
+  pronunciationCues?: StepPronunciationCues;
   /** This step's contribution to the final assembled draft ("我的破譯稿"), only set on the 7 steps whose
    * solved meaning becomes one line of the reconstructed story (see 全文密碼地圖 in the source lesson). */
   finalDraftLine?: string;
@@ -115,6 +130,7 @@ export interface RevealStep {
   correctFeedback: string;
   /** The assembled sentence/narrative shown after tapping continue. */
   explanation: string;
+  pronunciationCues?: StepPronunciationCues;
   finalDraftLine?: string;
   keyAwarded?: DecodingKey;
 }
@@ -227,10 +243,14 @@ export interface GuwenLesson {
   introHeadline?: string;
   /** App 開場白 — spoken on the intro screen. */
   introSpokenLine: string;
+  introPronunciationCues?: PronunciationCue[];
   acceptMissionLabel?: string;
   fullText: string;
+  fullTextPronunciationCues?: PronunciationCue[];
   /** fullText split into individually-readable sentences (concatenating these reproduces fullText exactly). */
   sentences: string[];
+  /** Optional corrections for the corresponding individually playable entry in `sentences`. */
+  sentencePronunciationCues?: Partial<Record<number, PronunciationCue[]>>;
   steps: LessonStep[];
   /** Optional whole-lesson wrap-up screens shown (in this fixed order — whichever are present) after every
    * step is solved, before the final translation unlocks. Independent and each individually optional — not
@@ -249,7 +269,7 @@ export interface GuwenLesson {
   preserveAuthoredOptionOrder?: boolean;
 }
 
-export const simaGuangLesson: GuwenLesson = {
+export const legacySimaGuangLesson: GuwenLesson = {
   id: 'sima-guang-po-weng',
   title: '司馬光破甕救友',
   source: '《宋史．司馬光傳》',

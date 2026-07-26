@@ -15,6 +15,7 @@ import {
   totalGuwenLessonItems,
   type GuwenLesson,
   type ClassicalClue,
+  type PronunciationCue,
   type LessonStep,
   type RevealStep,
   type SequenceCard,
@@ -148,10 +149,20 @@ function stepIntroLeadIn(step: LessonStep): string {
  * finishes before the next starts). Clues/keys are part of the auto-play here — the child needs to hear all
  * the evidence before the question makes sense, mirroring the guwen-decoder skill's 'pattern' puzzle rule. */
 function stepAutoPlayLines(step: LessonStep): string[] {
-  const lines: string[] = [step.targetSentence, step.intro];
+  const lines: string[] = [
+    step.targetSentence,
+    ...(step.pronunciationCues?.targetSentence?.map((cue) => cue.speechText) ?? []),
+    step.intro,
+    ...(step.pronunciationCues?.intro?.map((cue) => cue.speechText) ?? []),
+  ];
   if (step.type === 'evidence') {
     step.clues.forEach((c) =>
-      lines.push(c.text, c.pronunciationCue?.speechText ?? '', c.unlockedMeaning ?? ''),
+      lines.push(
+        c.text,
+        c.pronunciationCue?.speechText ?? '',
+        c.unlockedMeaning ?? '',
+        c.unlockedMeaningPronunciationCue?.speechText ?? '',
+      ),
     );
   } else if (step.type === 'reconstruction') {
     step.keys.forEach((k) => {
@@ -162,7 +173,12 @@ function stepAutoPlayLines(step: LessonStep): string[] {
       lines.push(k.code, k.decodedEvidence);
     });
   }
-  if (step.type !== 'reveal' && !questionRepeatsIntro(step.intro, step.question)) lines.push(step.question);
+  if (step.type !== 'reveal' && !questionRepeatsIntro(step.intro, step.question)) {
+    lines.push(
+      step.question,
+      ...(step.pronunciationCues?.question?.map((cue) => cue.speechText) ?? []),
+    );
+  }
   return lines.filter(Boolean);
 }
 
@@ -348,7 +364,15 @@ export default function GuwenLessonDecode() {
   function playFullSequence(fullText: string) {
     setIsPlaying(true);
     setIsPaused(false);
-    speakSequence([LISTEN_LEAD_IN, fullText, LISTEN_PROMPT], () => setIsPlaying(false));
+    speakSequence(
+      [
+        LISTEN_LEAD_IN,
+        ...(lesson?.fullTextPronunciationCues?.map((cue) => cue.speechText) ?? []),
+        fullText,
+        LISTEN_PROMPT,
+      ],
+      () => setIsPlaying(false),
+    );
   }
 
   function toggleFullPlayback() {
@@ -397,7 +421,12 @@ export default function GuwenLessonDecode() {
 
   useEffect(() => {
     if (phase !== 'intro' || !lesson) return;
-    speakSequence([lesson.introSpokenLine, `標題是《${lesson.title}》。`, INTRO_HINT]);
+    speakSequence([
+      lesson.introSpokenLine,
+      ...(lesson.introPronunciationCues?.map((cue) => cue.speechText) ?? []),
+      `標題是《${lesson.title}》。`,
+      INTRO_HINT,
+    ]);
     return () => cancelSpeech();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, lesson]);
@@ -735,7 +764,14 @@ export default function GuwenLessonDecode() {
       explainTimeoutRef.current = null;
       setPlaybackId(id);
       setPlaybackPaused(false);
-      speak(step.explanation.replace(/\n+/g, ' '), () => setPlaybackId((cur) => (cur === id ? null : cur)));
+      speakSequence(
+        [
+          step.correctFeedback,
+          ...(step.pronunciationCues?.correctFeedback?.map((cue) => cue.speechText) ?? []),
+          step.explanation.replace(/\n+/g, ' '),
+        ],
+        () => setPlaybackId((cur) => (cur === id ? null : cur)),
+      );
     }, 250);
   }
 
@@ -1019,11 +1055,42 @@ export default function GuwenLessonDecode() {
     setPhase('intro');
   }
 
+  function renderPronunciationCues(cues?: PronunciationCue[]) {
+    if (!cues?.length) return null;
+    return (
+      <div className="space-y-1.5">
+        {cues.map((cue, index) => (
+          <div
+            key={`${cue.displayText}-${index}`}
+            className="flex items-start gap-2 rounded-lg bg-amber-50 px-2.5 py-2 text-amber-800"
+          >
+            <button
+              type="button"
+              onClick={() => speak(cue.speechText)}
+              aria-label="聽讀音提示"
+              className="shrink-0 text-xs text-sky-600"
+            >
+              🔊
+            </button>
+            <p className="text-xs font-medium">{cue.displayText}</p>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
   function renderClue(clue: ClassicalClue, i: number) {
     return (
       <div key={i} className="rounded-xl border-2 border-gray-200 bg-gray-50 px-4 py-3 space-y-1.5">
         <div className="flex items-start gap-2">
-          <button type="button" onClick={() => speak(clue.text)} aria-label="聽這句古文線索" className="text-sky-500 shrink-0">
+          <button
+            type="button"
+            onClick={() =>
+              speakSequence([clue.text, ...(clue.pronunciationCue ? [clue.pronunciationCue.speechText] : [])])
+            }
+            aria-label="聽這句古文線索"
+            className="text-sky-500 shrink-0"
+          >
             🔊
           </button>
           <p className="text-gray-800 font-medium">{highlightPhrase(clue.text, clue.highlight)}</p>
@@ -1044,16 +1111,30 @@ export default function GuwenLessonDecode() {
         {/* Some clues deliberately omit unlockedMeaning — the child is meant to compare bare clues and
             induce the pattern themselves, so translating one here would hand over the answer. */}
         {clue.unlockedMeaning && (
-          <div className="flex items-start gap-2 pl-1">
-            <button
-              type="button"
-              onClick={() => speak(clue.unlockedMeaning!)}
-              aria-label="聽這句白話"
-              className="text-sky-500 shrink-0 text-xs"
-            >
-              🔊
-            </button>
-            <p className="text-xs text-gray-500">已破解為：{highlightQuoted(clue.unlockedMeaning)}</p>
+          <div className="space-y-1.5">
+            <div className="flex items-start gap-2 pl-1">
+              <button
+                type="button"
+                onClick={() =>
+                  speakSequence([
+                    clue.unlockedMeaning!,
+                    ...(clue.unlockedMeaningPronunciationCue
+                      ? [clue.unlockedMeaningPronunciationCue.speechText]
+                      : []),
+                  ])
+                }
+                aria-label="聽這句白話"
+                className="text-sky-500 shrink-0 text-xs"
+              >
+                🔊
+              </button>
+              <p className="text-xs text-gray-500">已破解為：{highlightQuoted(clue.unlockedMeaning)}</p>
+            </div>
+            {renderPronunciationCues(
+              clue.unlockedMeaningPronunciationCue
+                ? [clue.unlockedMeaningPronunciationCue]
+                : undefined,
+            )}
           </div>
         )}
         <p className="text-[11px] text-gray-300 pl-1">出處：{clue.source}</p>
@@ -1672,6 +1753,7 @@ export default function GuwenLessonDecode() {
             <h2 className="text-xl font-bold text-gray-800">{lesson.title}</h2>
             <p className="text-xs text-gray-400">{lesson.source}</p>
             <p className="text-gray-600 whitespace-pre-line">{lesson.introSpokenLine}</p>
+            {renderPronunciationCues(lesson.introPronunciationCues)}
             {renderPassage()}
             <p className="text-sm text-gray-400">{INTRO_HINT}</p>
           </div>
@@ -1692,17 +1774,31 @@ export default function GuwenLessonDecode() {
         <div className="space-y-4">
           <div className="bg-white rounded-2xl shadow p-5 space-y-3">
             <p className="text-lg leading-relaxed text-gray-800">{lesson.fullText}</p>
+            {renderPronunciationCues(lesson.fullTextPronunciationCues)}
             <button type="button" onClick={toggleFullPlayback} className="text-sm text-sky-600 font-medium">
               {!isPlaying ? '🔊 播放全文' : isPaused ? '▶️ 繼續播放' : '⏸ 暫停播放'}
             </button>
             <div className="pt-2 border-t border-gray-100 space-y-1.5">
               <p className="text-xs text-gray-400">或者一句一句聽：</p>
               {lesson.sentences.map((s, i) => (
-                <div key={i} className="flex items-center gap-2">
-                  <button type="button" onClick={() => speak(s)} aria-label="聽這句話" className="text-sky-500 shrink-0">
-                    🔊
-                  </button>
-                  <span className="text-sm text-gray-600">{s}</span>
+                <div key={i} className="space-y-1.5">
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        speakSequence([
+                          s,
+                          ...(lesson.sentencePronunciationCues?.[i]?.map((cue) => cue.speechText) ?? []),
+                        ])
+                      }
+                      aria-label="聽這句話"
+                      className="text-sky-500 shrink-0"
+                    >
+                      🔊
+                    </button>
+                    <span className="text-sm text-gray-600">{s}</span>
+                  </div>
+                  {renderPronunciationCues(lesson.sentencePronunciationCues?.[i])}
                 </div>
               ))}
             </div>
@@ -1736,6 +1832,7 @@ export default function GuwenLessonDecode() {
               <p className="text-lg font-semibold text-gray-800 leading-relaxed">
                 <span className="text-indigo-600 font-bold">{currentStep.targetSentence}</span>
               </p>
+              {renderPronunciationCues(currentStep.pronunciationCues?.targetSentence)}
               <button
                 type="button"
                 onClick={() => togglePlayback(`step-${currentStep.id}`, stepAutoPlayLines(currentStep))}
@@ -1752,7 +1849,10 @@ export default function GuwenLessonDecode() {
                 leaving only real lead-in text here; the bold question paragraph below still carries the
                 question itself exactly once. Mirrors stepAutoPlayLines' identical audio-side dedupe. */}
             {stepIntroLeadIn(currentStep) && (
-              <p className="text-sm text-center text-gray-600 whitespace-pre-line">{stepIntroLeadIn(currentStep)}</p>
+              <div className="space-y-2">
+                <p className="text-sm text-center text-gray-600 whitespace-pre-line">{stepIntroLeadIn(currentStep)}</p>
+                {renderPronunciationCues(currentStep.pronunciationCues?.intro)}
+              </div>
             )}
 
             {currentStep.type === 'evidence' && (
@@ -1764,18 +1864,27 @@ export default function GuwenLessonDecode() {
             {currentStep.type !== 'reveal' && (
               <>
                 <p className="text-sm font-semibold text-center text-gray-700">{currentStep.question}</p>
+                {renderPronunciationCues(currentStep.pronunciationCues?.question)}
                 {feedback !== 'correct' && renderOptions(currentStep, false)}
                 {wrongIndex !== null && feedback !== 'correct' && (
-                  <div className="flex items-center justify-center gap-2">
-                    <p className="text-center text-sm text-red-500">{currentStep.retryHint}</p>
-                    <button
-                      type="button"
-                      onClick={() => speak(currentStep.retryHint)}
-                      aria-label="聽這段提示"
-                      className="text-red-400 shrink-0"
-                    >
-                      🔊
-                    </button>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-center gap-2">
+                      <p className="text-center text-sm text-red-500">{currentStep.retryHint}</p>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          speakSequence([
+                            currentStep.retryHint,
+                            ...(currentStep.pronunciationCues?.retryHint?.map((cue) => cue.speechText) ?? []),
+                          ])
+                        }
+                        aria-label="聽這段提示"
+                        className="text-red-400 shrink-0"
+                      >
+                        🔊
+                      </button>
+                    </div>
+                    {renderPronunciationCues(currentStep.pronunciationCues?.retryHint)}
                   </div>
                 )}
               </>
@@ -1820,13 +1929,20 @@ export default function GuwenLessonDecode() {
                   <p className="font-bold text-emerald-700">{currentStep.correctFeedback}</p>
                   <button
                     type="button"
-                    onClick={() => togglePlayback(`explain-${currentStep.id}`, currentStep.explanation.replace(/\n+/g, ' '))}
+                    onClick={() =>
+                      togglePlayback(`explain-${currentStep.id}`, [
+                        currentStep.correctFeedback,
+                        ...(currentStep.pronunciationCues?.correctFeedback?.map((cue) => cue.speechText) ?? []),
+                        currentStep.explanation.replace(/\n+/g, ' '),
+                      ])
+                    }
                     aria-label="聽這段說明"
                     className="text-emerald-600 shrink-0"
                   >
                     {playbackLabel(`explain-${currentStep.id}`, '🔊', '⏸', '▶️')}
                   </button>
                 </div>
+                {renderPronunciationCues(currentStep.pronunciationCues?.correctFeedback)}
                 <p className="text-sm text-emerald-700 whitespace-pre-line">{currentStep.explanation}</p>
                 {currentStep.keyAwarded && (
                   <p className="text-xs text-amber-600 bg-white/70 rounded-lg p-2">
@@ -1873,9 +1989,15 @@ export default function GuwenLessonDecode() {
               🪙 共得 {earnedCoins} 金幣　⭐ 共得 {earnedStars} 星星
             </p>
             {renderPassage()}
+            {renderPronunciationCues(lesson.fullTextPronunciationCues)}
             <button
               type="button"
-              onClick={() => togglePlayback('complete-full-text', lesson.fullText)}
+              onClick={() =>
+                togglePlayback('complete-full-text', [
+                  ...(lesson.fullTextPronunciationCues?.map((cue) => cue.speechText) ?? []),
+                  lesson.fullText,
+                ])
+              }
               className="text-sm font-medium text-sky-600"
             >
               {playbackLabel('complete-full-text', '🔊 聽古文全文', '⏸ 暫停播放', '▶️ 重新播放')}
