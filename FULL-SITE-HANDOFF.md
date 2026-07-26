@@ -337,8 +337,12 @@ Firebase Web 設定不是伺服器密鑰；真正存取控制必須由 Firebase 
 - 專用路由：`/#/tts-audit`；不放入孩子的主選單，由教材編輯者直接開啟。
 - 頁面：`src/pages/TtsAuditPage.tsx`。
 - 所有播放都呼叫正式 App 的 `speak()`，因此會經過同一套 `ttsSafe()` 修音規則。
-- 可一次貼入多行完整語音單元、逐句或依序播放、標記念對／念錯／待確認，並複製包含裝置與可見 `zh-TW` 聲音資訊的 Markdown 結果。
-- 測試紀錄只保存在獨立 localStorage key `guwen-tts-audit-v1`，不得併入 `AppData` 或同步到孩子的 Firestore 學習資料。
+- 正式候選資料：`src/data/guwenPronunciationAudit.ts`；每筆依篇章、題號、穩定語音單元 ID 與目標字具體出現位置建檔。
+- 雲端讀寫：`src/lib/ttsAuditCloud.ts`。沿用既有匿名 Firebase Authentication，但使用獨立的 `families/GUWENTTS-*` 文件；不得併入孩子的 `AppData`。
+- 點選「念對／念錯」後立即寫入中央資料庫，畫面必須顯示成功、失敗或重送狀態；成功寫入會產生回傳編號。另提供「重新同步全部結果」作為補送入口。
+- 可一次貼入多行完整語音單元、逐句或依序播放，並複製包含裝置與可見 `zh-TW` 聲音資訊的備份。臨時加入者標為「待分類」，正式使用前要補進候選資料檔。
+- 獨立 localStorage key `guwen-tts-audit-v1` 只作離線備份與舊版資料遷移；它不是正式資料庫，也不得同步到孩子的 Firestore 學習資料。
+- 編輯代理開始多音字工作時先執行 `npm run tts:audit:pull`，讀回中央資料庫後再更新教材主檔與孩子端提示。
 - `getTtsInput()` 只供成人測試頁查看實際送入語音引擎的文字；正式孩子畫面仍顯示原文。
 
 ### 音效

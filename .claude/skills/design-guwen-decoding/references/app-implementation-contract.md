@@ -79,6 +79,21 @@ type Lesson = {
   finalVerification: FinalVerification;
 };
 
+type PronunciationAuditCatalogItem = {
+  id: string;
+  lessonId: string;
+  questionId: string;
+  speechUnitId: string;
+  text: string;
+  targets: Array<{
+    character: string;
+    occurrence: number;
+    zhuyin: string;
+    homophoneCue: string;
+    usage: string;
+  }>;
+};
+
 type StepBase = {
   id: string;
   type:
@@ -157,6 +172,10 @@ type FinalVerification = {
 - `uncertainty` 必須可顯示，不能併入正解後遺失；
 - 編輯者備註不得打包成孩子端 lesson step；
 - 最終白話文必須是受條件控制的欄位，不能出現在初始畫面資料中而被 UI 提前渲染。
+- 每個待實聽語音單元先加入 `src/data/guwenPronunciationAudit.ts`，再交由 `/#/tts-audit` 在目標裝置播放；臨時貼入網頁的句子只算待分類，不算正式建檔。
+- 實聽台選擇「念對／念錯」後必須寫入獨立的 Firestore 多音字資料庫並顯示回傳成功或失敗；localStorage 只作離線備份，不得當成唯一結果來源。
+- App 實作或教材交付前執行 `npm run tts:audit:pull`。中央確認念對者不建立孩子端提示；中央確認念錯者才建立就近提示與讀音控制。
+- 完整語音文字、TTS 輸入或目標字出現位置改變時，舊實測紀錄失效，必須重新建檔與實聽。
 
 ## 6. 互動狀態與解鎖順序
 

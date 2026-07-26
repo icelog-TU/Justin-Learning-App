@@ -1,123 +1,123 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  GUWEN_PRONUNCIATION_AUDIT_CATALOG,
+  type PronunciationAuditCatalogItem,
+  type PronunciationAuditStatus,
+} from '../data/guwenPronunciationAudit';
 import { cancelSpeech, getTtsInput, speak } from '../lib/speech';
+import {
+  fetchCentralAuditDatabase,
+  submitAuditResults,
+  type AuditEnvironment,
+  type CloudAuditDatabase,
+  type CloudAuditResult,
+} from '../lib/ttsAuditCloud';
 
-type AuditStatus = 'pending' | 'correct' | 'incorrect';
-
-type AuditItem = {
-  id: string;
-  source: string;
-  text: string;
-  target: string;
-  intendedReading: string;
-  status: AuditStatus;
+type AuditItem = PronunciationAuditCatalogItem & {
+  status: PronunciationAuditStatus;
   note: string;
   checkedAt?: string;
+  cloudSyncedAt?: string;
+  cloudReceiptId?: string;
 };
 
 type StoredAudit = {
-  version: 1;
+  version: 2;
   items: AuditItem[];
 };
 
+type SyncState = 'idle' | 'saving' | 'saved' | 'error';
+
 const STORAGE_KEY = 'guwen-tts-audit-v1';
+const DEVICE_ID_KEY = 'guwen-tts-audit-device-v1';
 
-const DEFAULT_ITEMS: AuditItem[] = [
-  {
-    id: 'kezhou-q3-nan',
-    source: '《刻舟求劍》第三題｜App 引導語',
-    text: '下一句出現了其劍，這真的很難懂：它該怎麼接回前面的故事？',
-    target: '難',
-    intendedReading: '南（ㄋㄢˊ）',
-    status: 'pending',
-    note: '',
-  },
-  {
-    id: 'kezhou-q3-yi-classical',
-    source: '《刻舟求劍》第三題｜古文線索一',
-    text: '楊布換黑衣而歸，其狗不知而吠之。',
-    target: '衣',
-    intendedReading: '一（ㄧ）',
-    status: 'pending',
-    note: '',
-  },
-  {
-    id: 'kezhou-q3-yi-modern',
-    source: '《刻舟求劍》第三題｜線索一已破解白話',
-    text: '楊布換穿黑衣回家，其狗沒有認出自己的主人，就向他叫。',
-    target: '衣',
-    intendedReading: '一（ㄧ）',
-    status: 'pending',
-    note: '',
-  },
-  {
-    id: 'kezhou-q3-yu',
-    source: '《刻舟求劍》第三題｜古文線索二',
-    text: '楚人賣盾與矛，又譽其矛曰：「吾矛之利，於物無不陷也。」',
-    target: '與',
-    intendedReading: '雨（ㄩˇ）',
-    status: 'pending',
-    note: '',
-  },
-  {
-    id: 'kezhou-q3-jia',
-    source: '《刻舟求劍》第三題｜推理提問',
-    text: '古文破譯家，哪一個假說能同時解開兩條線索中的其？',
-    target: '假',
-    intendedReading: '甲（ㄐㄧㄚˇ）',
-    status: 'pending',
-    note: '',
-  },
-  {
-    id: 'kezhou-q4-zhong-original',
-    source: '《刻舟求劍》第四題｜待破解目標句',
-    text: '其劍自舟中墜於水。',
-    target: '中',
-    intendedReading: '鐘（ㄓㄨㄥ）',
-    status: 'pending',
-    note: '',
-  },
-  {
-    id: 'kezhou-q4-zhong-di',
-    source: '《刻舟求劍》第四題｜古文線索一',
-    text: '椀自手中墜地。',
-    target: '中、地',
-    intendedReading: '鐘（ㄓㄨㄥ）；弟（ㄉㄧˋ）',
-    status: 'pending',
-    note: '',
-  },
-];
-
-const STATUS_META: Record<AuditStatus, { label: string; className: string }> = {
+const STATUS_META: Record<PronunciationAuditStatus, { label: string; className: string }> = {
   pending: { label: '待確認', className: 'border-slate-300 bg-slate-50 text-slate-600' },
   correct: { label: '念對', className: 'border-emerald-500 bg-emerald-50 text-emerald-700' },
   incorrect: { label: '念錯', className: 'border-rose-500 bg-rose-50 text-rose-700' },
 };
-
-function cloneDefaults(): AuditItem[] {
-  return DEFAULT_ITEMS.map((item) => ({ ...item }));
-}
-
-function loadItems(): AuditItem[] {
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return cloneDefaults();
-    const parsed = JSON.parse(raw) as StoredAudit;
-    if (parsed.version !== 1 || !Array.isArray(parsed.items)) return cloneDefaults();
-    return parsed.items;
-  } catch {
-    return cloneDefaults();
-  }
-}
 
 function createId(): string {
   if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) return crypto.randomUUID();
   return `tts-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
-function formatStatus(status: AuditStatus): string {
+function getDeviceId(): string {
+  const existing = window.localStorage.getItem(DEVICE_ID_KEY);
+  if (existing) return existing;
+  const next = createId();
+  window.localStorage.setItem(DEVICE_ID_KEY, next);
+  return next;
+}
+
+function cloneCatalog(): AuditItem[] {
+  return GUWEN_PRONUNCIATION_AUDIT_CATALOG.map((item) => ({
+    ...item,
+    status: 'pending',
+    note: '',
+  }));
+}
+
+function legacyItemToAudit(item: Partial<AuditItem> & { id: string; source: string; text: string }): AuditItem {
+  const catalogItem = GUWEN_PRONUNCIATION_AUDIT_CATALOG.find((candidate) => candidate.id === item.id);
+  if (catalogItem) {
+    return {
+      ...catalogItem,
+      status: item.status ?? 'pending',
+      note: item.note ?? '',
+      checkedAt: item.checkedAt,
+      cloudSyncedAt: item.cloudSyncedAt,
+      cloudReceiptId: item.cloudReceiptId,
+    };
+  }
+
+  return {
+    id: item.id,
+    lessonId: item.lessonId ?? 'unassigned',
+    lessonNumber: item.lessonNumber ?? 999,
+    lessonTitle: item.lessonTitle ?? '待分類',
+    questionId: item.questionId ?? 'unassigned',
+    speechUnitId: item.speechUnitId ?? item.id,
+    source: item.source,
+    text: item.text,
+    target: item.target ?? '',
+    intendedReading: item.intendedReading ?? '',
+    targets: item.targets ?? [],
+    initialVerifications: item.initialVerifications ?? [],
+    status: item.status ?? 'pending',
+    note: item.note ?? '',
+    checkedAt: item.checkedAt,
+    cloudSyncedAt: item.cloudSyncedAt,
+    cloudReceiptId: item.cloudReceiptId,
+  };
+}
+
+function loadItems(): AuditItem[] {
+  const defaults = cloneCatalog();
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY);
+    if (!raw) return defaults;
+    const parsed = JSON.parse(raw) as { version?: number; items?: Array<Partial<AuditItem> & { id: string; source: string; text: string }> };
+    if (!Array.isArray(parsed.items)) return defaults;
+
+    const stored = parsed.items.map(legacyItemToAudit);
+    const storedIds = new Set(stored.map((item) => item.id));
+    return [...defaults.filter((item) => !storedIds.has(item.id)), ...stored];
+  } catch {
+    return defaults;
+  }
+}
+
+function formatStatus(status: PronunciationAuditStatus): string {
   if (status === 'correct') return '念對，不需加註';
   if (status === 'incorrect') return '念錯，需要處理';
   return '待實聽';
+}
+
+function latestResult(database: CloudAuditDatabase | null, itemId: string): CloudAuditResult | null {
+  if (!database) return null;
+  const results = database.lessons.flatMap((lesson) => lesson.items[itemId]?.results ?? []);
+  return results.sort((a, b) => b.receivedAt - a.receivedAt)[0] ?? null;
 }
 
 export default function TtsAuditPage() {
@@ -126,15 +126,51 @@ export default function TtsAuditPage() {
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
   const [playingId, setPlayingId] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [syncStates, setSyncStates] = useState<Record<string, SyncState>>({});
+  const [database, setDatabase] = useState<CloudAuditDatabase | null>(null);
+  const [databaseState, setDatabaseState] = useState<'loading' | 'ready' | 'error'>('loading');
+  const [databaseError, setDatabaseError] = useState('');
+  const [lastReceipt, setLastReceipt] = useState('');
   const stopSequenceRef = useRef(false);
+  const migrationSyncRef = useRef(false);
+
+  const zhTwVoices = useMemo(
+    () => voices.filter((voice) => voice.lang.toLowerCase() === 'zh-tw'),
+    [voices],
+  );
+
+  const environment = useCallback(
+    (): AuditEnvironment => ({
+      deviceId: getDeviceId(),
+      userAgent: navigator.userAgent,
+      language: navigator.language,
+      zhTwVoiceNames: zhTwVoices.map((voice) => voice.name),
+    }),
+    [zhTwVoices],
+  );
+
+  const refreshDatabase = useCallback(async () => {
+    try {
+      const next = await fetchCentralAuditDatabase();
+      setDatabase(next);
+      setDatabaseState('ready');
+      setDatabaseError('');
+    } catch (error) {
+      setDatabaseState('error');
+      setDatabaseError(error instanceof Error ? error.message : '中央資料庫讀取失敗');
+    }
+  }, []);
 
   useEffect(() => {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: 1, items } satisfies StoredAudit));
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: 2, items } satisfies StoredAudit));
   }, [items]);
 
   useEffect(() => {
-    if (!('speechSynthesis' in window)) return;
+    void refreshDatabase();
+  }, [refreshDatabase]);
 
+  useEffect(() => {
+    if (!('speechSynthesis' in window)) return;
     const refreshVoices = () => setVoices(window.speechSynthesis.getVoices());
     refreshVoices();
     window.speechSynthesis.addEventListener('voiceschanged', refreshVoices);
@@ -156,20 +192,98 @@ export default function TtsAuditPage() {
     [items],
   );
 
-  const zhTwVoices = useMemo(
-    () => voices.filter((voice) => voice.lang.toLowerCase() === 'zh-tw'),
-    [voices],
-  );
+  const centralCounts = useMemo(() => {
+    if (!database) return { correct: 0, incorrect: 0, items: 0 };
+    const cloudItems = database.lessons.flatMap((lesson) => Object.values(lesson.items));
+    return cloudItems.reduce(
+      (result, item) => {
+        const latest = [...item.results].sort((a, b) => b.receivedAt - a.receivedAt)[0];
+        if (latest?.status === 'correct') result.correct += 1;
+        if (latest?.status === 'incorrect') result.incorrect += 1;
+        result.items += 1;
+        return result;
+      },
+      { correct: 0, incorrect: 0, items: 0 },
+    );
+  }, [database]);
 
   const updateItem = (id: string, patch: Partial<AuditItem>) => {
     setItems((current) => current.map((item) => (item.id === id ? { ...item, ...patch } : item)));
   };
 
-  const markStatus = (id: string, status: AuditStatus) => {
-    updateItem(id, {
+  const syncTestedItems = useCallback(
+    async (testedItems: AuditItem[]) => {
+      const eligible = testedItems.filter(
+        (item): item is AuditItem & { status: 'correct' | 'incorrect'; checkedAt: string } =>
+          item.status !== 'pending' && Boolean(item.checkedAt),
+      );
+      if (!eligible.length) return;
+
+      setSyncStates((current) => ({
+        ...current,
+        ...Object.fromEntries(eligible.map((item) => [item.id, 'saving' as const])),
+      }));
+
+      try {
+        const receipt = await submitAuditResults(
+          eligible.map((item) => ({
+            item,
+            status: item.status,
+            note: item.note,
+            checkedAt: item.checkedAt,
+          })),
+          environment(),
+        );
+        const syncedAt = new Date(receipt.receivedAt).toISOString();
+        const receiptId = receipt.submissionIds.join('、');
+        setItems((current) =>
+          current.map((item) =>
+            eligible.some((eligibleItem) => eligibleItem.id === item.id)
+              ? { ...item, cloudSyncedAt: syncedAt, cloudReceiptId: receiptId }
+              : item,
+          ),
+        );
+        setSyncStates((current) => ({
+          ...current,
+          ...Object.fromEntries(eligible.map((item) => [item.id, 'saved' as const])),
+        }));
+        setLastReceipt(receiptId);
+        await refreshDatabase();
+      } catch (error) {
+        setSyncStates((current) => ({
+          ...current,
+          ...Object.fromEntries(eligible.map((item) => [item.id, 'error' as const])),
+        }));
+        setDatabaseState('error');
+        setDatabaseError(error instanceof Error ? error.message : '結果尚未回傳');
+      }
+    },
+    [environment, refreshDatabase],
+  );
+
+  useEffect(() => {
+    if (databaseState !== 'ready' || migrationSyncRef.current) return;
+    const locallyTestedButUnsynced = items.filter(
+      (item) => item.status !== 'pending' && !item.cloudSyncedAt,
+    );
+    migrationSyncRef.current = true;
+    if (locallyTestedButUnsynced.length) void syncTestedItems(locallyTestedButUnsynced);
+  }, [databaseState, items, syncTestedItems]);
+
+  const markStatus = (id: string, status: PronunciationAuditStatus) => {
+    const checkedAt = status === 'pending' ? undefined : new Date().toISOString();
+    const next = items.find((item) => item.id === id);
+    if (!next) return;
+    const updated: AuditItem = {
+      ...next,
       status,
-      checkedAt: status === 'pending' ? undefined : new Date().toISOString(),
-    });
+      checkedAt,
+      cloudSyncedAt: undefined,
+      cloudReceiptId: undefined,
+    };
+    updateItem(id, updated);
+    setSyncStates((current) => ({ ...current, [id]: status === 'pending' ? 'idle' : 'saving' }));
+    if (status !== 'pending') void syncTestedItems([updated]);
   };
 
   const playOne = (item: AuditItem, onEnd?: () => void) => {
@@ -184,7 +298,6 @@ export default function TtsAuditPage() {
   const playAll = () => {
     if (!items.length) return;
     stopSequenceRef.current = false;
-
     const playAt = (index: number) => {
       if (stopSequenceRef.current || index >= items.length) {
         setPlayingId(null);
@@ -194,7 +307,6 @@ export default function TtsAuditPage() {
       setPlayingId(item.id);
       speak(item.text, () => playAt(index + 1));
     };
-
     playAt(0);
   };
 
@@ -210,25 +322,34 @@ export default function TtsAuditPage() {
       .map((line) => line.trim())
       .filter(Boolean);
     if (!lines.length) return;
-
     setItems((current) => [
       ...current,
-      ...lines.map((text, index) => ({
-        id: `${createId()}-${index}`,
-        source: '自行新增',
-        text,
-        target: '',
-        intendedReading: '',
-        status: 'pending' as const,
-        note: '',
-      })),
+      ...lines.map((text, index): AuditItem => {
+        const id = `${createId()}-${index}`;
+        return {
+          id,
+          lessonId: 'unassigned',
+          lessonNumber: 999,
+          lessonTitle: '待分類',
+          questionId: 'unassigned',
+          speechUnitId: id,
+          source: '自行新增',
+          text,
+          target: '',
+          intendedReading: '',
+          targets: [],
+          initialVerifications: [],
+          status: 'pending',
+          note: '',
+        };
+      }),
     ]);
     setDraft('');
   };
 
   const restoreDefaults = () => {
     const existingIds = new Set(items.map((item) => item.id));
-    const missing = cloneDefaults().filter((item) => !existingIds.has(item.id));
+    const missing = cloneCatalog().filter((item) => !existingIds.has(item.id));
     if (missing.length) setItems((current) => [...missing, ...current]);
   };
 
@@ -248,6 +369,7 @@ export default function TtsAuditPage() {
       '- 正式 App 語音設定：zh-TW；系統自動選擇聲音',
       `- 本裝置可見的 zh-TW 聲音：${voiceNames}`,
       `- 裝置／瀏覽器：${navigator.userAgent}`,
+      `- 中央回傳編號：${lastReceipt || '尚未取得'}`,
       '',
     ];
 
@@ -259,7 +381,8 @@ export default function TtsAuditPage() {
         return;
       }
       matching.forEach((item) => {
-        lines.push(`- 來源：${item.source}`);
+        lines.push(`- 篇章：第 ${item.lessonNumber} 篇《${item.lessonTitle}》`);
+        lines.push(`  - 來源：${item.source}`);
         lines.push(`  - 完整句子：${item.text}`);
         lines.push(`  - 候選字：${item.target || '未填'}`);
         lines.push(`  - 正確讀音：${item.intendedReading || '未填'}`);
@@ -267,7 +390,6 @@ export default function TtsAuditPage() {
         lines.push('');
       });
     });
-
     return lines.join('\n');
   };
 
@@ -287,9 +409,64 @@ export default function TtsAuditPage() {
         <p className="text-xs font-bold tracking-[0.18em] text-teal-700">教材編輯工具</p>
         <h2 className="text-2xl font-black text-slate-800">多音字 TTS 實聽台</h2>
         <p className="text-sm leading-6 text-slate-600">
-          這裡和正式 App 使用同一套朗讀與修音規則。請在孩子實際使用的裝置上播放完整句子，再標記念對或念錯。
+          這裡和正式 App 使用同一套朗讀與修音規則。點選「念對」或「念錯」後，結果會直接回傳到中央資料庫。
         </p>
       </header>
+
+      <section
+        className={`rounded-2xl border p-4 text-sm ${
+          databaseState === 'error'
+            ? 'border-rose-200 bg-rose-50 text-rose-800'
+            : 'border-teal-100 bg-teal-50 text-teal-900'
+        }`}
+      >
+        <p className="font-bold">中央資料庫</p>
+        {databaseState === 'loading' && <p className="mt-1">正在連線並讀取既有紀錄……</p>}
+        {databaseState === 'ready' && (
+          <>
+            <p className="mt-1">
+              已連線｜共 {centralCounts.items} 個語音單元｜目前念對 {centralCounts.correct}｜念錯{' '}
+              {centralCounts.incorrect}
+            </p>
+            {lastReceipt && <p className="mt-1 break-all text-xs">本次回傳編號：{lastReceipt}</p>}
+            {database && database.lessons.length > 0 && (
+              <details className="mt-3 rounded-xl bg-white/70 p-3">
+                <summary className="cursor-pointer font-bold">查看按篇章整理的中央紀錄</summary>
+                <div className="mt-2 space-y-2">
+                  {database.lessons
+                    .slice()
+                    .sort((a, b) => a.lessonNumber - b.lessonNumber)
+                    .map((lesson) => {
+                      const lessonItems = Object.values(lesson.items);
+                      const correct = lessonItems.filter((item) => {
+                        const latest = [...item.results].sort((a, b) => b.receivedAt - a.receivedAt)[0];
+                        return latest?.status === 'correct';
+                      }).length;
+                      const incorrect = lessonItems.filter((item) => {
+                        const latest = [...item.results].sort((a, b) => b.receivedAt - a.receivedAt)[0];
+                        return latest?.status === 'incorrect';
+                      }).length;
+                      return (
+                        <p key={lesson.lessonId} className="text-xs">
+                          第 {lesson.lessonNumber} 篇《{lesson.lessonTitle}》：{lessonItems.length} 個語音單元；
+                          念對 {correct}，念錯 {incorrect}
+                        </p>
+                      );
+                    })}
+                </div>
+              </details>
+            )}
+          </>
+        )}
+        {databaseState === 'error' && (
+          <>
+            <p className="mt-1">尚未成功回傳：{databaseError}</p>
+            <button type="button" onClick={() => void refreshDatabase()} className="mt-2 font-bold underline">
+              重新連線
+            </button>
+          </>
+        )}
+      </section>
 
       <section className="rounded-2xl border border-teal-100 bg-teal-50 p-4 text-sm text-teal-900">
         <p className="font-bold">目前語音環境</p>
@@ -333,107 +510,137 @@ export default function TtsAuditPage() {
         </button>
         <button
           type="button"
+          onClick={() => void syncTestedItems(items)}
+          disabled={!items.some((item) => item.status !== 'pending')}
+          className="rounded-xl bg-sky-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-sky-700 disabled:bg-slate-300"
+        >
+          重新同步全部結果
+        </button>
+        <button
+          type="button"
           onClick={copyResults}
           className="rounded-xl bg-orange-500 px-4 py-2.5 text-sm font-bold text-white hover:bg-orange-600"
         >
-          {copied ? '結果已複製' : '複製測試結果'}
+          {copied ? '結果已複製' : '複製備份'}
         </button>
       </section>
 
       <section className="space-y-3">
-        {items.map((item, index) => (
-          <article
-            key={item.id}
-            className={`rounded-2xl border bg-white p-4 shadow-sm transition ${
-              playingId === item.id ? 'border-teal-500 ring-2 ring-teal-100' : 'border-slate-200'
-            }`}
-          >
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-xs font-bold text-teal-700">
-                  {index + 1}. {item.source}
-                </p>
-                <p className="mt-2 text-lg font-semibold leading-8 text-slate-800">{item.text}</p>
+        {items.map((item, index) => {
+          const central = latestResult(database, item.id);
+          const syncState = syncStates[item.id] ?? (item.cloudSyncedAt ? 'saved' : 'idle');
+          return (
+            <article
+              key={item.id}
+              className={`rounded-2xl border bg-white p-4 shadow-sm transition ${
+                playingId === item.id ? 'border-teal-500 ring-2 ring-teal-100' : 'border-slate-200'
+              }`}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-xs font-bold text-teal-700">
+                    {index + 1}. {item.source}
+                  </p>
+                  <p className="mt-2 text-lg font-semibold leading-8 text-slate-800">{item.text}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => playOne(item)}
+                  className="shrink-0 rounded-xl bg-slate-800 px-3 py-2 text-sm font-bold text-white hover:bg-slate-900"
+                >
+                  {playingId === item.id ? '播放中…' : '播放'}
+                </button>
               </div>
+
+              <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                <label className="text-xs font-semibold text-slate-600">
+                  候選字
+                  <input
+                    type="text"
+                    value={item.target}
+                    onChange={(event) => updateItem(item.id, { target: event.target.value })}
+                    placeholder="例如：中"
+                    className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm font-normal text-slate-800 outline-none focus:border-teal-400"
+                  />
+                </label>
+                <label className="text-xs font-semibold text-slate-600">
+                  正確讀音
+                  <input
+                    type="text"
+                    value={item.intendedReading}
+                    onChange={(event) => updateItem(item.id, { intendedReading: event.target.value })}
+                    placeholder="例如：鐘（ㄓㄨㄥ）"
+                    className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm font-normal text-slate-800 outline-none focus:border-teal-400"
+                  />
+                </label>
+              </div>
+
+              <div className="mt-3 flex flex-wrap gap-2" role="group" aria-label="實聽結果">
+                {(Object.keys(STATUS_META) as PronunciationAuditStatus[]).map((status) => (
+                  <button
+                    key={status}
+                    type="button"
+                    onClick={() => markStatus(item.id, status)}
+                    className={`rounded-full border px-3 py-1.5 text-sm font-bold ${
+                      item.status === status
+                        ? STATUS_META[status].className
+                        : 'border-slate-200 bg-white text-slate-400 hover:bg-slate-50'
+                    }`}
+                  >
+                    {STATUS_META[status].label}
+                  </button>
+                ))}
+              </div>
+
+              <p
+                className={`mt-2 text-xs font-semibold ${
+                  syncState === 'error'
+                    ? 'text-rose-600'
+                    : syncState === 'saved'
+                      ? 'text-emerald-700'
+                      : 'text-slate-500'
+                }`}
+              >
+                {syncState === 'saving' && '正在回傳中央資料庫……'}
+                {syncState === 'saved' && '已回傳中央資料庫'}
+                {syncState === 'error' && '回傳失敗；可再點一次結果或使用「重新同步全部結果」'}
+                {syncState === 'idle' && central && `中央最新紀錄：${formatStatus(central.status)}`}
+                {syncState === 'idle' && !central && '尚無中央紀錄'}
+              </p>
+
+              <label className="mt-3 block text-xs font-semibold text-slate-600">
+                備註
+                <input
+                  type="text"
+                  value={item.note}
+                  onChange={(event) => updateItem(item.id, { note: event.target.value })}
+                  placeholder="例如：把「中」念成第四聲"
+                  className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm font-normal text-slate-800 outline-none focus:border-teal-400"
+                />
+              </label>
+
+              <details className="mt-3 text-xs text-slate-500">
+                <summary className="cursor-pointer font-semibold">查看實際送入 TTS 的文字</summary>
+                <p className="mt-2 break-words rounded-lg bg-slate-50 p-2">{getTtsInput(item.text)}</p>
+              </details>
+
               <button
                 type="button"
-                onClick={() => playOne(item)}
-                className="shrink-0 rounded-xl bg-slate-800 px-3 py-2 text-sm font-bold text-white hover:bg-slate-900"
+                onClick={() => removeItem(item.id)}
+                className="mt-3 text-xs font-semibold text-slate-400 underline decoration-slate-300 underline-offset-2 hover:text-rose-600"
               >
-                {playingId === item.id ? '播放中…' : '播放'}
+                從本機測試清單移除
               </button>
-            </div>
-
-            <div className="mt-3 grid gap-2 sm:grid-cols-2">
-              <label className="text-xs font-semibold text-slate-600">
-                候選字
-                <input
-                  type="text"
-                  value={item.target}
-                  onChange={(event) => updateItem(item.id, { target: event.target.value })}
-                  placeholder="例如：中"
-                  className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm font-normal text-slate-800 outline-none focus:border-teal-400"
-                />
-              </label>
-              <label className="text-xs font-semibold text-slate-600">
-                正確讀音
-                <input
-                  type="text"
-                  value={item.intendedReading}
-                  onChange={(event) => updateItem(item.id, { intendedReading: event.target.value })}
-                  placeholder="例如：鐘（ㄓㄨㄥ）"
-                  className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm font-normal text-slate-800 outline-none focus:border-teal-400"
-                />
-              </label>
-            </div>
-
-            <div className="mt-3 flex flex-wrap gap-2" role="group" aria-label="實聽結果">
-              {(Object.keys(STATUS_META) as AuditStatus[]).map((status) => (
-                <button
-                  key={status}
-                  type="button"
-                  onClick={() => markStatus(item.id, status)}
-                  className={`rounded-full border px-3 py-1.5 text-sm font-bold ${
-                    item.status === status
-                      ? STATUS_META[status].className
-                      : 'border-slate-200 bg-white text-slate-400 hover:bg-slate-50'
-                  }`}
-                >
-                  {STATUS_META[status].label}
-                </button>
-              ))}
-            </div>
-
-            <label className="mt-3 block text-xs font-semibold text-slate-600">
-              備註
-              <input
-                type="text"
-                value={item.note}
-                onChange={(event) => updateItem(item.id, { note: event.target.value })}
-                placeholder="例如：把「中」念成第四聲"
-                className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm font-normal text-slate-800 outline-none focus:border-teal-400"
-              />
-            </label>
-
-            <details className="mt-3 text-xs text-slate-500">
-              <summary className="cursor-pointer font-semibold">查看實際送入 TTS 的文字</summary>
-              <p className="mt-2 break-words rounded-lg bg-slate-50 p-2">{getTtsInput(item.text)}</p>
-            </details>
-
-            <button
-              type="button"
-              onClick={() => removeItem(item.id)}
-              className="mt-3 text-xs font-semibold text-slate-400 underline decoration-slate-300 underline-offset-2 hover:text-rose-600"
-            >
-              移除這一句
-            </button>
-          </article>
-        ))}
+            </article>
+          );
+        })}
       </section>
 
       <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
         <h3 className="font-bold text-slate-800">一次加入更多句子</h3>
-        <p className="mt-1 text-xs leading-5 text-slate-500">每行貼一個完整語音單元。加入後可再填候選字與正確讀音。</p>
+        <p className="mt-1 text-xs leading-5 text-slate-500">
+          每行貼一個完整語音單元。臨時加入的句子會先標為「待分類」；正式教材候選仍須寫入篇章資料檔。
+        </p>
         <textarea
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
@@ -455,13 +662,13 @@ export default function TtsAuditPage() {
             onClick={restoreDefaults}
             className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 hover:bg-slate-50"
           >
-            補回預設測試句
+            補回正式測試句
           </button>
         </div>
       </section>
 
       <p className="text-xs leading-5 text-slate-500">
-        測試結果只保存在這台裝置的瀏覽器中，不會更動孩子的學習進度。裝置、瀏覽器或語音套件更新後，請重新實聽。
+        本機仍保留離線備份；中央資料庫與孩子的學習進度完全分開。裝置、瀏覽器或語音套件更新後，請重新實聽。
       </p>
     </div>
   );
