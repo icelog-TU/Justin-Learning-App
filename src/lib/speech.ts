@@ -111,6 +111,11 @@ function ttsSafe(text: string): string {
     .replace(/(?<=太丘)舍(?=去)/g, '捨');
 }
 
+/** Returns the exact string that the production speech path sends to the browser TTS engine. */
+export function getTtsInput(text: string): string {
+  return ttsSafe(text);
+}
+
 function queueSpeech(texts: string[], onDone?: () => void) {
   texts.map(ttsSafe).forEach((text, i) => {
     const utterance = new SpeechSynthesisUtterance(text);

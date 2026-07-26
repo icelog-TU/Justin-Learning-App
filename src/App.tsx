@@ -20,6 +20,7 @@ import AssociationCharacterDetailPage from './pages/AssociationCharacterDetailPa
 import GuwenHome from './pages/GuwenHome';
 import GuwenLessonDecode from './pages/GuwenLessonDecode';
 import SettingsPage from './pages/SettingsPage';
+import TtsAuditPage from './pages/TtsAuditPage';
 import { AppDataProvider } from './lib/AppDataContext';
 
 export default function App() {
@@ -36,6 +37,7 @@ export default function App() {
             <Route path="/idioms/association" element={<IdiomAssociationGame />} />
             <Route path="/guwen" element={<GuwenHome />} />
             <Route path="/guwen-lesson/:lessonId" element={<GuwenLessonDecode />} />
+            <Route path="/tts-audit" element={<TtsAuditPage />} />
             <Route path="/confusables" element={<ConfusablesQuiz />} />
             <Route path="/gacha" element={<GachaPage />} />
             <Route path="/characters" element={<CharactersPage />} />

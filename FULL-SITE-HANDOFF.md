@@ -332,6 +332,15 @@ Firebase Web 設定不是伺服器密鑰；真正存取控制必須由 Firebase 
 
 測試時可 monkey-patch `window.speechSynthesis.speak` 與 `cancel` 捕捉送出的文字；不要整個替換唯讀的 `speechSynthesis` 物件，也不要替換原生 `SpeechSynthesisUtterance` 建構子。
 
+### 多音字 TTS 實聽台
+
+- 專用路由：`/#/tts-audit`；不放入孩子的主選單，由教材編輯者直接開啟。
+- 頁面：`src/pages/TtsAuditPage.tsx`。
+- 所有播放都呼叫正式 App 的 `speak()`，因此會經過同一套 `ttsSafe()` 修音規則。
+- 可一次貼入多行完整語音單元、逐句或依序播放、標記念對／念錯／待確認，並複製包含裝置與可見 `zh-TW` 聲音資訊的 Markdown 結果。
+- 測試紀錄只保存在獨立 localStorage key `guwen-tts-audit-v1`，不得併入 `AppData` 或同步到孩子的 Firestore 學習資料。
+- `getTtsInput()` 只供成人測試頁查看實際送入語音引擎的文字；正式孩子畫面仍顯示原文。
+
 ### 音效
 
 `src/lib/sound.ts` 使用 Web Audio oscillator 即時合成，沒有 mp3／wav 資產。新音效應沿用共用 AudioContext 與 `tone()`，並顧及瀏覽器必須由使用者互動解鎖音訊的限制。
