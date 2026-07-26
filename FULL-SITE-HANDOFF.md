@@ -337,6 +337,7 @@ Firebase Web 設定不是伺服器密鑰；真正存取控制必須由 Firebase 
 ### 多音字 TTS 實聽台
 
 - 所有涉及孩子端播放文字、TTS、讀音提示或多音字資料的 agent，除本文件外，必須在修改前完整閱讀 `GUWEN-TTS-CENTRAL-DATABASE-HANDOFF.md`；固定流程另見 `GUWEN-WORKFLOW-SOP.md` 的「逐題掃描＋全篇批次多音字查核流程」與「多音字 TTS 實聽台的固定入口與用法」。
+- 百篇教材的日常操作入口為 `GUWEN-POLYPHONIC-AUDIT-RUNBOOK.md`。使用者只需以「第 N 篇已經定稿，執行第一階段」與「第 N 篇已經全部實聽完成，讀回並套用」兩句短指令啟動；agent 必須自行讀取 Runbook，不得要求重貼長版流程。
 - 專用路由：`/#/tts-audit`；不放入孩子的主選單，由教材編輯者直接開啟。
 - 頁面：`src/pages/TtsAuditPage.tsx`。
 - 每篇教材的全部孩子端文字完成後，必須做一次全篇最終掃描：不得只挑 agent 猜測「可能念錯」的字；每個多音字在每個實際可播放整句中的具體出現位置都要批次加入正式 catalog。同一整句有多個多音字時共用一個 item，分列在 `targets[]`。

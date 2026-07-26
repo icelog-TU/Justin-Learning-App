@@ -181,6 +181,7 @@ type FinalVerification = {
 - App 實作或教材交付前執行 `npm run tts:audit:pull`。中央確認念對者不建立孩子端提示；中央確認念錯者在每個受影響的朗讀位置，緊接完整整句另顯示一行正確讀音，不改寫原句。
 - 完整語音文字、TTS 輸入或目標字出現位置改變時，舊實測紀錄失效，必須重新建檔與實聽。
 - catalog 與 result 必須保存 exact `displayText`、`ttsInput`、`auditRevision`、`targetFingerprint`、`utteranceFingerprint` 與逐目標 `targetResults[]`；只有指紋全部相符且每個目標都有判定的結果才可產生教材結論。舊單目標結果可相容讀取；舊多目標整句沒有逐目標判定時列為待複驗。
+- 百篇教材對話統一以 `GUWEN-POLYPHONIC-AUDIT-RUNBOOK.md` 的兩階段短指令啟動；實作者必須自行讀取該檔，不得要求使用者為每篇重貼長版流程。
 - 正式 App 與實聽台必須共用同一個 zh-TW voice 選擇函式；result 保存實際 voice name、voiceURI、lang 與 default。瀏覽器未提供 voice 清單時必須標記為未解析系統預設。
 - 臨時貼入實聽台的「待分類」句子只作本機測試，不得寫入中央正式 catalog；先加入 `src/data/guwenPronunciationAudit.ts` 才能中央回傳。
 - 中央歷史可以日後用來統計經常念對的字、句型或 voice，但目前不得形成跨句永久白名單。只有 exact utterance、TTS input、目標位置、revision 與適用語音環境相符的有效結果才能沿用；免測政策必須另行實作並由使用者核准。

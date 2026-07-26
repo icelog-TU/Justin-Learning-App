@@ -327,6 +327,8 @@ families/GUWENTTS-03-KEZHOUQIUJIAN
 
 ## 九、以後每一篇的固定批次工作流程
 
+一百篇古文對話的簡式啟動方式、第一階段停點、使用者實聽交接與第二階段完成回報，統一見 `GUWEN-POLYPHONIC-AUDIT-RUNBOOK.md`。該檔是操作入口，不另定 schema；本文件仍是中央資料庫與有效性規則的唯一詳細交接。
+
 1. 編題前先更新固定分支並執行 `npm run tts:audit:pull`。
 2. 每題完成時先掃描該題所有可能播放的文字，不只掃古文原文。
 3. 全篇孩子端文字完成後，重新從頭掃描所有 exact playable utterances，抓出全部多音字的每個出現位置；不得按「agent 猜測是否容易念錯」篩掉任何多音字。只顯示而確定不播放的成人來源資料可排除。
