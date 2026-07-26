@@ -13,7 +13,7 @@
 |---:|---|---|---|---|---|
 | 1 | 王戎不取道旁李 | `lessons/01-guwen-wangrong-rewrite.md` | 新版逐題重寫中 | 第 1–18 題已核准；第 19–20 題草稿待審 | 審核第 19 題完整判斷重建與第 20 題「信然」；讀音提示已同步，待未來 App 實作與實聽 |
 | 2 | 司馬光破甕救友 | `02-guwen-simaguang-decoder-content.md` | 新版逐題認真改寫中 | 第一至七題已核准；任務開場與第八、第九題草稿待審 | 審核第八題「足跌沒水中」與第九題「棄去」 |
-| 3 | 刻舟求劍 | `03-guwen-kezhouqiujian-decoder-content.md` | 依兒童實測結果新版逐題重寫中 | 新版任務開場、第一至四題已核准；第三、四題七個多音字 v1 實聽紀錄仍保留，但因缺少 exact fingerprint，升級後均標為待複驗 | 用孩子實際裝置重測既有七項並取得 v2 回傳編號；審核第五題「其劍自舟中墜於水」 |
+| 3 | 刻舟求劍 | `03-guwen-kezhouqiujian-decoder-content.md` | 依兒童實測結果新版逐題重寫中 | 新版任務開場、第一至四題已核准；第三、四題七個語音單元的 v1 實聽紀錄仍保留，但因缺少 exact fingerprint，升級後均標為待複驗 | 用孩子實際裝置逐目標重測既有七個語音單元並取得 v3 回傳編號；審核第五題「其劍自舟中墜於水」 |
 | 4 | 守株待兔 | `04-guwen-shouzhudaitu-decoder-content.md` | 全文核准，可交付實作 | 第一至十九題、白話驗證卷軸、完成鼓勵與徽章收集均已完成 | 待 App 實作或驗收 |
 | 5 | 揠苗助長 | `05-guwen-yamiaozhuzhang-decoder-content.md` | 全文完成 | 第一至十七題、白話驗證卷軸、完成鼓勵與徽章收集流程均已完成 | 進入實作前確認最終核准與語音驗收 |
 | 6 | 掩耳盜鐘 | `06-guwen-yanerdaozhong-decoder-content.md` | 全文核准完成 | 第一至二十一題、全文大因果鏈、證據邊界、白話驗證卷軸與徽章收尾均已核准 | 待 App 實作或驗收 |
@@ -122,7 +122,7 @@
 | `guwen-decoder-learned-keys.md` | 已記錄前六篇及《鄭人買履》全部已核准鑰匙；第十八題新增「信」與「無自信也」 | 後續篇章依提醒規則調用 |
 | `app-implementation-contract.md` | 已存在 | 只在核准教材交付實作前使用 |
 | `GUWEN-WORKFLOW-SOP.md` | 已補入開放思考、逐題重貼原文、正解位置序列稽核、中央多音字資料庫及網頁自動回傳流程 | 每題送審前先建候選並送測；只接受可由中央資料庫讀回的實聽結果 |
-| 多音字中央資料庫 | schema v2 已上線；catalog/result 已保存 exact display text、TTS input、target 與 utterance fingerprint；CLI 可列 stale／missing／orphan；正式 App 與實聽台共用確定性 zh-TW voice 選擇 | 第三篇既有七項因 v1 無指紋均待孩子真實裝置複驗；第一、二篇只在 exact App 語音單元定稿後建檔 |
+| 多音字中央資料庫 | schema v3 已上線；catalog/result 已保存 exact display text、TTS input、target／utterance fingerprint 與逐目標 `targetResults[]`；CLI 可按篇列出每個字的加註決策、建議文字、stale／missing／orphan；正式 App 與實聽台共用確定性 zh-TW voice 選擇 | 第三篇既有七個語音單元因 v1 無指紋均待孩子真實裝置逐目標複驗；第一、二篇只在 exact App 語音單元定稿後建檔 |
 
 ---
 
@@ -156,6 +156,7 @@
 
 | 日期 | 更新內容 |
 |---|---|
+| 2026-07-26 | 多音字中央資料庫升級為 schema v3：同一整句只播放一次，但每個多音字位置分別判定念對／念錯，全部選完才回傳；`npm run tts:audit:pull -- --lesson <lessonId>` 可讓該篇古文對話逐目標讀回「不加註／必須加註」與建議提示文字。網頁臨時貼入仍只供本機測試，正式批次必須先進 catalog。 |
 | 2026-07-26 | 第二篇《司馬光破甕救友》第六題「足跌」與第七題「沒水中」經使用者核准；新增第八題整句重建與第九題「棄去」草稿，待使用者審核；鑰匙庫同步推進新版有效邊界至第七題。 |
 | 2026-07-26 | 第一篇第 13 題依指定更換三個選項後核准；第 14 題將「追出來」改為「破解出來」後核准；新增第 15 題問答重建與第 16 題「而」關係破解草稿。 |
 | 2026-07-26 | 多音字中央資料庫升級為 schema v2：加入 exact display text／TTS input／target fingerprint 與 revision，舊結果不刪除但不再誤當有效；CLI 新增 stale／missing／orphan 稽核，正式 App 與實聽台共用明確 zh-TW voice 選擇。第三篇既有七項目前均待真實裝置複驗。 |

@@ -15,6 +15,14 @@ import {
   buildUtteranceFingerprint,
 } from '../lib/ttsAuditFingerprint';
 import {
+  decisionForTarget,
+  pendingTargetStatuses,
+  submittedTargetDecisions,
+  summarizeTargetStatuses,
+  targetDecisionKey,
+  type TargetDecisionStatus,
+} from '../lib/ttsAuditDecision';
+import {
   fetchCentralAuditDatabase,
   latestCurrentAuditResult,
   submitAuditResults,
@@ -25,6 +33,7 @@ import {
 
 type AuditItem = PronunciationAuditCatalogItem & {
   status: PronunciationAuditStatus;
+  targetStatuses: Record<string, TargetDecisionStatus>;
   note: string;
   checkedAt?: string;
   cloudSyncedAt?: string;
@@ -32,7 +41,7 @@ type AuditItem = PronunciationAuditCatalogItem & {
 };
 
 type StoredAudit = {
-  version: 3;
+  version: 4;
   items: AuditItem[];
 };
 
@@ -64,6 +73,7 @@ function cloneCatalog(): AuditItem[] {
   return GUWEN_PRONUNCIATION_AUDIT_CATALOG.map((item) => ({
     ...item,
     status: 'pending',
+    targetStatuses: pendingTargetStatuses(item.targets),
     note: '',
   }));
 }
@@ -72,9 +82,18 @@ function legacyItemToAudit(item: Partial<AuditItem> & { id: string; source: stri
   const catalogItem = GUWEN_PRONUNCIATION_AUDIT_CATALOG.find((candidate) => candidate.id === item.id);
   if (catalogItem) {
     const fingerprintMatches = item.utteranceFingerprint === catalogItem.utteranceFingerprint;
+    const savedStatuses =
+      fingerprintMatches && item.targetStatuses
+        ? item.targetStatuses
+        : fingerprintMatches && catalogItem.targets.length === 1 && item.status && item.status !== 'pending'
+          ? {
+              [targetDecisionKey(catalogItem.targets[0])]: item.status,
+            }
+          : pendingTargetStatuses(catalogItem.targets);
     return {
       ...catalogItem,
-      status: fingerprintMatches ? (item.status ?? 'pending') : 'pending',
+      status: summarizeTargetStatuses(catalogItem.targets, savedStatuses),
+      targetStatuses: savedStatuses,
       note: fingerprintMatches ? (item.note ?? '') : '',
       checkedAt: fingerprintMatches ? item.checkedAt : undefined,
       cloudSyncedAt: fingerprintMatches ? item.cloudSyncedAt : undefined,
@@ -110,6 +129,7 @@ function legacyItemToAudit(item: Partial<AuditItem> & { id: string; source: stri
     targets: item.targets ?? [],
     initialVerifications: item.initialVerifications ?? [],
     status: item.status ?? 'pending',
+    targetStatuses: item.targetStatuses ?? pendingTargetStatuses(targets),
     note: item.note ?? '',
     checkedAt: item.checkedAt,
     cloudSyncedAt: item.cloudSyncedAt,
@@ -188,12 +208,43 @@ export default function TtsAuditPage() {
   }, []);
 
   useEffect(() => {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: 3, items } satisfies StoredAudit));
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: 4, items } satisfies StoredAudit));
   }, [items]);
 
   useEffect(() => {
     void refreshDatabase();
   }, [refreshDatabase]);
+
+  useEffect(() => {
+    if (!database) return;
+    setItems((current) =>
+      current.map((item) => {
+        if (
+          item.lessonId === 'unassigned' ||
+          Object.values(item.targetStatuses).some((status) => status !== 'pending')
+        ) {
+          return item;
+        }
+        const central = latestCurrentAuditResult(item, allResults(database, item.id));
+        if (!central) return item;
+        const targetStatuses = Object.fromEntries(
+          item.targets.map((target) => [
+            targetDecisionKey(target),
+            decisionForTarget(target, central.targetResults) ??
+              (item.targets.length === 1 ? central.status : 'pending'),
+          ]),
+        ) as Record<string, TargetDecisionStatus>;
+        return {
+          ...item,
+          targetStatuses,
+          status: summarizeTargetStatuses(item.targets, targetStatuses),
+          checkedAt: central.checkedAt,
+          cloudSyncedAt: new Date(central.receivedAt).toISOString(),
+          cloudReceiptId: central.resultId,
+        };
+      }),
+    );
+  }, [database]);
 
   useEffect(() => {
     if (!('speechSynthesis' in window)) return;
@@ -261,6 +312,7 @@ export default function TtsAuditPage() {
               catalogItem.id === item.id &&
               catalogItem.utteranceFingerprint === item.utteranceFingerprint,
           ) &&
+          submittedTargetDecisions(item.targets, item.targetStatuses) !== null &&
           item.status !== 'pending' &&
           Boolean(item.checkedAt),
       );
@@ -279,6 +331,7 @@ export default function TtsAuditPage() {
                 (catalogItem) => catalogItem.id === item.id,
               ) ?? item,
             status: item.status,
+            targetResults: submittedTargetDecisions(item.targets, item.targetStatuses) ?? [],
             note: item.note,
             checkedAt: item.checkedAt,
           })),
@@ -338,6 +391,32 @@ export default function TtsAuditPage() {
       [id]: status === 'pending' || !canSync ? 'idle' : 'saving',
     }));
     if (status !== 'pending' && canSync) void syncTestedItems([updated]);
+  };
+
+  const markTargetStatus = (
+    id: string,
+    targetKey: string,
+    status: TargetDecisionStatus,
+  ) => {
+    const current = items.find((item) => item.id === id);
+    if (!current) return;
+    const targetStatuses = { ...current.targetStatuses, [targetKey]: status };
+    const itemStatus = summarizeTargetStatuses(current.targets, targetStatuses);
+    const checkedAt = itemStatus === 'pending' ? undefined : new Date().toISOString();
+    const updated: AuditItem = {
+      ...current,
+      targetStatuses,
+      status: itemStatus,
+      checkedAt,
+      cloudSyncedAt: undefined,
+      cloudReceiptId: undefined,
+    };
+    updateItem(id, updated);
+    setSyncStates((states) => ({
+      ...states,
+      [id]: itemStatus === 'pending' ? 'idle' : 'saving',
+    }));
+    if (itemStatus !== 'pending') void syncTestedItems([updated]);
   };
 
   const playOne = (item: AuditItem, onEnd?: () => void) => {
@@ -407,6 +486,7 @@ export default function TtsAuditPage() {
           targets,
           initialVerifications: [],
           status: 'pending',
+          targetStatuses: {},
           note: '',
         };
       }),
@@ -660,22 +740,64 @@ export default function TtsAuditPage() {
                 </label>
               </div>
 
-              <div className="mt-3 flex flex-wrap gap-2" role="group" aria-label="實聽結果">
-                {(Object.keys(STATUS_META) as PronunciationAuditStatus[]).map((status) => (
-                  <button
-                    key={status}
-                    type="button"
-                    onClick={() => markStatus(item.id, status)}
-                    className={`rounded-full border px-3 py-1.5 text-sm font-bold ${
-                      item.status === status
-                        ? STATUS_META[status].className
-                        : 'border-slate-200 bg-white text-slate-400 hover:bg-slate-50'
-                    }`}
-                  >
-                    {STATUS_META[status].label}
-                  </button>
-                ))}
-              </div>
+              {item.targets.length > 0 ? (
+                <div className="mt-3 space-y-2">
+                  {item.targets.map((target) => {
+                    const key = targetDecisionKey(target);
+                    const targetStatus = item.targetStatuses[key] ?? 'pending';
+                    return (
+                      <div key={key} className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                        <p className="text-sm font-bold text-slate-700">
+                          「{target.character}」第 {target.occurrence} 處｜正確讀音：
+                          {target.homophoneCue}（{target.zhuyin}）
+                        </p>
+                        <div
+                          className="mt-2 flex flex-wrap gap-2"
+                          role="group"
+                          aria-label={`「${target.character}」第 ${target.occurrence} 處實聽結果`}
+                        >
+                          {(Object.keys(STATUS_META) as TargetDecisionStatus[]).map((status) => (
+                            <button
+                              key={status}
+                              type="button"
+                              onClick={() => markTargetStatus(item.id, key, status)}
+                              className={`rounded-full border px-3 py-1.5 text-sm font-bold ${
+                                targetStatus === status
+                                  ? STATUS_META[status].className
+                                  : 'border-slate-200 bg-white text-slate-400 hover:bg-slate-50'
+                              }`}
+                            >
+                              {STATUS_META[status].label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {item.status === 'pending' && item.targets.length > 1 && (
+                    <p className="text-xs font-semibold text-amber-700">
+                      這句有多個多音字；每一個都選完後才會回傳中央資料庫。
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <div className="mt-3 flex flex-wrap gap-2" role="group" aria-label="臨時實聽結果">
+                  {(Object.keys(STATUS_META) as PronunciationAuditStatus[]).map((status) => (
+                    <button
+                      key={status}
+                      type="button"
+                      onClick={() => markStatus(item.id, status)}
+                      className={`rounded-full border px-3 py-1.5 text-sm font-bold ${
+                        item.status === status
+                          ? STATUS_META[status].className
+                          : 'border-slate-200 bg-white text-slate-400 hover:bg-slate-50'
+                      }`}
+                    >
+                      {STATUS_META[status].label}
+                    </button>
+                  ))}
+                </div>
+              )}
 
               <p
                 className={`mt-2 text-xs font-semibold ${
@@ -743,7 +865,7 @@ export default function TtsAuditPage() {
       <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
         <h3 className="font-bold text-slate-800">一次加入更多句子</h3>
         <p className="mt-1 text-xs leading-5 text-slate-500">
-          每行貼一個完整語音單元。臨時加入的句子會先標為「待分類」；正式教材候選仍須寫入篇章資料檔。
+          每行貼一個完整語音單元。這裡只供臨時試聽，不會回傳中央資料庫；古文對話必須先把整批句子與每個多音字的正確讀音寫入正式 catalog、部署後，才會成為可回傳的正式候選。
         </p>
         <textarea
           value={draft}

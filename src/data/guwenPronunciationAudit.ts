@@ -12,6 +12,7 @@ export type PronunciationTarget = {
   zhuyin: string;
   homophoneCue: string;
   usage: string;
+  cueMode: 'known_usage' | 'unresolved_target';
 };
 
 export type PronunciationVerification = {
@@ -92,7 +93,7 @@ export const GUWEN_PRONUNCIATION_AUDIT_CATALOG: PronunciationAuditCatalogItem[] 
     text: '下一句出現了其劍，這真的很難懂：它該怎麼接回前面的故事？',
     target: '難',
     intendedReading: '南（ㄋㄢˊ）',
-    targets: [{ character: '難', occurrence: 1, zhuyin: 'ㄋㄢˊ', homophoneCue: '南', usage: '不容易' }],
+    targets: [{ character: '難', occurrence: 1, zhuyin: 'ㄋㄢˊ', homophoneCue: '南', usage: '不容易', cueMode: 'known_usage' }],
     initialVerifications: USER_CONFIRMED_CORRECT,
   }),
   defineCatalogItem({
@@ -107,7 +108,7 @@ export const GUWEN_PRONUNCIATION_AUDIT_CATALOG: PronunciationAuditCatalogItem[] 
     text: '楊布換黑衣而歸，其狗不知而吠之。',
     target: '衣',
     intendedReading: '一（ㄧ）',
-    targets: [{ character: '衣', occurrence: 1, zhuyin: 'ㄧ', homophoneCue: '一', usage: '衣服' }],
+    targets: [{ character: '衣', occurrence: 1, zhuyin: 'ㄧ', homophoneCue: '一', usage: '衣服', cueMode: 'known_usage' }],
     initialVerifications: USER_CONFIRMED_CORRECT,
   }),
   defineCatalogItem({
@@ -122,7 +123,7 @@ export const GUWEN_PRONUNCIATION_AUDIT_CATALOG: PronunciationAuditCatalogItem[] 
     text: '楊布換穿黑衣回家，其狗沒有認出自己的主人，就向他叫。',
     target: '衣',
     intendedReading: '一（ㄧ）',
-    targets: [{ character: '衣', occurrence: 1, zhuyin: 'ㄧ', homophoneCue: '一', usage: '衣服' }],
+    targets: [{ character: '衣', occurrence: 1, zhuyin: 'ㄧ', homophoneCue: '一', usage: '衣服', cueMode: 'known_usage' }],
     initialVerifications: USER_CONFIRMED_CORRECT,
   }),
   defineCatalogItem({
@@ -137,7 +138,7 @@ export const GUWEN_PRONUNCIATION_AUDIT_CATALOG: PronunciationAuditCatalogItem[] 
     text: '楚人賣盾與矛，又譽其矛曰：「吾矛之利，於物無不陷也。」',
     target: '與',
     intendedReading: '雨（ㄩˇ）',
-    targets: [{ character: '與', occurrence: 1, zhuyin: 'ㄩˇ', homophoneCue: '雨', usage: '和' }],
+    targets: [{ character: '與', occurrence: 1, zhuyin: 'ㄩˇ', homophoneCue: '雨', usage: '和', cueMode: 'known_usage' }],
     initialVerifications: USER_CONFIRMED_CORRECT,
   }),
   defineCatalogItem({
@@ -153,7 +154,7 @@ export const GUWEN_PRONUNCIATION_AUDIT_CATALOG: PronunciationAuditCatalogItem[] 
     target: '假',
     intendedReading: '甲（ㄐㄧㄚˇ）',
     targets: [
-      { character: '假', occurrence: 1, zhuyin: 'ㄐㄧㄚˇ', homophoneCue: '甲', usage: '根據證據提出的解法' },
+      { character: '假', occurrence: 1, zhuyin: 'ㄐㄧㄚˇ', homophoneCue: '甲', usage: '根據證據提出的解法', cueMode: 'known_usage' },
     ],
     initialVerifications: USER_CONFIRMED_CORRECT,
   }),
@@ -169,7 +170,7 @@ export const GUWEN_PRONUNCIATION_AUDIT_CATALOG: PronunciationAuditCatalogItem[] 
     text: '其劍自舟中墜於水。',
     target: '中',
     intendedReading: '鐘（ㄓㄨㄥ）',
-    targets: [{ character: '中', occurrence: 1, zhuyin: 'ㄓㄨㄥ', homophoneCue: '鐘', usage: '裡面' }],
+    targets: [{ character: '中', occurrence: 1, zhuyin: 'ㄓㄨㄥ', homophoneCue: '鐘', usage: '裡面', cueMode: 'known_usage' }],
     initialVerifications: USER_CONFIRMED_CORRECT,
   }),
   defineCatalogItem({
@@ -185,8 +186,8 @@ export const GUWEN_PRONUNCIATION_AUDIT_CATALOG: PronunciationAuditCatalogItem[] 
     target: '中、地',
     intendedReading: '鐘（ㄓㄨㄥ）；弟（ㄉㄧˋ）',
     targets: [
-      { character: '中', occurrence: 1, zhuyin: 'ㄓㄨㄥ', homophoneCue: '鐘', usage: '裡面' },
-      { character: '地', occurrence: 1, zhuyin: 'ㄉㄧˋ', homophoneCue: '弟', usage: '地面' },
+      { character: '中', occurrence: 1, zhuyin: 'ㄓㄨㄥ', homophoneCue: '鐘', usage: '裡面', cueMode: 'known_usage' },
+      { character: '地', occurrence: 1, zhuyin: 'ㄉㄧˋ', homophoneCue: '弟', usage: '地面', cueMode: 'known_usage' },
     ],
     initialVerifications: USER_CONFIRMED_CORRECT,
   }),

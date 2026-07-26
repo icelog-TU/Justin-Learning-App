@@ -342,13 +342,14 @@ Firebase Web 設定不是伺服器密鑰；真正存取控制必須由 Firebase 
 - 所有播放都呼叫正式 App 的 `speak()`，因此會經過同一套 `ttsSafe()` 修音規則。
 - 正式候選資料：`src/data/guwenPronunciationAudit.ts`；每筆依篇章、題號、穩定語音單元 ID 與目標字具體出現位置建檔。
 - 雲端讀寫：`src/lib/ttsAuditCloud.ts`。沿用既有匿名 Firebase Authentication，但使用獨立的 `families/GUWENTTS-*` 文件；不得併入孩子的 `AppData`。
-- 點選「念對／念錯」後立即寫入中央資料庫，畫面必須顯示成功、失敗或重送狀態；成功寫入會產生回傳編號。另提供「重新同步全部結果」作為補送入口。
+- 每個多音字目標各有自己的「念對／念錯」判定；同一句有多個目標時，全部選完才寫入中央資料庫。中央 schema v3 保存逐目標結果，不能用整句單一狀態掩蓋「一字念對、一字念錯」。
+- 寫入後畫面必須顯示成功、失敗或重送狀態；成功寫入會產生回傳編號。另提供「重新同步全部結果」作為補送入口。
 - 可一次貼入多行完整語音單元、逐句或依序播放，並複製包含裝置與可見 `zh-TW` 聲音資訊的備份。臨時加入者標為「待分類」，正式使用前要補進候選資料檔。
 - 有效「念對」只表示該 exact utterance 不加註；有效「念錯」必須在孩子端該句正下方另顯示一行正確讀音提示，不改寫原句。提示本身的 TTS 文字移除括號注音後仍要朗讀。
 - 獨立 localStorage key `guwen-tts-audit-v1` 只作離線備份與舊版資料遷移；它不是正式資料庫，也不得同步到孩子的 Firestore 學習資料。
 - 編輯代理開始多音字工作時先執行 `npm run tts:audit:pull`，讀回中央資料庫後再更新教材主檔與孩子端提示。
 - `getTtsInput()` 只供成人測試頁查看實際送入語音引擎的文字；正式孩子畫面仍顯示原文。
-- 中央資料庫 schema v2 會把 `displayText`、`ttsInput`、`auditRevision`、目標指紋與語音單元指紋同時保存在 catalog/result；只有完全相符的 result 才能產生有效結論，舊結果保留但顯示待複驗。
+- 中央資料庫 schema v3 會把 `displayText`、`ttsInput`、`auditRevision`、目標指紋、語音單元指紋與逐目標 `targetResults[]` 同時保存在 catalog/result；只有完全相符且每個目標都有判定的 result 才能產生有效結論，舊結果保留但顯示待複驗。舊版無逐目標資料的單目標結果可相容讀取，多目標整句必須重測。
 - 正式 App 與實聽台共用 `selectZhTwVoice()`；若瀏覽器提供 zh-TW voice，會明確設定並回傳 name／voiceURI／lang／default，否則標記為 `unresolved_default`。
 
 ### 音效

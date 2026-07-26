@@ -7,6 +7,11 @@ import {
   GUWEN_PRONUNCIATION_AUDIT_CATALOG,
   type PronunciationAuditCatalogItem,
 } from '../src/data/guwenPronunciationAudit';
+import {
+  decisionForTarget,
+  formatPronunciationCue,
+  type SubmittedTargetDecision,
+} from '../src/lib/ttsAuditDecision';
 
 type CloudResult = {
   resultId: string;
@@ -29,6 +34,7 @@ type CloudResult = {
   targetFingerprint?: string;
   displayText?: string;
   ttsInput?: string;
+  targetResults?: SubmittedTargetDecision[];
 };
 
 type CloudItem = {
@@ -37,6 +43,7 @@ type CloudItem = {
   text: string;
   target: string;
   intendedReading: string;
+  targets?: PronunciationAuditCatalogItem['targets'];
   results?: CloudResult[];
 };
 
@@ -49,6 +56,11 @@ type CloudLesson = {
 
 const source = fs.readFileSync(new URL('../src/lib/firebase.ts', import.meta.url), 'utf8');
 
+function argumentValue(name: string): string | null {
+  const index = process.argv.indexOf(name);
+  return index >= 0 ? (process.argv[index + 1] ?? null) : null;
+}
+
 function configValue(key: string): string {
   const match = source.match(new RegExp(`${key}: '([^']+)'`));
   if (!match) throw new Error(`找不到 Firebase 設定：${key}`);
@@ -56,13 +68,15 @@ function configValue(key: string): string {
 }
 
 function isCurrent(item: PronunciationAuditCatalogItem, result: CloudResult): boolean {
-  return (
+  const fingerprintMatches =
     result.auditRevision === item.auditRevision &&
     result.utteranceFingerprint === item.utteranceFingerprint &&
     result.targetFingerprint === item.targetFingerprint &&
     result.displayText === item.displayText &&
-    result.ttsInput === item.ttsInput
-  );
+    result.ttsInput === item.ttsInput;
+  if (!fingerprintMatches) return false;
+  if (item.targets.length === 1 && !result.targetResults) return true;
+  return item.targets.every((target) => decisionForTarget(target, result.targetResults) !== null);
 }
 
 function latestCurrent(item: PronunciationAuditCatalogItem, cloudItem: CloudItem): CloudResult | null {
@@ -71,6 +85,15 @@ function latestCurrent(item: PronunciationAuditCatalogItem, cloudItem: CloudItem
       .filter((result) => isCurrent(item, result))
       .sort((a, b) => b.receivedAt - a.receivedAt)[0] ?? null
   );
+}
+
+function targetDecision(
+  item: PronunciationAuditCatalogItem,
+  target: PronunciationAuditCatalogItem['targets'][number],
+  result: CloudResult | null,
+): 'correct' | 'incorrect' | 'pending' {
+  if (!result) return 'pending';
+  return decisionForTarget(target, result.targetResults) ?? (item.targets.length === 1 ? result.status : 'pending');
 }
 
 function environmentLabel(result: CloudResult): string {
@@ -112,7 +135,21 @@ if (!indexSnapshot.exists()) {
     ),
   );
   const localIds = new Set(GUWEN_PRONUNCIATION_AUDIT_CATALOG.map((item) => item.id));
-  const records = GUWEN_PRONUNCIATION_AUDIT_CATALOG.map((item) => {
+  const lessonFilter = argumentValue('--lesson')?.trim().toLowerCase() ?? null;
+  const selectedCatalog = lessonFilter
+    ? GUWEN_PRONUNCIATION_AUDIT_CATALOG.filter(
+        (item) =>
+          item.lessonId.toLowerCase() === lessonFilter ||
+          String(item.lessonNumber) === lessonFilter ||
+          item.lessonTitle.toLowerCase() === lessonFilter,
+      )
+    : GUWEN_PRONUNCIATION_AUDIT_CATALOG;
+  if (lessonFilter && !selectedCatalog.length) {
+    console.error(`找不到篇章：${lessonFilter}`);
+    process.exit(1);
+  }
+  const selectedLessonIds = new Set(selectedCatalog.map((item) => item.lessonId));
+  const records = selectedCatalog.map((item) => {
     const cloud = cloudItems.get(item.id);
     if (!cloud) return { item, state: 'missing' as const, result: null };
     const result = latestCurrent(item, cloud.item);
@@ -123,7 +160,10 @@ if (!indexSnapshot.exists()) {
       result: null,
     };
   });
-  const orphans = [...cloudItems.values()].filter(({ item }) => !localIds.has(item.id));
+  const orphans = [...cloudItems.values()].filter(
+    ({ lesson, item }) =>
+      !localIds.has(item.id) && (!lessonFilter || selectedLessonIds.has(lesson.lessonId)),
+  );
   const summary = {
     total: records.length,
     correct: records.filter((record) => record.state === 'correct').length,
@@ -150,6 +190,20 @@ if (!indexSnapshot.exists()) {
             utteranceFingerprint: item.utteranceFingerprint,
             state,
             result,
+            targetDecisions: item.targets.map((target) => {
+              const status = targetDecision(item, target, result);
+              return {
+                ...target,
+                status,
+                action:
+                  status === 'incorrect'
+                    ? '在完整整句正下方加註'
+                    : status === 'correct'
+                      ? '不加註'
+                      : '待使用者實聽',
+                suggestedCue: status === 'incorrect' ? formatPronunciationCue(target) : null,
+              };
+            }),
           })),
           orphans: orphans.map(({ lesson, item }) => ({
             lessonId: lesson.lessonId,
@@ -206,6 +260,21 @@ if (!indexSnapshot.exists()) {
         console.log(`  - 指定讀音：${item.intendedReading}`);
         console.log(`  - 指紋：${item.utteranceFingerprint}`);
         console.log(`  - 有效結論：${status}`);
+        item.targets.forEach((target) => {
+          const decision = targetDecision(item, target, result);
+          const label =
+            decision === 'correct'
+              ? '念對／不加註'
+              : decision === 'incorrect'
+                ? '念錯／必須在本整句正下方加註'
+                : '待使用者實聽';
+          console.log(
+            `  - 「${target.character}」第 ${target.occurrence} 處（${target.homophoneCue}／${target.zhuyin}）：${label}`,
+          );
+          if (decision === 'incorrect') {
+            console.log(`    - 建議加註：${formatPronunciationCue(target)}`);
+          }
+        });
         if (result) {
           console.log(`  - 實聽日期：${result.checkedAt}`);
           console.log(`  - 實際聲音：${environmentLabel(result)}`);

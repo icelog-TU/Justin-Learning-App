@@ -7,10 +7,14 @@ import {
 } from '../data/guwenPronunciationAudit';
 import { db, ensureSignedIn } from './firebase';
 import { isMatchingAuditFingerprint } from './ttsAuditFingerprint';
+import {
+  decisionForTarget,
+  type SubmittedTargetDecision,
+} from './ttsAuditDecision';
 
 const INDEX_DOC_ID = 'GUWENTTS-INDEX-V1';
 const DATABASE_KIND = 'guwen-tts-audit-database';
-const SCHEMA_VERSION = 2;
+const SCHEMA_VERSION = 3;
 const MAX_SUBMISSIONS_PER_LESSON = 200;
 const MAX_RESULTS_PER_ITEM = 20;
 
@@ -31,6 +35,7 @@ export type AuditEnvironment = {
 export type AuditResultInput = {
   item: PronunciationAuditCatalogItem;
   status: Exclude<PronunciationAuditStatus, 'pending'>;
+  targetResults: SubmittedTargetDecision[];
   note: string;
   checkedAt: string;
 };
@@ -48,6 +53,7 @@ export type CloudAuditResult = {
   targetFingerprint?: string;
   displayText?: string;
   ttsInput?: string;
+  targetResults?: SubmittedTargetDecision[];
 };
 
 export type CloudAuditItem = Omit<PronunciationAuditCatalogItem, 'initialVerifications'> & {
@@ -57,7 +63,7 @@ export type CloudAuditItem = Omit<PronunciationAuditCatalogItem, 'initialVerific
 
 export type CloudLessonAudit = {
   kind: typeof DATABASE_KIND;
-  schemaVersion: 1 | typeof SCHEMA_VERSION;
+  schemaVersion: 1 | 2 | typeof SCHEMA_VERSION;
   lessonId: string;
   lessonNumber: number;
   lessonTitle: string;
@@ -74,7 +80,7 @@ export type CloudLessonAudit = {
 
 type CloudAuditIndex = {
   kind: typeof DATABASE_KIND;
-  schemaVersion: 1 | typeof SCHEMA_VERSION;
+  schemaVersion: 1 | 2 | typeof SCHEMA_VERSION;
   lessonDocs: Array<{
     lessonId: string;
     lessonNumber: number;
@@ -92,11 +98,18 @@ export type CloudAuditDatabase = {
 export function isAuditResultCurrent(
   item: Pick<
     PronunciationAuditCatalogItem,
-    'auditRevision' | 'utteranceFingerprint' | 'targetFingerprint' | 'displayText' | 'ttsInput'
+    | 'auditRevision'
+    | 'utteranceFingerprint'
+    | 'targetFingerprint'
+    | 'displayText'
+    | 'ttsInput'
+    | 'targets'
   >,
   result: CloudAuditResult,
 ): boolean {
-  return isMatchingAuditFingerprint(item, result);
+  if (!isMatchingAuditFingerprint(item, result)) return false;
+  if (item.targets.length === 1 && !result.targetResults) return true;
+  return item.targets.every((target) => decisionForTarget(target, result.targetResults) !== null);
 }
 
 export function latestCurrentAuditResult(
@@ -153,6 +166,7 @@ function initialResult(
     targetFingerprint: item.targetFingerprint,
     displayText: item.displayText,
     ttsInput: item.ttsInput,
+    targetResults: item.targets.map((target) => ({ ...target, status: verification.status })),
   };
 }
 
@@ -314,7 +328,7 @@ export async function submitAuditResults(
       const first = lessonInputs[0].item;
       const items: Record<string, CloudAuditItem> = { ...(existing?.items ?? {}) };
 
-      lessonInputs.forEach(({ item, status, note, checkedAt }) => {
+      lessonInputs.forEach(({ item, status, targetResults, note, checkedAt }) => {
         const current = items[item.id] ?? catalogItemToCloud(item);
         const result: CloudAuditResult = {
           resultId: `${submissionId}-${item.id}`,
@@ -329,6 +343,7 @@ export async function submitAuditResults(
           targetFingerprint: item.targetFingerprint,
           displayText: item.displayText,
           ttsInput: item.ttsInput,
+          targetResults,
         };
         const otherEnvironments = current.results.filter(
           (entry) =>

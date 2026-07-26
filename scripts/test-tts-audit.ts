@@ -10,6 +10,14 @@ import {
   buildUtteranceFingerprint,
   isMatchingAuditFingerprint,
 } from '../src/lib/ttsAuditFingerprint';
+import {
+  decisionForTarget,
+  formatPronunciationCue,
+  pendingTargetStatuses,
+  submittedTargetDecisions,
+  summarizeTargetStatuses,
+  targetDecisionKey,
+} from '../src/lib/ttsAuditDecision';
 
 const ids = new Set<string>();
 
@@ -53,6 +61,52 @@ for (const item of GUWEN_PRONUNCIATION_AUDIT_CATALOG) {
 }
 
 const sample = GUWEN_PRONUNCIATION_AUDIT_CATALOG[0];
+const multiTargetSample = GUWEN_PRONUNCIATION_AUDIT_CATALOG.find(
+  (item) => item.targets.length > 1,
+);
+assert(multiTargetSample, '測試 catalog 必須至少包含一個多目標整句');
+const multiStatuses = pendingTargetStatuses(multiTargetSample.targets);
+multiStatuses[targetDecisionKey(multiTargetSample.targets[0])] = 'correct';
+assert.equal(
+  summarizeTargetStatuses(multiTargetSample.targets, multiStatuses),
+  'pending',
+  '多目標整句未全部判定以前不得送出',
+);
+assert.equal(
+  formatPronunciationCue(multiTargetSample.targets[0]),
+  '中，當作「裡面」時，念作鐘（ㄓㄨㄥ）。',
+  '已知用法應產生完整的就近加註文字',
+);
+assert.equal(
+  formatPronunciationCue({
+    character: '度',
+    occurrence: 1,
+    zhuyin: 'ㄉㄨㄛˋ',
+    homophoneCue: '墮',
+    usage: '測量',
+    cueMode: 'unresolved_target',
+  }),
+  '度，這裡念作墮（ㄉㄨㄛˋ）。',
+  '待破解目標的提示不得洩漏字義',
+);
+multiStatuses[targetDecisionKey(multiTargetSample.targets[1])] = 'incorrect';
+assert.equal(
+  summarizeTargetStatuses(multiTargetSample.targets, multiStatuses),
+  'incorrect',
+  '任一目標念錯時整句摘要應為念錯',
+);
+const decisions = submittedTargetDecisions(multiTargetSample.targets, multiStatuses);
+assert(decisions, '全部目標判定後應可建立送出資料');
+assert.equal(
+  decisionForTarget(multiTargetSample.targets[0], decisions),
+  'correct',
+  '同一句中念對的目標必須獨立保存',
+);
+assert.equal(
+  decisionForTarget(multiTargetSample.targets[1], decisions),
+  'incorrect',
+  '同一句中念錯的目標必須獨立保存',
+);
 const baseInput = {
   displayText: sample.displayText,
   ttsInput: sample.ttsInput,
