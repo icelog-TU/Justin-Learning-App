@@ -11,6 +11,8 @@ import {
   maxExponentForBase,
   currentLevel,
   ownedSquareCharacterCount,
+  CUBE_CHARACTER_COUNT,
+  ownedCubeCharacterCount,
 } from '../lib/rewards';
 import { guwenLessons } from '../data/guwenLesson';
 
@@ -86,6 +88,10 @@ export default function ProgressPage() {
           <Link to="/characters?collection=squares" className="rounded-lg py-1 hover:bg-gray-50">
             <p className="font-bold text-gray-700">{ownedSquareCharacterCount(data.characters)}/{SQUARE_CHARACTER_COUNT}</p>
             <p>1² 到 50²</p>
+          </Link>
+          <Link to="/characters?collection=cubes" className="rounded-lg py-1 hover:bg-gray-50">
+            <p className="font-bold text-gray-700">{ownedCubeCharacterCount(data.characters)}/{CUBE_CHARACTER_COUNT}</p>
+            <p>1³ 到 50³</p>
           </Link>
         </div>
       </div>

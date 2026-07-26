@@ -13,6 +13,7 @@ import {
   maxExponentForBase,
   characterCollectionIndexFromId,
   SQUARE_CHARACTER_COUNT,
+  CUBE_CHARACTER_COUNT,
 } from '../lib/rewards';
 import { numberToChineseWords } from '../lib/chineseNumber';
 import { speak } from '../lib/speech';
@@ -189,8 +190,12 @@ export default function CharacterDetailPage() {
   }
 
   const parsed = parseCharacterId(id);
-  const base = parsed.kind === 'square' ? parsed.squareBase : parsed.base;
-  const exponent = parsed.kind === 'square' ? 2 : parsed.exponent;
+  const base = parsed.kind === 'power'
+    ? parsed.base
+    : parsed.kind === 'square'
+      ? parsed.squareBase
+      : parsed.cubeBase;
+  const exponent = parsed.kind === 'power' ? parsed.exponent : parsed.kind === 'square' ? 2 : 3;
   const maxHearts = characterMaxHearts(id);
   const isFull = hearts >= maxHearts;
   const canGiveHeart = !isFull && data.stars >= HEART_COST_STARS;
@@ -198,8 +203,12 @@ export default function CharacterDetailPage() {
   const value = characterValueFromId(id);
   const label = characterLabelFromId(id);
   const color = characterColor(
-    parsed.kind === 'square' ? parsed.squareBase : exponent,
-    parsed.kind === 'square' ? SQUARE_CHARACTER_COUNT : maxExponentForBase(base),
+    parsed.kind === 'power' ? exponent : parsed.kind === 'square' ? parsed.squareBase : parsed.cubeBase,
+    parsed.kind === 'power'
+      ? maxExponentForBase(base)
+      : parsed.kind === 'square'
+        ? SQUARE_CHARACTER_COUNT
+        : CUBE_CHARACTER_COUNT,
   );
 
   function handleGiveHeart() {

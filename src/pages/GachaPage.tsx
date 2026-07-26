@@ -16,6 +16,9 @@ import {
   SQUARE_CHARACTER_COUNT,
   ownedSquareCharacterCount,
   arePowerCharactersComplete,
+  CUBE_CHARACTER_COUNT,
+  ownedCubeCharacterCount,
+  areSquareCharactersComplete,
 } from '../lib/rewards';
 import type { GachaResult } from '../lib/rewards';
 import { playGachaSpinSound, playGachaRevealSound } from '../lib/sound';
@@ -30,8 +33,11 @@ export default function GachaPage() {
   const activeBase = currentUnlockedBase(data.characters);
   const powersComplete = arePowerCharactersComplete(data.characters);
   const squareOwned = ownedSquareCharacterCount(data.characters);
+  const cubeOwned = ownedCubeCharacterCount(data.characters);
   const squareCollectionActive = powersComplete && squareOwned < SQUARE_CHARACTER_COUNT;
-  const allCollected = powersComplete && squareOwned >= SQUARE_CHARACTER_COUNT;
+  const squaresComplete = areSquareCharactersComplete(data.characters);
+  const cubeCollectionActive = powersComplete && squaresComplete && cubeOwned < CUBE_CHARACTER_COUNT;
+  const allCollected = powersComplete && squaresComplete && cubeOwned >= CUBE_CHARACTER_COUNT;
   const canAfford = data.coins >= GACHA_COST_COINS;
 
   function handleRoll() {
@@ -57,7 +63,7 @@ export default function GachaPage() {
       <div>
         <h2 className="text-xl font-bold text-gray-800">轉蛋</h2>
         <p className="text-sm text-gray-500">
-          用金幣依序收集八組次方角色，再解鎖 1² 到 50² 的平方角色，共 {TOTAL_CHARACTER_SLOTS} 隻！
+          用金幣依序收集八組次方角色、平方角色與三次方角色，共 {TOTAL_CHARACTER_SLOTS} 隻！
         </p>
       </div>
 
@@ -73,7 +79,12 @@ export default function GachaPage() {
         ) : (
           <>
             <p className="text-sm text-gray-500">
-              {squareCollectionActive ? (
+              {cubeCollectionActive ? (
+                <>
+                  目前可以轉到 <span className="font-bold text-sky-600">1³ 到 50³ 的三次方</span>角色（
+                  {cubeOwned} / {CUBE_CHARACTER_COUNT}）
+                </>
+              ) : squareCollectionActive ? (
                 <>
                   目前可以轉到 <span className="font-bold text-violet-600">1² 到 50² 的平方</span>角色（
                   {squareOwned} / {SQUARE_CHARACTER_COUNT}）
@@ -107,12 +118,24 @@ export default function GachaPage() {
               className="mx-auto w-20 h-20 rounded-full flex items-center justify-center text-white font-extrabold text-2xl"
               style={{
                 backgroundColor: characterColor(
-                  lastResult.kind === 'square' ? lastResult.squareBase : lastResult.exponent,
-                  lastResult.kind === 'square' ? SQUARE_CHARACTER_COUNT : maxExponentForBase(lastResult.base),
+                  lastResult.kind === 'square'
+                    ? lastResult.squareBase
+                    : lastResult.kind === 'cube'
+                      ? lastResult.cubeBase
+                      : lastResult.exponent,
+                  lastResult.kind === 'power'
+                    ? maxExponentForBase(lastResult.base)
+                    : lastResult.kind === 'square'
+                      ? SQUARE_CHARACTER_COUNT
+                      : CUBE_CHARACTER_COUNT,
                 ),
               }}
             >
-              {lastResult.kind === 'square' ? lastResult.squareBase : lastResult.exponent}
+              {lastResult.kind === 'power'
+                ? lastResult.exponent
+                : lastResult.kind === 'square'
+                  ? lastResult.squareBase
+                  : lastResult.cubeBase}
             </div>
             {lastResult.isDupe ? (
               <>
@@ -179,6 +202,22 @@ export default function GachaPage() {
             </div>
             <span className="text-xs text-gray-400 w-14 text-right">
               {!powersComplete ? '🔒 未解鎖' : `${squareOwned}/${SQUARE_CHARACTER_COUNT}`}
+            </span>
+          </Link>
+          <Link
+            to="/characters?collection=cubes"
+            className="flex items-center gap-3 rounded-lg hover:bg-gray-50 -mx-1 px-1 py-0.5"
+          >
+            <span className="text-xl w-7">🧊</span>
+            <span className="w-16 text-sm font-semibold text-gray-700">三次方角色</span>
+            <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
+              <div
+                className={`h-full ${cubeCollectionActive ? 'bg-sky-500' : 'bg-emerald-500'}`}
+                style={{ width: `${(cubeOwned / CUBE_CHARACTER_COUNT) * 100}%` }}
+              />
+            </div>
+            <span className="text-xs text-gray-400 w-14 text-right">
+              {!squaresComplete ? '🔒 未解鎖' : `${cubeOwned}/${CUBE_CHARACTER_COUNT}`}
             </span>
           </Link>
         </div>

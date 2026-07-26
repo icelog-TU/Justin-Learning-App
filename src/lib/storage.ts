@@ -10,6 +10,9 @@ import {
   SQUARE_CHARACTER_COUNT,
   squareCharacterId,
   ownedSquareCharacterCount,
+  CUBE_CHARACTER_COUNT,
+  cubeCharacterId,
+  ownedCubeCharacterCount,
   characterMaxHearts,
   type GachaResult,
 } from './rewards';
@@ -233,8 +236,9 @@ export function earnRewards(data: AppData, coins: number, stars: number): AppDat
 export function rollGacha(data: AppData): { data: AppData; result: GachaResult | null } {
   if (data.coins < GACHA_COST_COINS) return { data, result: null };
   const base = currentUnlockedBase(data.characters);
-  const squareCollectionActive = base === null;
-  if (squareCollectionActive && ownedSquareCharacterCount(data.characters) >= SQUARE_CHARACTER_COUNT) {
+  const squareCollectionActive = base === null && ownedSquareCharacterCount(data.characters) < SQUARE_CHARACTER_COUNT;
+  const cubeCollectionActive = base === null && !squareCollectionActive;
+  if (cubeCollectionActive && ownedCubeCharacterCount(data.characters) >= CUBE_CHARACTER_COUNT) {
     return { data, result: null };
   }
 
@@ -256,7 +260,21 @@ export function rollGacha(data: AppData): { data: AppData; result: GachaResult |
     }
     const id = squareCharacterId(squareBase);
     result = { kind: 'square', id, squareBase, isDupe: data.characters[id] !== undefined };
+  } else if (cubeCollectionActive) {
+    let cubeBase: number;
+    if (forceNew) {
+      const unowned: number[] = [];
+      for (let candidate = 1; candidate <= CUBE_CHARACTER_COUNT; candidate++) {
+        if (data.characters[cubeCharacterId(candidate)] === undefined) unowned.push(candidate);
+      }
+      cubeBase = unowned[Math.floor(Math.random() * unowned.length)];
+    } else {
+      cubeBase = 1 + Math.floor(Math.random() * CUBE_CHARACTER_COUNT);
+    }
+    const id = cubeCharacterId(cubeBase);
+    result = { kind: 'cube', id, cubeBase, isDupe: data.characters[id] !== undefined };
   } else {
+    if (base === null) return { data, result: null };
     const maxExponent = maxExponentForBase(base);
     let exponent: number;
     if (forceNew) {

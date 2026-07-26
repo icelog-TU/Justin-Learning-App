@@ -17,9 +17,10 @@ export function maxExponentForBase(base: number): number {
   return BASE_MAX_EXPONENT[base] ?? 46;
 }
 export const SQUARE_CHARACTER_COUNT = 50;
+export const CUBE_CHARACTER_COUNT = 50;
 /** Existing power-series slots stay first; the standalone 1²..50² collection unlocks after them. */
 export const POWER_CHARACTER_SLOTS = GACHA_BASES.reduce((sum, base) => sum + maxExponentForBase(base), 0);
-export const TOTAL_CHARACTER_SLOTS = POWER_CHARACTER_SLOTS + SQUARE_CHARACTER_COUNT;
+export const TOTAL_CHARACTER_SLOTS = POWER_CHARACTER_SLOTS + SQUARE_CHARACTER_COUNT + CUBE_CHARACTER_COUNT;
 export const GACHA_COST_COINS = 10;
 export const HEART_COST_STARS = 3;
 /** Pity system: a brand-new character is guaranteed at least once every this many rolls. */
@@ -101,13 +102,27 @@ export function squareCharacterId(squareBase: number): string {
   return `square:${squareBase}`;
 }
 
+export function cubeCharacterId(cubeBase: number): string {
+  return `cube:${cubeBase}`;
+}
+
 export function isSquareCharacterId(id: string): boolean {
   return id.startsWith('square:');
 }
 
-export function parseCharacterId(id: string): { kind: 'power'; base: number; exponent: number } | { kind: 'square'; squareBase: number } {
+export function isCubeCharacterId(id: string): boolean {
+  return id.startsWith('cube:');
+}
+
+export function parseCharacterId(id: string):
+  | { kind: 'power'; base: number; exponent: number }
+  | { kind: 'square'; squareBase: number }
+  | { kind: 'cube'; cubeBase: number } {
   if (isSquareCharacterId(id)) {
     return { kind: 'square', squareBase: Number(id.slice('square:'.length)) };
+  }
+  if (isCubeCharacterId(id)) {
+    return { kind: 'cube', cubeBase: Number(id.slice('cube:'.length)) };
   }
   const [base, exponent] = id.split('^').map(Number);
   return { kind: 'power', base, exponent };
@@ -130,23 +145,29 @@ export function formatSquareCharacterLabel(squareBase: number): string {
   return formatCharacterLabel(squareBase, 2);
 }
 
+export function formatCubeCharacterLabel(cubeBase: number): string {
+  return formatCharacterLabel(cubeBase, 3);
+}
+
 export function characterMaxHearts(id: string): number {
   const parsed = parseCharacterId(id);
-  return parsed.kind === 'square' ? parsed.squareBase : parsed.exponent;
+  if (parsed.kind === 'square') return parsed.squareBase;
+  if (parsed.kind === 'cube') return parsed.cubeBase;
+  return parsed.exponent;
 }
 
 export function characterLabelFromId(id: string): string {
   const parsed = parseCharacterId(id);
-  return parsed.kind === 'square'
-    ? formatSquareCharacterLabel(parsed.squareBase)
-    : formatCharacterLabel(parsed.base, parsed.exponent);
+  if (parsed.kind === 'square') return formatSquareCharacterLabel(parsed.squareBase);
+  if (parsed.kind === 'cube') return formatCubeCharacterLabel(parsed.cubeBase);
+  return formatCharacterLabel(parsed.base, parsed.exponent);
 }
 
 export function characterValueFromId(id: string): bigint {
   const parsed = parseCharacterId(id);
-  return parsed.kind === 'square'
-    ? characterValue(parsed.squareBase, 2)
-    : characterValue(parsed.base, parsed.exponent);
+  if (parsed.kind === 'square') return characterValue(parsed.squareBase, 2);
+  if (parsed.kind === 'cube') return characterValue(parsed.cubeBase, 3);
+  return characterValue(parsed.base, parsed.exponent);
 }
 
 export function formatBigNumber(n: bigint): string {
@@ -175,9 +196,11 @@ export function characterCollectionIndex(base: number, exponent: number): number
 
 export function characterCollectionIndexFromId(id: string): number {
   const parsed = parseCharacterId(id);
-  return parsed.kind === 'square'
-    ? POWER_CHARACTER_SLOTS + Math.max(0, parsed.squareBase - 1)
-    : characterCollectionIndex(parsed.base, parsed.exponent);
+  if (parsed.kind === 'square') return POWER_CHARACTER_SLOTS + Math.max(0, parsed.squareBase - 1);
+  if (parsed.kind === 'cube') {
+    return POWER_CHARACTER_SLOTS + SQUARE_CHARACTER_COUNT + Math.max(0, parsed.cubeBase - 1);
+  }
+  return characterCollectionIndex(parsed.base, parsed.exponent);
 }
 
 /** Which base is currently open for gacha pulls: the first base in order that isn't fully collected yet. */
@@ -208,8 +231,20 @@ export function ownedSquareCharacterCount(characters: Record<string, number>): n
   return count;
 }
 
+export function ownedCubeCharacterCount(characters: Record<string, number>): number {
+  let count = 0;
+  for (let cubeBase = 1; cubeBase <= CUBE_CHARACTER_COUNT; cubeBase++) {
+    if (characters[cubeCharacterId(cubeBase)] !== undefined) count++;
+  }
+  return count;
+}
+
 export function arePowerCharactersComplete(characters: Record<string, number>): boolean {
   return currentUnlockedBase(characters) === null;
+}
+
+export function areSquareCharactersComplete(characters: Record<string, number>): boolean {
+  return ownedSquareCharacterCount(characters) >= SQUARE_CHARACTER_COUNT;
 }
 
 export interface PowerGachaResult {
@@ -227,7 +262,14 @@ export interface SquareGachaResult {
   isDupe: boolean;
 }
 
-export type GachaResult = PowerGachaResult | SquareGachaResult;
+export interface CubeGachaResult {
+  kind: 'cube';
+  id: string;
+  cubeBase: number;
+  isDupe: boolean;
+}
+
+export type GachaResult = PowerGachaResult | SquareGachaResult | CubeGachaResult;
 
 export interface LevelInfo {
   level: number;
@@ -261,6 +303,9 @@ export const LEVELS: LevelInfo[] = [
   { level: 20, title: '平方探索家', icon: '🔲', threshold: 385 },
   { level: 21, title: '平方大師', icon: '🧮', threshold: 402 },
   { level: 22, title: '數字宇宙王', icon: '🚀', threshold: 418 },
+  { level: 23, title: '立方探索家', icon: '🧊', threshold: 435 },
+  { level: 24, title: '立方大師', icon: '🧠', threshold: 452 },
+  { level: 25, title: '次方傳奇', icon: '🌠', threshold: 468 },
 ];
 
 export function currentLevel(charactersOwned: number): LevelInfo {

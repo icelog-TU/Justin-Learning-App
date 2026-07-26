@@ -18,19 +18,25 @@ import {
   squareCharacterId,
   ownedSquareCharacterCount,
   arePowerCharactersComplete,
+  CUBE_CHARACTER_COUNT,
+  cubeCharacterId,
+  ownedCubeCharacterCount,
+  formatCubeCharacterLabel,
+  areSquareCharactersComplete,
 } from '../lib/rewards';
 import { playHeartSound } from '../lib/sound';
 
 type CharacterSort = 'exponent-asc' | 'exponent-desc' | 'missing-desc' | 'missing-asc';
-type CollectionSelection = number | 'squares';
+type CollectionSelection = number | 'squares' | 'cubes';
 
 export default function CharactersPage() {
   const { data, giveHeart } = useAppDataContext();
   const activeBase = currentUnlockedBase(data.characters);
   const [searchParams] = useSearchParams();
   const baseFromUrl = Number(searchParams.get('base'));
-  const initialCollection: CollectionSelection = searchParams.get('collection') === 'squares'
-    ? 'squares'
+  const requestedCollection = searchParams.get('collection');
+  const initialCollection: CollectionSelection = requestedCollection === 'squares' || requestedCollection === 'cubes'
+    ? requestedCollection
     : GACHA_BASES.includes(baseFromUrl as (typeof GACHA_BASES)[number])
       ? baseFromUrl
       : (activeBase ?? GACHA_BASES[0]);
@@ -39,10 +45,17 @@ export default function CharactersPage() {
   const [sortBy, setSortBy] = useState<CharacterSort>('exponent-asc');
 
   const isSquareCollection = selectedCollection === 'squares';
-  const selectedCount = isSquareCollection ? SQUARE_CHARACTER_COUNT : maxExponentForBase(selectedCollection);
-  const idForIndex = (index: number) => isSquareCollection
-    ? squareCharacterId(index)
-    : characterId(selectedCollection, index);
+  const isCubeCollection = selectedCollection === 'cubes';
+  const selectedCount = isSquareCollection
+    ? SQUARE_CHARACTER_COUNT
+    : isCubeCollection
+      ? CUBE_CHARACTER_COUNT
+      : maxExponentForBase(selectedCollection);
+  const idForIndex = (index: number) => {
+    if (isSquareCollection) return squareCharacterId(index);
+    if (isCubeCollection) return cubeCharacterId(index);
+    return characterId(selectedCollection, index);
+  };
   const characterIndexes = Array.from({ length: selectedCount }, (_, i) => i + 1)
     .filter((index) => {
       if (!onlyNeedsHearts) return true;
@@ -73,7 +86,9 @@ export default function CharactersPage() {
   }).length;
   const selectedOwnedCount = isSquareCollection
     ? ownedSquareCharacterCount(data.characters)
-    : ownedCountForBase(data.characters, selectedCollection);
+    : isCubeCollection
+      ? ownedCubeCharacterCount(data.characters)
+      : ownedCountForBase(data.characters, selectedCollection);
 
   return (
     <div className="space-y-4">
@@ -129,43 +144,66 @@ export default function CharactersPage() {
           </span>
           {!arePowerCharactersComplete(data.characters) && <span>🔒</span>}
         </button>
+        <button
+          type="button"
+          onClick={() => setSelectedCollection('cubes')}
+          className={`px-3 py-2 rounded-xl text-sm font-medium border flex items-center gap-2 ${
+            isCubeCollection
+              ? 'bg-sky-500 text-white border-sky-500'
+              : 'bg-white text-gray-600 border-gray-200 hover:border-sky-300'
+          }`}
+        >
+          <span className="text-lg">🧊</span>
+          <span className="flex-1 text-left leading-tight">
+            <span className="block">1³ 到 50³</span>
+            <span className={`block text-[11px] ${isCubeCollection ? 'text-sky-100' : 'text-gray-400'}`}>
+              {ownedCubeCharacterCount(data.characters)}/{CUBE_CHARACTER_COUNT}
+            </span>
+          </span>
+          {!areSquareCharactersComplete(data.characters) && <span>🔒</span>}
+        </button>
       </div>
 
-      <div className="rounded-2xl border-2 border-pink-200 bg-pink-50 p-4 shadow-sm space-y-3">
-        <div className="flex items-center justify-between gap-3">
+      <details className="group rounded-2xl border-2 border-pink-200 bg-pink-50 p-4 shadow-sm">
+        <summary className="flex items-center justify-between gap-3 cursor-pointer list-none">
           <div>
             <p className="font-bold text-pink-700">快速補愛心</p>
-            <p className="text-xs text-pink-500">篩選待補角色，再決定排列順序</p>
+            <p className="text-xs text-pink-500">預設收合，需要時點這裡展開</p>
           </div>
-          <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-pink-600 shadow-sm">
-            {needsHeartsCount} 隻待補
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-pink-600 shadow-sm">
+              {needsHeartsCount} 隻待補
+            </span>
+            <span className="text-pink-500 transition-transform group-open:rotate-180">▼</span>
+          </div>
+        </summary>
+
+        <div className="space-y-3 pt-3">
+          <label className="flex items-center gap-3 rounded-xl bg-white px-3 py-3 text-sm font-semibold text-gray-700 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={onlyNeedsHearts}
+              onChange={(event) => setOnlyNeedsHearts(event.target.checked)}
+              className="h-5 w-5 accent-pink-500"
+            />
+            只顯示愛心未填滿的角色
+          </label>
+
+          <label className="block text-sm font-semibold text-gray-700">
+            <span className="mb-1 block">角色排序</span>
+            <select
+              value={sortBy}
+              onChange={(event) => setSortBy(event.target.value as CharacterSort)}
+              className="w-full rounded-xl border border-pink-200 bg-white px-3 py-3 text-sm text-gray-700"
+            >
+              <option value="exponent-asc">{isSquareCollection || isCubeCollection ? '底數' : '次方'}：小到大</option>
+              <option value="exponent-desc">{isSquareCollection || isCubeCollection ? '底數' : '次方'}：大到小</option>
+              <option value="missing-desc">愛心缺最多的在最上面</option>
+              <option value="missing-asc">愛心最接近填滿的在最上面</option>
+            </select>
+          </label>
         </div>
-
-        <label className="flex items-center gap-3 rounded-xl bg-white px-3 py-3 text-sm font-semibold text-gray-700 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={onlyNeedsHearts}
-            onChange={(event) => setOnlyNeedsHearts(event.target.checked)}
-            className="h-5 w-5 accent-pink-500"
-          />
-          只顯示愛心未填滿的角色
-        </label>
-
-        <label className="block text-sm font-semibold text-gray-700">
-          <span className="mb-1 block">角色排序</span>
-          <select
-            value={sortBy}
-            onChange={(event) => setSortBy(event.target.value as CharacterSort)}
-            className="w-full rounded-xl border border-pink-200 bg-white px-3 py-3 text-sm text-gray-700"
-          >
-            <option value="exponent-asc">{isSquareCollection ? '底數' : '次方'}：小到大</option>
-            <option value="exponent-desc">{isSquareCollection ? '底數' : '次方'}：大到小</option>
-            <option value="missing-desc">愛心缺最多的在最上面</option>
-            <option value="missing-asc">愛心最接近填滿的在最上面</option>
-          </select>
-        </label>
-      </div>
+      </details>
 
       <p className="text-xs text-gray-400">
         {selectedOwnedCount} / {selectedCount} 已收集
@@ -183,10 +221,14 @@ export default function CharactersPage() {
             const canGiveHeart = owned && !isFull && data.stars >= HEART_COST_STARS;
             const label = isSquareCollection
               ? formatSquareCharacterLabel(index)
-              : formatCharacterLabel(selectedCollection, index);
+              : isCubeCollection
+                ? formatCubeCharacterLabel(index)
+                : formatCharacterLabel(selectedCollection, index);
             const value = isSquareCollection
               ? characterValue(index, 2)
-              : characterValue(selectedCollection, index);
+              : isCubeCollection
+                ? characterValue(index, 3)
+                : characterValue(selectedCollection, index);
 
             return (
               <div
@@ -204,7 +246,9 @@ export default function CharactersPage() {
                       >
                         {index}
                       </div>
-                      <p className={`text-lg font-extrabold mt-1 ${isSquareCollection ? 'text-violet-600' : 'text-orange-600'}`}>
+                      <p className={`text-lg font-extrabold mt-1 ${
+                        isSquareCollection ? 'text-violet-600' : isCubeCollection ? 'text-sky-600' : 'text-orange-600'
+                      }`}>
                         {label}
                       </p>
                       <p className="text-[11px] text-gray-400 leading-tight">
