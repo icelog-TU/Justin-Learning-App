@@ -115,9 +115,26 @@ function initialResult(
   };
 }
 
+function catalogFields(item: PronunciationAuditCatalogItem): Omit<CloudAuditItem, 'results'> {
+  return {
+    id: item.id,
+    lessonId: item.lessonId,
+    lessonNumber: item.lessonNumber,
+    lessonTitle: item.lessonTitle,
+    questionId: item.questionId,
+    speechUnitId: item.speechUnitId,
+    source: item.source,
+    text: item.text,
+    target: item.target,
+    intendedReading: item.intendedReading,
+    targets: item.targets,
+    initialVerifications: item.initialVerifications,
+  };
+}
+
 function catalogItemToCloud(item: PronunciationAuditCatalogItem): CloudAuditItem {
   return {
-    ...item,
+    ...catalogFields(item),
     results: item.initialVerifications.map((verification, index) => initialResult(item, verification, index)),
   };
 }
@@ -251,7 +268,7 @@ export async function submitAuditResults(
         );
         items[item.id] = {
           ...current,
-          ...item,
+          ...catalogFields(item),
           results: [...otherEnvironments, result].slice(-MAX_RESULTS_PER_ITEM),
         };
       });
