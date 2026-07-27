@@ -341,8 +341,8 @@ preferredRepresentativeIds.forEach((stableId, text) => {
       retainedKeys.has(key)
     ) return;
     retainedKeys.add(key);
-    const { groupTtsBehavior: _groupTtsBehavior, ...catalogTarget } = target;
-    retainedTargets.push(catalogTarget);
+    const { groupTtsBehavior, ...catalogTarget } = target;
+    retainedTargets.push({ ...catalogTarget, ttsBehavior: groupTtsBehavior });
     uncoveredGroupKeys.delete(key);
   });
   if (retainedTargets.length > 0) {
@@ -373,8 +373,8 @@ while (uncoveredGroupKeys.size > 0) {
     const key = pronunciationGroupKey(target);
     if (retainedKeys.has(key)) return;
     retainedKeys.add(key);
-    const { groupTtsBehavior: _groupTtsBehavior, ...catalogTarget } = target;
-    retainedTargets.push(catalogTarget);
+    const { groupTtsBehavior, ...catalogTarget } = target;
+    retainedTargets.push({ ...catalogTarget, ttsBehavior: groupTtsBehavior });
     uncoveredGroupKeys.delete(key);
   });
   selectedUnits.push({ ...chosen.unit, targets: retainedTargets });
@@ -395,14 +395,13 @@ const chenSheShaoTarget = chenSheShaoShiUnit.targets.find(
 if (!chenSheShaoTarget) {
   throw new Error('找不到「陳涉少時」的少（ㄕㄠˋ）target');
 }
-const {
-  groupTtsBehavior: _chenSheGroupTtsBehavior,
-  ...chenSheBaseCatalogTarget
-} = chenSheShaoTarget;
+const { groupTtsBehavior: chenSheTtsBehavior, ...chenSheBaseCatalogTarget } =
+  chenSheShaoTarget;
 const chenSheCatalogTarget = {
   ...chenSheBaseCatalogTarget,
   homophoneCue: '紹',
   usage: '年輕',
+  ttsBehavior: chenSheTtsBehavior,
 };
 selectedUnits.push({
   ...chenSheShaoShiUnit,

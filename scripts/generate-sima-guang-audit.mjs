@@ -299,8 +299,8 @@ for (const unit of targetUnits) {
     if (!target) continue;
     const key = groupKey(target);
     if (!uncovered.has(key)) continue;
-    const { groupTtsBehavior: _groupTtsBehavior, ...catalogTarget } = target;
-    retainedTargets.push(catalogTarget);
+    const { groupTtsBehavior, ...catalogTarget } = target;
+    retainedTargets.push({ ...catalogTarget, ttsBehavior: groupTtsBehavior });
     uncovered.delete(key);
   }
   if (retainedTargets.length > 0) {
@@ -332,8 +332,8 @@ while (uncovered.size > 0) {
     const key = groupKey(target);
     if (retainedKeys.has(key)) continue;
     retainedKeys.add(key);
-    const { groupTtsBehavior: _groupTtsBehavior, ...catalogTarget } = target;
-    retainedTargets.push(catalogTarget);
+    const { groupTtsBehavior, ...catalogTarget } = target;
+    retainedTargets.push({ ...catalogTarget, ttsBehavior: groupTtsBehavior });
     uncovered.delete(key);
   }
   selectedUnits.push({ ...chosen.unit, targets: retainedTargets });

@@ -9,6 +9,7 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "tts:audit:pull": "tsx scripts/read-tts-audit.ts",
+    "tts:audit:reusable": "tsx scripts/read-tts-audit.ts --reusable-groups",
     "tts:audit:test": "tsx scripts/test-tts-audit.ts"
   },
   "dependencies": {

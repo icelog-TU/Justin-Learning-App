@@ -12,6 +12,7 @@ import {
   formatPronunciationCue,
   type SubmittedTargetDecision,
 } from '../src/lib/ttsAuditDecision';
+import { buildPronunciationReuseGroupKey } from '../src/lib/ttsAuditGroup';
 
 type CloudResult = {
   resultId: string;
@@ -174,7 +175,74 @@ if (!indexSnapshot.exists()) {
     orphan: orphans.length,
   };
 
-  if (process.argv.includes('--json')) {
+  if (process.argv.includes('--reusable-groups')) {
+    const reusableByKey = new Map<
+      string,
+      {
+        groupKey: string;
+        character: string;
+        zhuyin: string;
+        usage: string;
+        ttsBehavior: string;
+        lessonId: string;
+        lessonNumber: number;
+        lessonTitle: string;
+        itemId: string;
+        source: string;
+        checkedAt: string;
+        receivedAt: number;
+        resultId: string;
+        environment: string;
+      }
+    >();
+    records.forEach(({ item, result }) => {
+      if (!result) return;
+      item.targets.forEach((target) => {
+        if (targetDecision(item, target, result) !== 'correct') return;
+        const groupKey = buildPronunciationReuseGroupKey(target);
+        if (!groupKey || !target.ttsBehavior) return;
+        const candidate = {
+          groupKey,
+          character: target.character,
+          zhuyin: target.zhuyin,
+          usage: target.usage,
+          ttsBehavior: target.ttsBehavior,
+          lessonId: item.lessonId,
+          lessonNumber: item.lessonNumber,
+          lessonTitle: item.lessonTitle,
+          itemId: item.id,
+          source: item.source,
+          checkedAt: result.checkedAt,
+          receivedAt: result.receivedAt,
+          resultId: result.resultId,
+          environment: environmentLabel(result),
+        };
+        const previous = reusableByKey.get(groupKey);
+        if (!previous || candidate.receivedAt > previous.receivedAt) {
+          reusableByKey.set(groupKey, candidate);
+        }
+      });
+    });
+    const reusableGroups = [...reusableByKey.values()].sort(
+      (a, b) =>
+        a.character.localeCompare(b.character, 'zh-TW') ||
+        a.zhuyin.localeCompare(b.zhuyin, 'zh-TW') ||
+        a.usage.localeCompare(b.usage, 'zh-TW'),
+    );
+    console.log(
+      JSON.stringify(
+        {
+          updatedAt: index.updatedAt,
+          schemaVersion: index.schemaVersion ?? 1,
+          reuseGroupVersion: 1,
+          reusableGroupCount: reusableGroups.length,
+          reusableGroups,
+        },
+        null,
+        2,
+      ),
+    );
+  } else if (process.argv.includes('--json')) {
     console.log(
       JSON.stringify(
         {

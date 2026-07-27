@@ -365,8 +365,8 @@ while (uncovered.size > 0) {
     const key = groupKey(target);
     if (retainedKeys.has(key)) continue;
     retainedKeys.add(key);
-    const { groupTtsBehavior: _groupTtsBehavior, ...catalogTarget } = target;
-    retainedTargets.push(catalogTarget);
+    const { groupTtsBehavior, ...catalogTarget } = target;
+    retainedTargets.push({ ...catalogTarget, ttsBehavior: groupTtsBehavior });
     uncovered.delete(key);
   }
   selectedUnits.push({ ...chosen.unit, targets: retainedTargets });

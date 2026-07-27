@@ -22,6 +22,7 @@ import {
   isTtsAuditItemHeard,
   matchesTtsAuditListeningFilter,
 } from '../src/lib/ttsAuditListening';
+import { buildPronunciationReuseGroupKey } from '../src/lib/ttsAuditGroup';
 
 assert.equal(isTtsAuditItemHeard('pending'), false);
 assert.equal(isTtsAuditItemHeard('correct'), true);
@@ -87,6 +88,11 @@ for (const item of GUWEN_PRONUNCIATION_AUDIT_CATALOG) {
   );
 
   for (const target of item.targets) {
+    assert(target.ttsBehavior, `${item.id} 的 ${target.character} 缺少 ttsBehavior`);
+    assert(
+      buildPronunciationReuseGroupKey(target),
+      `${item.id} 的 ${target.character} 無法建立跨篇 reuse group key`,
+    );
     const occurrences = [...item.displayText].filter((character) => character === target.character).length;
     assert(
       target.occurrence >= 1 && target.occurrence <= occurrences,
@@ -106,7 +112,13 @@ for (const item of GUWEN_PRONUNCIATION_AUDIT_CATALOG) {
     }
     if (item.lessonId === 'shou-zhu-dai-tu') {
       const ttsCondition = fourthLessonTtsCondition(item.displayText, target);
-      const groupKey = `${target.character}|${target.zhuyin}|${target.usage}|${ttsCondition}`;
+      assert.equal(
+        target.ttsBehavior,
+        ttsCondition,
+        `${item.id} 的 ${target.character} ttsBehavior 與產生規則不一致`,
+      );
+      const groupKey = buildPronunciationReuseGroupKey(target);
+      assert(groupKey);
       assert(!shouZhuDaiTuGroupKeys.has(groupKey), `第四篇有重複讀音群組：${groupKey}`);
       shouZhuDaiTuGroupKeys.add(groupKey);
       shouZhuDaiTuTargetCount += 1;

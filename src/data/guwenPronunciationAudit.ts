@@ -11,6 +11,8 @@ export type PronunciationTarget = {
   homophoneCue: string;
   usage: string;
   cueMode: 'known_usage' | 'unresolved_target';
+  /** 正式 TTS 管線對此位置採用的分組條件；跨篇沿用時必須完全相同。 */
+  ttsBehavior?: string;
 };
 
 export type PronunciationVerification = {
