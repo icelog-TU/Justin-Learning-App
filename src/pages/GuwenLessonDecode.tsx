@@ -638,6 +638,8 @@ export default function GuwenLessonDecode() {
   // "已破解 X/Y" (they count the closing screens as things to finish too), unlike `totalSteps` above, which
   // stays word-steps-only on purpose for the "is this the last word step" button-label decision below.
   const totalGradableItems = totalGuwenLessonItems(lesson);
+  const feedbackSpeechUnits = (text: string) =>
+    lesson.splitFeedbackParagraphs ? text.split(/\n{2,}/).filter(Boolean) : [text];
   const completionRewardReached = alreadyComplete || readyForComplete;
   const earnedCoins = solvedIds.size * guwenCoinAmount + (completionRewardReached ? completionCoinBonus : 0);
   const earnedStars = solvedIds.size * guwenStarAmount + (completionRewardReached ? completionStarBonus : 0);
@@ -766,7 +768,7 @@ export default function GuwenLessonDecode() {
       setPlaybackPaused(false);
       speakSequence(
         [
-          step.correctFeedback,
+          ...feedbackSpeechUnits(step.correctFeedback),
           ...(step.pronunciationCues?.correctFeedback?.map((cue) => cue.speechText) ?? []),
           step.explanation.replace(/\n+/g, ' '),
         ],
@@ -958,7 +960,7 @@ export default function GuwenLessonDecode() {
     // (a real user action), not via a useEffect keyed on orderingSolved, because that state starts `true`
     // on every remount of an already-solved lesson (see its useState initializer above) and would replay
     // the encouragement on every reopen instead of only right after a fresh solve.
-    speak(closing.correctFeedback);
+    speakSequence(feedbackSpeechUnits(closing.correctFeedback));
     setOrderingWrong(false);
     setOrderingSolved(true);
   }
@@ -980,7 +982,7 @@ export default function GuwenLessonDecode() {
     // Called directly here (a real user action), not via a useEffect keyed on causalSolved — same
     // reload-replay pitfall as handleSubmitOrdering's identical comment above: that state's initializer
     // already returns true on mount for an already-solved lesson.
-    speak(closing.correctFeedback);
+    speakSequence(feedbackSpeechUnits(closing.correctFeedback));
     setCausalChoice(i);
     setCausalWrong(false);
     setCausalSolved(true);
@@ -1014,7 +1016,7 @@ export default function GuwenLessonDecode() {
     // Called directly here (a real user action), not via a useEffect keyed on multiSelectSolved — same
     // reload-replay pitfall as handleSubmitOrdering's identical comment above: that state's initializer
     // already returns true on mount for an already-solved lesson.
-    speak(closing.correctFeedback);
+    speakSequence(feedbackSpeechUnits(closing.correctFeedback));
     setMultiSelectWrong(false);
     setMultiSelectSolved(true);
   }
@@ -1314,7 +1316,7 @@ export default function GuwenLessonDecode() {
               <p className="font-bold text-emerald-700 flex-1">{closing.correctFeedback}</p>
               <button
                 type="button"
-                onClick={() => speak(closing.correctFeedback)}
+                onClick={() => speakSequence(feedbackSpeechUnits(closing.correctFeedback))}
                 aria-label="聽這段回饋"
                 className="text-emerald-600 shrink-0"
               >
@@ -1398,7 +1400,7 @@ export default function GuwenLessonDecode() {
               <p className="font-bold text-emerald-700 flex-1">{closing.correctFeedback}</p>
               <button
                 type="button"
-                onClick={() => speak(closing.correctFeedback)}
+                onClick={() => speakSequence(feedbackSpeechUnits(closing.correctFeedback))}
                 aria-label="聽這段回饋"
                 className="text-emerald-600 shrink-0"
               >
@@ -1520,7 +1522,9 @@ export default function GuwenLessonDecode() {
               <p className="font-bold text-emerald-700 whitespace-pre-line flex-1">{closing.correctFeedback}</p>
               <button
                 type="button"
-                onClick={() => togglePlayback(`closing-feedback-${closing.id}`, closing.correctFeedback)}
+                onClick={() =>
+                  togglePlayback(`closing-feedback-${closing.id}`, feedbackSpeechUnits(closing.correctFeedback))
+                }
                 aria-label="聽這段回饋"
                 className="text-emerald-600 shrink-0"
               >
@@ -1945,7 +1949,7 @@ export default function GuwenLessonDecode() {
                     type="button"
                     onClick={() =>
                       togglePlayback(`explain-${currentStep.id}`, [
-                        currentStep.correctFeedback,
+                        ...feedbackSpeechUnits(currentStep.correctFeedback),
                         ...(currentStep.pronunciationCues?.correctFeedback?.map((cue) => cue.speechText) ?? []),
                         currentStep.explanation.replace(/\n+/g, ' '),
                       ])

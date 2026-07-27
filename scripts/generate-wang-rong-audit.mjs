@@ -272,16 +272,84 @@ for (let index = 0; index < lines.length; index += 1) {
 flushParagraph();
 
 const exactTextUnits = [...new Map(speechUnits.map((unit) => [unit.text, unit])).values()];
+// 「陳涉少時」的少有使用者確認的 exact 例外結果，必須獨立成項；
+// 不讓貪婪減量器同時把這個整句選成其他一般讀音群組的代表句。
+const regularExactTextUnits = exactTextUnits.filter(
+  (unit) => unit.text !== '陳涉少時，嘗與人傭耕。',
+);
 const pronunciationGroupKey = (target) =>
   `${target.character}|${target.zhuyin}|${target.usage}|${target.groupTtsBehavior}`;
 const allGroupKeys = new Set(
-  exactTextUnits.flatMap((unit) => unit.targets.map(pronunciationGroupKey)),
+  regularExactTextUnits.flatMap((unit) => unit.targets.map(pronunciationGroupKey)),
 );
 const uncoveredGroupKeys = new Set(allGroupKeys);
 const selectedUnits = [];
 
+// 優先沿用仍存在的既有代表整句與穩定 ID，讓題號縮編不會使完全相同的
+// displayText／ttsInput／target fingerprint 失去中央真人實聽結果。
+const preferredRepresentativeIds = new Map([
+  ['王戎七歲，嘗與諸小兒遊。看道邊李樹多子折枝，諸兒競走取之，唯戎不動。人問之，答曰：「樹在道邊而多子，此必苦李。」取之，信然。', 'wangrong-opening-speech-002'],
+  ['少年時，嘗過一村院。', 'wangrong-q1-speech-005'],
+  ['追蹤成功！其他孩子都跑去摘李子，只有王戎沒有行動，大家自然會注意到他的不同。', 'wangrong-q13-speech-005'],
+  ['曾子曰：「吾日三省吾身。」', 'wangrong-q14-speech-004'],
+  ['船已經向前行駛，而落入水中的劍仍留在原來的位置。', 'wangrong-q16-speech-003'],
+  ['道路旁邊的李子容易被人發現和摘走；如果好吃，照理不容易還剩這麼多', 'wangrong-q17-speech-005'],
+  ['因為李樹長在道路旁邊，所以王戎已經親口吃過每一顆李子，知道它們全都很苦。', 'wangrong-q19-speech-005'],
+  ['我找到了兩條線索，請你比較裡面的數量。', 'wangrong-q2-speech-002'],
+  ['家有五兒。母卒，諸兒見家人泣，則隨之泣。', 'wangrong-q2-speech-005'],
+  ['「取之，信然」可以重建為：有人摘下李子查驗，結果果然如王戎所說，是苦的。', 'wangrong-q22-speech-005'],
+  ['沒有被文章明確寫出來的內容，就算聽起來合理，也不能當成文章已經說出的事。', 'wangrong-q24-speech-006'],
+  ['王戎七歲時，曾經和一群好朋友一起遊玩。', 'wangrong-q3-speech-006'],
+  ['梨樹多子折枝，果農便用長竹竿撐住樹枝。', 'wangrong-q4-speech-006'],
+  ['破譯家，下一處待破解的是競。', 'wangrong-q6-speech-001'],
+  ['兩個孩子競走；一會兒這個領先，一會兒另一個領先，兩人都不肯落在後面。', 'wangrong-q6-speech-005'],
+  ['屠暴起，以刀劈狼首，又數刀斃之。', 'wangrong-q8-speech-003'],
+  ['可是回到本篇，「取之」前面出現了好幾個對象，我還不確定孩子們究竟跑去拿什麼。麻煩古文破譯家幫我沿著故事追蹤之的指向。', 'wangrong-q9-speech-003'],
+]);
+const preferredTargetCharacters = new Map([
+  ['wangrong-opening-speech-002', '與答'],
+  ['wangrong-q1-speech-005', '少過'],
+  ['wangrong-q13-speech-005', '只會'],
+  ['wangrong-q14-speech-004', '省'],
+  ['wangrong-q16-speech-003', '行落中'],
+  ['wangrong-q17-speech-005', '好'],
+  ['wangrong-q19-speech-005', '為長過都'],
+  ['wangrong-q2-speech-002', '數'],
+  ['wangrong-q2-speech-005', '卒'],
+  ['wangrong-q22-speech-005', '為結'],
+  ['wangrong-q24-speech-006', '當'],
+  ['wangrong-q3-speech-006', '好'],
+  ['wangrong-q4-speech-006', '便長'],
+  ['wangrong-q6-speech-001', '處'],
+  ['wangrong-q6-speech-005', '會'],
+  ['wangrong-q8-speech-003', '數'],
+  ['wangrong-q9-speech-003', '好幾還著'],
+]);
+
+preferredRepresentativeIds.forEach((stableId, text) => {
+  const unit = regularExactTextUnits.find((candidate) => candidate.text === text);
+  if (!unit) return;
+  const retainedTargets = [];
+  const retainedKeys = new Set();
+  unit.targets.forEach((target) => {
+    const key = pronunciationGroupKey(target);
+    if (
+      !preferredTargetCharacters.get(stableId)?.includes(target.character) ||
+      !uncoveredGroupKeys.has(key) ||
+      retainedKeys.has(key)
+    ) return;
+    retainedKeys.add(key);
+    const { groupTtsBehavior: _groupTtsBehavior, ...catalogTarget } = target;
+    retainedTargets.push(catalogTarget);
+    uncoveredGroupKeys.delete(key);
+  });
+  if (retainedTargets.length > 0) {
+    selectedUnits.push({ ...unit, id: stableId, targets: retainedTargets });
+  }
+});
+
 while (uncoveredGroupKeys.size > 0) {
-  const candidates = exactTextUnits
+  const candidates = regularExactTextUnits
     .map((unit) => {
       const newTargets = unit.targets.filter((target) =>
         uncoveredGroupKeys.has(pronunciationGroupKey(target)),
@@ -437,7 +505,7 @@ fs.writeFileSync(
 >
 > 篩選方式：只保留任務開場、本篇／目標原文、App 引導語、古文線索、破解白話、任務／題目、選項、答對回饋與答錯提示；再依「字＋讀音＋用法」選一個代表語音單元。
 >
-> 狀態：全部待使用者本人在正式實聽台判定；本檔不記錄、也不預選任何「念對／念錯」。
+> 狀態：本檔只記正式代表句，不保存真人判定；有效結果以中央資料庫最新讀回為準。
 
 ${reportRows.join('\n\n')}
 `,

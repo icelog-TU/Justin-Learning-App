@@ -267,6 +267,8 @@ export interface GuwenLesson {
   badgeClaimMode?: 'scroll-end';
   /** Keeps the source lesson's audited option sequence instead of applying the legacy balancing adapter. */
   preserveAuthoredOptionOrder?: boolean;
+  /** Plays each blank-line-separated feedback paragraph as the exact independently audited utterance. */
+  splitFeedbackParagraphs?: boolean;
 }
 
 export const legacySimaGuangLesson: GuwenLesson = {
