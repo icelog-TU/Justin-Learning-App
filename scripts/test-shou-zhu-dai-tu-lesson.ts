@@ -41,6 +41,11 @@ assert.deepEqual(
 );
 assert.equal(shouZhuDaiTuLesson.sequenceOrderingClosing?.cards.length, 5, '第 17 題應有五張排序卡');
 assert.equal(shouZhuDaiTuLesson.evidenceMultiSelectClosing?.options.length, 6, '第 18 題應有六張分類卡');
+assert.equal(
+  shouZhuDaiTuLesson.evidenceMultiSelectClosing?.intro,
+  '故事已經排好了。最後想麻煩古文破譯家檢查：哪些內容是文章明確寫出來的，請打勾。',
+  '第 18 題引導語必須使用最新版核准文字',
+);
 assert.equal(shouZhuDaiTuLesson.causalChainClosing, undefined, '第四篇沒有額外因果鏈收尾頁');
 assert.equal(shouZhuDaiTuLesson.preserveAuthoredOptionOrder, true);
 assert.equal(shouZhuDaiTuLesson.badgeClaimMode, 'scroll-end');

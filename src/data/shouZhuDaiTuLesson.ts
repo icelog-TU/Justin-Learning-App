@@ -465,7 +465,7 @@ export const shouZhuDaiTuLesson: GuwenLesson = {
   evidenceMultiSelectClosing: {
     id: 'closing_evidence_multiselect',
     title: '證據檢查',
-    intro: '故事已經排好了。最後想麻煩古文破譯家檢查：哪些內容是文章明確寫出來的，哪些不是？',
+    intro: '故事已經排好了。最後想麻煩古文破譯家檢查：哪些內容是文章明確寫出來的，請打勾。',
     options: [
       {
         text: '農夫覺得守著樹樁，比繼續耕田更值得。',
