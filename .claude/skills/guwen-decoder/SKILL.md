@@ -19,6 +19,13 @@ resume, and stop controls while continuing to use the shared production `speakSe
 Changing lesson, question, or preview state must cancel the previous utterance so audio from two review contexts
 cannot overlap.
 
+Every classical-clue card in this adult preview must also show its source as small gray text directly under the
+clue content. Sources are display-only and must not enter whole-page or individual speech playback. The parser
+must support both a nearby `出處` / `線索類型與出處` section and older masters that consolidate numbered entries
+under `線索類型與來源` or `成人編輯備註`; consolidated entries must be mapped back to clue 1 / clue 2. If a source
+cannot be extracted, show a red missing-source warning on that clue card and in diagnostics rather than silently
+omitting it or guessing another source.
+
 ## The word-puzzle format has been deleted
 
 The original model (`src/data/guwen.ts`, `src/pages/GuwenDecode.tsx`, `src/lib/guwenGame.ts`, the `/guwen/:textId` route, the `guwenTexts.map(...)` card list in `GuwenHome.tsx`) is **gone** — deleted in full at the user's explicit instruction when the first text (`wangRongText`, 王戎不取道旁李) was rebuilt from scratch in the evidence-lesson format instead. The user's own words: "原始的舊版 王戎不取道旁李 我們就不要了" followed by an explicit choice of "整個舊版模式的程式碼都刪掉" over just unlinking it from the home page — so this was a considered, confirmed deletion, not an oversight. Any progress recorded under the old lesson id was discarded; the new `wangRongLesson` (id `wang-rong-bu-qu-dao-pang-li`) starts fresh under its own id.

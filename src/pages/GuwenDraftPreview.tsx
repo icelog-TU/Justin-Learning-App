@@ -304,6 +304,15 @@ export default function GuwenDraftPreview() {
                         {clue.meaning && (
                           <AudioLine field={clue.meaning} id={`clue-${index}-meaning`} label={`線索 ${index + 1} 已破解為`} activePlayback={playback} onToggle={togglePlayback} className="pl-1 text-xs text-slate-500" />
                         )}
+                        {clue.source ? (
+                          <p className="whitespace-pre-line border-t border-slate-200 pt-2 text-[11px] leading-relaxed text-slate-400">
+                            出處：{clue.source.text}
+                          </p>
+                        ) : (
+                          <p className="border-t border-red-100 pt-2 text-[11px] font-bold text-red-400">
+                            ⚠ MD 未抓到這條線索的出處
+                          </p>
+                        )}
                       </div>
                     ))}
                   </div>

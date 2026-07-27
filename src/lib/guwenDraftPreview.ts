@@ -13,6 +13,7 @@ export type DraftField = {
 
 export type DraftClue = DraftField & {
   meaning?: DraftField;
+  source?: DraftField;
 };
 
 export type DraftQuestion = {
@@ -73,6 +74,7 @@ function parseQuestionNumber(raw: string): number {
 function cleanInline(text: string): string {
   return text
     .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
     .replace(/\*\*(.*?)\*\*/g, '$1')
     .replace(/__(.*?)__/g, '$1')
     .replace(/`([^`]+)`/g, '$1')
@@ -121,6 +123,65 @@ function matches(section: Section, patterns: RegExp[]): boolean {
 
 function firstSection(sections: Section[], patterns: RegExp[]): Section | undefined {
   return sections.find((section) => matches(section, patterns));
+}
+
+function isClueSection(section: Section): boolean {
+  return /(?:古文|真實古文)?線索[一二三四五六七八九十\d]/.test(section.heading)
+    && !/來源|出處|核對|類型/.test(section.heading);
+}
+
+function sourceFieldFromLines(
+  heading: string,
+  lines: Array<{ text: string; line: number }>,
+): DraftField | undefined {
+  const useful = lines
+    .map(({ text, line }) => ({
+      text: text
+        .replace(/^\s*[-*]\s+/, '')
+        .trim(),
+      line,
+    }))
+    .filter(({ text }) => text && !/^(?:教材處理|本題保留)/.test(text));
+  if (!useful.length) return undefined;
+  return {
+    heading,
+    line: useful[0].line,
+    text: cleanInline(useful.map(({ text }) => text).join('\n')),
+  };
+}
+
+function consolidatedClueSources(sections: Section[]): Map<number, DraftField> {
+  const result = new Map<number, DraftField>();
+  const sourceSections = sections.filter((section) =>
+    /線索類型與來源|成人編輯備註/.test(section.heading),
+  );
+  for (const section of sourceSections) {
+    let currentNumber: number | undefined;
+    let currentLines: Array<{ text: string; line: number }> = [];
+    const save = () => {
+      if (!currentNumber || result.has(currentNumber)) return;
+      const parsed = sourceFieldFromLines('線索類型與來源', currentLines);
+      if (parsed) result.set(currentNumber, parsed);
+    };
+    section.lines.forEach((line, index) => {
+      const start = line.match(/^\s*-\s*線索([一二三四五六七八九十\d]+)(?:為|：|:)\s*(.*)$/);
+      if (start) {
+        save();
+        currentNumber = parseQuestionNumber(start[1]);
+        currentLines = [{ text: start[2], line: section.line + index + 1 }];
+      } else if (currentNumber !== undefined) {
+        if (/^\s*-\s+\S/.test(line) && !/^\s{2,}-\s+/.test(line)) {
+          save();
+          currentNumber = undefined;
+          currentLines = [];
+        } else {
+          currentLines.push({ text: line, line: section.line + index + 1 });
+        }
+      }
+    });
+    save();
+  }
+  return result;
 }
 
 function optionFields(sections: Section[]): DraftField[] {
@@ -196,9 +257,9 @@ function parseOneQuestion(header: RegExpMatchArray, lines: string[], start: numb
   const correctMatch = correctAnswer?.text.match(/^\s*([1-9]\d*)[.、]/);
   const correctIndex = correctMatch ? Number(correctMatch[1]) - 1 : undefined;
   const clues: DraftClue[] = [];
+  const fallbackSources = consolidatedClueSources(sections);
   sections.forEach((section, index) => {
-    if (!/(?:古文|真實古文)?線索[一二三四五六七八九十\d]/.test(section.heading)) return;
-    if (/來源|核對|類型/.test(section.heading)) return;
+    if (!isClueSection(section)) return;
     const inlineMeaningIndex = section.lines.findIndex((line) => /已破解為/.test(line));
     const clueSection = inlineMeaningIndex >= 0
       ? { ...section, lines: section.lines.slice(0, inlineMeaningIndex) }
@@ -213,7 +274,19 @@ function parseOneQuestion(header: RegExpMatchArray, lines: string[], start: numb
           lines: section.lines.slice(inlineMeaningIndex + 1),
         }
       : sections.slice(index + 1, index + 3).find((candidate) => /已破解為/.test(candidate.heading));
-    clues.push({ ...clue, meaning: field(meaningSection) });
+    const nextClueIndex = sections.findIndex((candidate, candidateIndex) =>
+      candidateIndex > index && isClueSection(candidate),
+    );
+    const nearbySections = sections.slice(index + 1, nextClueIndex >= 0 ? nextClueIndex : sections.length);
+    const directSource = field(nearbySections.find((candidate) =>
+      /^(?:出處|來源)|線索類型與出處/.test(candidate.heading),
+    ));
+    const clueNumber = clues.length + 1;
+    clues.push({
+      ...clue,
+      meaning: field(meaningSection),
+      source: directSource ?? fallbackSources.get(clueNumber),
+    });
   });
   const options = optionFields(sections);
   const diagnostics: string[] = [];
@@ -222,6 +295,9 @@ function parseOneQuestion(header: RegExpMatchArray, lines: string[], start: numb
   if (!question) diagnostics.push('找不到「比較任務／推理提問／提交假說」');
   if (options.length < 2) diagnostics.push(`只抓到 ${options.length} 個選項`);
   if (!correctAnswer) diagnostics.push('找不到「正解／正確答案」');
+  clues.forEach((clue, index) => {
+    if (!clue.source) diagnostics.push(`線索 ${index + 1} 找不到出處`);
+  });
 
   return {
     number: parseQuestionNumber(header[2]),
