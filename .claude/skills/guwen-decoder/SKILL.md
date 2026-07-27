@@ -344,9 +344,9 @@ Known Playwright gotcha in this feature specifically: `page.click('text=開始�
 
 Every one of 守株待兔's "把密碼放回「XYZ」" reconstruction sections has real `選項`/`正解`/`答錯提示` in the source doc — none needed `RevealStep`. Don't assume a new lesson needs `RevealStep` just because 刻舟求劍 used several; check each "組合問題" section's own content for actual options before deciding (see the authoring template's §3).
 
-### Preserve an approved pre-accept full-text opening as one screen
+### Keep the mission request and full-text listening on two separate screens
 
-The rewritten 守株待兔 opening explicitly orders three pieces before the child accepts the mission: the AI request, the complete unchanged classical text, then a short readiness line. The shared lesson model now supports `missionOpeningFullText` plus `introClosingLine`; use these when a master file specifies that order, so the accept action enters question 1 directly instead of inserting the legacy extra listening screen. Split blank-line-separated opening and step-intro paragraphs into separate TTS utterances, matching the formal audit catalog's exact playable units.
+The child-facing opening is always a low-pressure two-screen flow. Screen 1 contains only the AI's request for help and the `接受破譯任務` action; do not place the complete classical text, its playback controls, or the first question on that screen. Accepting the mission opens screen 2, which introduces, displays, and automatically plays the unchanged full text, keeps full-text and sentence-level replay controls, and ends with `開始破解第一道密碼`. Only that second action enters question 1. Do not add a lesson-level bypass that merges these screens or skips listening. If an approved opening uses blank-line-separated paragraphs, preserve those exact paragraphs as separate TTS utterances; moving an approved readiness line to the listening screen must not change its text or audit fingerprint.
 
 ### 刻舟求劍's six `RevealStep`s all got converted to graded reconstruction steps — a real bug, not a design choice that changed
 

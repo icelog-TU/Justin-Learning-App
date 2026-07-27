@@ -41,7 +41,7 @@ function cleanMarkdown(text) {
 
 function isPlayableHeading(heading, lessonPart) {
   if (lessonPart === 'opening') {
-    return /^畫面[一二三]｜/.test(heading);
+    return /^(?:畫面[一二三]|第[一二三]頁)｜/.test(heading);
   }
   return lessonPart.startsWith('q') && playableQuestionHeadings.has(heading);
 }
@@ -54,14 +54,24 @@ const unitCountByPart = new Map();
 function addUnit(rawText, lineNumber, sourceOverride = '') {
   const text = cleanMarkdown(rawText);
   if (!text) return;
-  const unitNumber = (unitCountByPart.get(lessonPart) ?? 0) + 1;
-  unitCountByPart.set(lessonPart, unitNumber);
+  // The listening lead-in was added when the low-pressure two-screen opening was restored. Give this new
+  // speech unit a semantic ID and keep it out of the legacy sequence counter so every already-audited
+  // opening utterance retains its original stable ID (especially opening-speech-005).
+  const fixedSpeechUnitId =
+    lessonPart === 'opening' && text === '首先，跟我們一起聽一遍全文。'
+      ? 'opening-listening-lead-in'
+      : '';
+  const unitNumber = fixedSpeechUnitId
+    ? (unitCountByPart.get(lessonPart) ?? 0)
+    : (unitCountByPart.get(lessonPart) ?? 0) + 1;
+  if (!fixedSpeechUnitId) unitCountByPart.set(lessonPart, unitNumber);
   const partLabel =
     lessonPart === 'opening' ? '任務開場' : `第${lessonPart.slice(1)}題`;
   rawUnits.push({
     questionId:
       lessonPart === 'opening' ? 'opening' : `question-${lessonPart.slice(1)}`,
-    speechUnitId: `${lessonPart}-speech-${String(unitNumber).padStart(3, '0')}`,
+    speechUnitId:
+      fixedSpeechUnitId || `${lessonPart}-speech-${String(unitNumber).padStart(3, '0')}`,
     source: `《守株待兔》${partLabel}｜${sourceOverride || heading}（主檔第 ${lineNumber} 行）`,
     text,
     order: rawUnits.length,

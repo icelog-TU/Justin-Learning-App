@@ -47,7 +47,6 @@ type Phase = 'intro' | 'listening' | 'steps' | 'complete';
 type ClosingStageKind = 'ordering' | 'causal' | 'multiselect';
 
 const INTRO_LINE = '小學者，我們要一起破譯這些古文字！';
-const INTRO_HINT = '上面發光的字，就是等一下要破解的古文句。按下按鈕，開始破譯吧！';
 const LISTEN_LEAD_IN = '首先，跟我們一起聽一遍全文。';
 const LISTEN_PROMPT =
   '你是不是完全聽不懂它在說什麼呢？沒關係，跟著我們一步一步比對古文線索，把每個密碼都破解完之後，你就會自然看懂這整篇文章了！';
@@ -374,6 +373,7 @@ export default function GuwenLessonDecode() {
         ...(lesson?.fullTextPronunciationCues?.map((cue) => cue.speechText) ?? []),
         fullText,
         LISTEN_PROMPT,
+        ...(lesson?.introClosingLine ? [lesson.introClosingLine] : []),
       ],
       () => setIsPlaying(false),
     );
@@ -426,12 +426,11 @@ export default function GuwenLessonDecode() {
   useEffect(() => {
     if (phase !== 'intro' || !lesson) return;
     speakSequence([
-      ...(lesson.missionOpeningFullText
+      ...(lesson.splitIntroSpeechParagraphs
         ? speechParagraphs(lesson.introSpokenLine)
         : [lesson.introSpokenLine]),
       ...(lesson.introPronunciationCues?.map((cue) => cue.speechText) ?? []),
-      ...(lesson.missionOpeningFullText ? [lesson.fullText] : [`標題是《${lesson.title}》。`]),
-      lesson.introClosingLine ?? INTRO_HINT,
+      `標題是《${lesson.title}》。`,
     ]);
     return () => cancelSpeech();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1773,36 +1772,16 @@ export default function GuwenLessonDecode() {
             <p className="text-xs text-gray-400">{lesson.source}</p>
             <p className="text-gray-600 whitespace-pre-line">{lesson.introSpokenLine}</p>
             {renderPronunciationCues(lesson.introPronunciationCues)}
-            {lesson.missionOpeningFullText ? (
-              <>
-                <p className="text-lg font-semibold leading-relaxed text-gray-800">{lesson.fullText}</p>
-                <button
-                  type="button"
-                  onClick={() => togglePlayback('intro-full-text', lesson.fullText)}
-                  className="text-sm font-medium text-sky-600"
-                >
-                  {playbackLabel('intro-full-text', '🔊 播放全文', '⏸ 暫停播放', '▶️ 重新播放')}
-                </button>
-              </>
-            ) : (
-              renderPassage()
-            )}
-            <p className="text-sm text-gray-400">{lesson.introClosingLine ?? INTRO_HINT}</p>
           </div>
           <button
             type="button"
             onClick={() => {
-              if (lesson.missionOpeningFullText) {
-                cancelSpeech();
-                setPhase('steps');
-              } else {
-                speak(INTRO_LINE);
-                setPhase('listening');
-              }
+              speak(INTRO_LINE);
+              setPhase('listening');
             }}
             className="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-xl py-3"
           >
-            🏺 {lesson.acceptMissionLabel ?? '開始破譯'}
+            🏺 {lesson.acceptMissionLabel ?? '接受破譯任務'}
           </button>
         </div>
       )}
@@ -1810,6 +1789,7 @@ export default function GuwenLessonDecode() {
       {phase === 'listening' && (
         <div className="space-y-4">
           <div className="bg-white rounded-2xl shadow p-5 space-y-3">
+            <p className="font-bold text-teal-700">{LISTEN_LEAD_IN}</p>
             <p className="text-lg leading-relaxed text-gray-800">{lesson.fullText}</p>
             {renderPronunciationCues(lesson.fullTextPronunciationCues)}
             <button type="button" onClick={toggleFullPlayback} className="text-sm text-sky-600 font-medium">
@@ -1844,6 +1824,9 @@ export default function GuwenLessonDecode() {
                 </div>
               ))}
             </div>
+            {lesson.introClosingLine && (
+              <p className="pt-2 text-sm text-gray-500">{lesson.introClosingLine}</p>
+            )}
           </div>
           <button
             type="button"

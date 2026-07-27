@@ -49,6 +49,12 @@ assert.equal(
 assert.equal(shouZhuDaiTuLesson.causalChainClosing, undefined, '第四篇沒有額外因果鏈收尾頁');
 assert.equal(shouZhuDaiTuLesson.preserveAuthoredOptionOrder, true);
 assert.equal(shouZhuDaiTuLesson.badgeClaimMode, 'scroll-end');
+assert.equal(shouZhuDaiTuLesson.splitIntroSpeechParagraphs, true);
+assert.equal(
+  'missionOpeningFullText' in shouZhuDaiTuLesson,
+  false,
+  '第四篇不得再把任務求助、全文聆聽與接受任務合併在同一頁',
+);
 
 const allIds = [
   ...expectedStepIds,
@@ -101,6 +107,26 @@ const masterText = normalize(
     .readFileSync(new URL('../04-guwen-shouzhudaitu-decoder-content.md', import.meta.url), 'utf8')
     .replace(/\*\*/g, ''),
 );
+const decoderSource = fs.readFileSync(new URL('../src/pages/GuwenLessonDecode.tsx', import.meta.url), 'utf8');
+assert(
+  !decoderSource.includes('missionOpeningFullText'),
+  '共用頁面不得保留跳過全文聆聽頁的 missionOpeningFullText 特例',
+);
+const introPhaseSource = decoderSource.slice(
+  decoderSource.indexOf("{phase === 'intro'"),
+  decoderSource.indexOf("{phase === 'listening'"),
+);
+assert(!introPhaseSource.includes('lesson.fullText'), '任務求助頁不得顯示完整原文');
+assert(!introPhaseSource.includes('renderPassage()'), '任務求助頁不得塞入灰色全文');
+assert(introPhaseSource.includes("setPhase('listening')"), '接受任務後必須進入全文聆聽頁');
+assert(introPhaseSource.includes("'接受破譯任務'"), '第一頁的共用預設按鈕必須是「接受破譯任務」');
+const listeningPhaseSource = decoderSource.slice(
+  decoderSource.indexOf("{phase === 'listening'"),
+  decoderSource.indexOf("{phase === 'steps'"),
+);
+assert(listeningPhaseSource.includes('lesson.fullText'), '第二頁必須顯示完整原文');
+assert(listeningPhaseSource.includes('lesson.introClosingLine'), '核准的等待句必須移到第二頁');
+assert(listeningPhaseSource.includes("setPhase('steps')"), '第二頁按鈕才可以進入第一題');
 const technicalKeys = new Set([
   'id',
   'type',

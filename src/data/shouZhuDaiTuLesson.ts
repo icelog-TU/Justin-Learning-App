@@ -12,7 +12,7 @@ export const shouZhuDaiTuLesson: GuwenLesson = {
   introSpokenLine:
     '古文破譯家，我找到一篇和農夫、兔子有關的古文。\n\n我看得出來，一次意外發生後，農夫改變了原本的生活；可是他為什麼這樣做，最後又發生了什麼事，我還讀不完整。\n\n我已經找到一些其他古文留下的線索。想請你幫我比較證據，一步一步重建這個故事。',
   introClosingLine: '準備好後，我們就從農夫田裡那個陌生的東西開始。',
-  missionOpeningFullText: true,
+  splitIntroSpeechParagraphs: true,
   acceptMissionLabel: '接受破譯任務',
   fullText,
   sentences: [

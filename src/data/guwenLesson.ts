@@ -244,10 +244,10 @@ export interface GuwenLesson {
   introHeadline?: string;
   /** App 開場白 — spoken on the intro screen. */
   introSpokenLine: string;
-  /** Optional approved line shown after the full text and before the mission-accept action. */
+  /** Optional approved line shown after the full text on the listening screen. */
   introClosingLine?: string;
-  /** Keeps an approved opening's full-text playback and mission acceptance on the same screen. */
-  missionOpeningFullText?: boolean;
+  /** Preserves blank-line-separated opening paragraphs as distinct audited TTS utterances. */
+  splitIntroSpeechParagraphs?: boolean;
   introPronunciationCues?: PronunciationCue[];
   acceptMissionLabel?: string;
   fullText: string;
