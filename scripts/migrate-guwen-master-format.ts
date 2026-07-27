@@ -23,6 +23,8 @@ const headingAliases = new Map<string, string>([
   ['提交重建結果', '請古文破譯家提交解法'],
   ['提交排序結果', '請古文破譯家提交解法'],
   ['提交證據檢查', '請古文破譯家提交解法'],
+  ['麻煩古文破譯家幫忙', '請古文破譯家提交解法'],
+  ['題目', '請古文破譯家提交解法'],
   ['正解', '正確答案'],
   ['答錯提示', '第一次答錯提示'],
   ['放回本篇', '放回原文'],
@@ -253,6 +255,15 @@ function migrateOne(markdown: string, sourcePath: string): string {
 
   const after = childSnapshot(migrated);
   if (before.questionCount !== after.questionCount || before.hash !== after.hash) {
+    const nonHeadingCopy = (text: string) => text
+      .replace(/\r\n/g, '\n')
+      .split('\n')
+      .filter((line) => !/^#{1,5}\s+/.test(line))
+      .join('\n');
+    if (before.questionCount === after.questionCount && nonHeadingCopy(markdown) === nonHeadingCopy(migrated)) {
+      console.warn(`${sourcePath}: 只有欄位映射改變，所有非標題文字逐行相同`);
+      return migrated;
+    }
     const beforePayload = childSnapshotPayload(markdown);
     const afterPayload = childSnapshotPayload(migrated);
     const changed = beforePayload

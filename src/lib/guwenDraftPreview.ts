@@ -300,11 +300,11 @@ function parseOneQuestion(header: RegExpMatchArray, lines: string[], start: numb
   });
   const options = optionFields(sections);
   const diagnostics: string[] = [];
-  if (!target) diagnostics.push('找不到「本輪處理句子／待破解的目標句」');
-  if (!intro) diagnostics.push('找不到「App 引導語／孩子端幫忙」');
-  if (!question) diagnostics.push('找不到「比較任務／推理提問／提交假說」');
+  if (!target) diagnostics.push('找不到「本輪處理的句子」');
+  if (!intro) diagnostics.push('找不到「孩子端｜麻煩古文破譯家幫忙」');
+  if (!question) diagnostics.push('找不到「請古文破譯家提交解法」');
   if (options.length < 2) diagnostics.push(`只抓到 ${options.length} 個選項`);
-  if (!correctAnswer) diagnostics.push('找不到「正解／正確答案」');
+  if (!correctAnswer) diagnostics.push('找不到「正確答案」');
   clues.forEach((clue, index) => {
     if (!clue.source) diagnostics.push(`線索 ${index + 1} 找不到出處`);
   });
