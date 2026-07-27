@@ -146,6 +146,29 @@ export function reconcileLongestChain(data: AppData): AppData {
   return data;
 }
 
+/** Calendar date in the child's local timezone. ISO UTC dates put Taiwan activity before 08:00 on yesterday. */
+export function localDateKey(date = new Date()): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+/**
+ * Older/cloud-synced data can contain daily rewards without the matching visit date. Reward history is
+ * definitive evidence that Justin learned that day, so recover those dates instead of showing a zero streak.
+ */
+export function reconcileLearningDates(data: AppData): AppData {
+  const rewardDates = Object.entries(data.dailyEarnings)
+    .filter(([, earning]) => earning.coins > 0 || earning.stars > 0)
+    .map(([date]) => date);
+  const visitDates = [...new Set([...data.visitDates, ...rewardDates])].sort();
+  if (visitDates.length === data.visitDates.length && visitDates.every((date, i) => date === data.visitDates[i])) {
+    return data;
+  }
+  return { ...data, visitDates };
+}
+
 /**
  * Fills in any fields missing from `partial` with their empty-state default. Needed anywhere data can
  * come from outside this running app version — localStorage from an older build, or a cloud snapshot
@@ -153,7 +176,7 @@ export function reconcileLongestChain(data: AppData): AppData {
  * would otherwise crash any code that assumes every AppData key is always present.
  */
 export function normalizeAppData(partial: Partial<AppData>): AppData {
-  return reconcileLongestChain({ ...emptyData(), ...partial });
+  return reconcileLearningDates(reconcileLongestChain({ ...emptyData(), ...partial }));
 }
 
 export function loadData(): AppData {
@@ -172,7 +195,7 @@ export function saveData(data: AppData) {
 }
 
 export function recordVisitToday(data: AppData): AppData {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localDateKey();
   if (!data.visitDates.includes(today)) {
     data.visitDates = [...data.visitDates, today];
   }
@@ -181,18 +204,12 @@ export function recordVisitToday(data: AppData): AppData {
 
 export function getStreakDays(visitDates: string[]): number {
   if (visitDates.length === 0) return 0;
-  const dates = [...visitDates].sort().reverse();
+  const dates = new Set(visitDates);
   let streak = 0;
   const cursor = new Date();
-  for (let i = 0; i < dates.length; i++) {
-    const expected = new Date(cursor);
-    expected.setDate(cursor.getDate() - streak);
-    const expectedStr = expected.toISOString().slice(0, 10);
-    if (dates.includes(expectedStr)) {
-      streak++;
-    } else {
-      break;
-    }
+  while (dates.has(localDateKey(cursor))) {
+    streak++;
+    cursor.setDate(cursor.getDate() - 1);
   }
   return streak;
 }
@@ -221,9 +238,10 @@ export function recordSentence(data: AppData, entry: SentenceLogEntry): AppData 
 
 function logDailyEarning(data: AppData, coins: number, stars: number) {
   if (coins <= 0 && stars <= 0) return;
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localDateKey();
   const prev = data.dailyEarnings[today] ?? { coins: 0, stars: 0 };
   data.dailyEarnings = { ...data.dailyEarnings, [today]: { coins: prev.coins + coins, stars: prev.stars + stars } };
+  recordVisitToday(data);
 }
 
 export function earnRewards(data: AppData, coins: number, stars: number): AppData {

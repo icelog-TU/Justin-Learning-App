@@ -108,6 +108,12 @@ justin-chinese-app-v1
 
 目前 `normalizeAppData()` 採「空狀態預設值＋淺層合併」。新增巢狀結構時不能假設這種策略自然足夠。
 
+連續學習日期有三項資料安全規則：
+
+- 日期 key 必須使用 `localDateKey()` 依孩子裝置的本地日曆產生，不可使用 `toISOString().slice(0, 10)`，否則台灣上午 8 點以前會被記到前一天。
+- `normalizeAppData()` 會把有正數金幣或星星的 `dailyEarnings` 日期回補進 `visitDates`；獎勵紀錄是當天確實學習的證據，不能出現有每日獎勵、連續天數卻為零的矛盾。
+- Firebase 初始讀取或即時訂閱套用雲端 `AppData` 時，必須在正規化後再執行 `recordVisitToday()`，避免整份雲端快照覆蓋掉本機剛記下的今天。
+
 ### React 狀態安全慣例
 
 `src/lib/useAppData.ts` 是把 `storage.ts` 純函式包裝成 React 操作的唯一入口。
