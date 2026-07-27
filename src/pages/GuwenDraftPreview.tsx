@@ -1,0 +1,323 @@
+import { useEffect, useMemo, useState } from 'react';
+import {
+  DRAFT_SOURCES,
+  findAdjacentRepetitions,
+  githubEditUrl,
+  githubRawUrl,
+  parseDraftQuestions,
+  type DraftField,
+  type DraftQuestion,
+} from '../lib/guwenDraftPreview';
+import { cancelSpeech, speak, speakSequence } from '../lib/speech';
+
+type PreviewState = 'answering' | 'wrong' | 'correct';
+
+function Highlighted({ text }: { text: string }) {
+  const parts = text.split(/(【[^】]+】)/g);
+  return (
+    <>
+      {parts.map((part, index) =>
+        /^【.*】$/.test(part)
+          ? <strong key={`${part}-${index}`} className="text-indigo-600">{part}</strong>
+          : part,
+      )}
+    </>
+  );
+}
+
+function AudioLine({ field, label, className = '' }: { field: DraftField; label: string; className?: string }) {
+  return (
+    <div className={className}>
+      <div className="flex items-start gap-2">
+        <button
+          type="button"
+          onClick={() => speakSequence([field.text, ...(field.pronunciationCues ?? [])])}
+          aria-label={`播放${label}`}
+          className="shrink-0 text-sky-500"
+        >
+          🔊
+        </button>
+        <p className="whitespace-pre-line"><Highlighted text={field.text} /></p>
+      </div>
+      {field.pronunciationCues?.map((cue) => (
+        <div key={cue} className="mt-1.5 flex items-start gap-2 rounded-lg bg-amber-50 px-2.5 py-2 text-left text-xs font-medium text-amber-800">
+          <button type="button" onClick={() => speak(cue)} aria-label={`播放${label}讀音提示`} className="shrink-0 text-sky-500">🔊</button>
+          <p>{cue}</p>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function readingOrder(question: DraftQuestion) {
+  const lines: Array<{ label: string; text: string }> = [];
+  if (question.target) lines.push({ label: '目標句', text: question.target.text });
+  question.target?.pronunciationCues?.forEach((text) => lines.push({ label: '目標句讀音提示', text }));
+  if (question.intro) {
+    lines.push({ label: '引導語', text: question.intro.text });
+    question.intro.pronunciationCues?.forEach((text) => lines.push({ label: '引導語讀音提示', text }));
+  }
+  question.clues.forEach((clue, index) => {
+    lines.push({ label: `線索 ${index + 1}`, text: clue.text });
+    clue.pronunciationCues?.forEach((text) => lines.push({ label: `線索 ${index + 1} 讀音提示`, text }));
+    if (clue.meaning) {
+      lines.push({ label: `線索 ${index + 1} 已破解為`, text: clue.meaning.text });
+      clue.meaning.pronunciationCues?.forEach((text) => lines.push({ label: `線索 ${index + 1} 白話讀音提示`, text }));
+    }
+  });
+  if (question.question) lines.push({ label: '提問', text: question.question.text });
+  question.options.forEach((option, index) => lines.push({ label: `選項 ${index + 1}`, text: option.text }));
+  return lines;
+}
+
+export default function GuwenDraftPreview() {
+  const params = new URLSearchParams(window.location.hash.split('?')[1] ?? '');
+  const initialLesson = params.get('lesson');
+  const [sourceIndex, setSourceIndex] = useState(() => {
+    const found = DRAFT_SOURCES.findIndex((source) => source.lessonId === initialLesson);
+    return found >= 0 ? found : 0;
+  });
+  const [questions, setQuestions] = useState<DraftQuestion[]>([]);
+  const [questionIndex, setQuestionIndex] = useState(0);
+  const [previewState, setPreviewState] = useState<PreviewState>('answering');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [loadedAt, setLoadedAt] = useState<Date>();
+  const source = DRAFT_SOURCES[sourceIndex];
+  const question = questions[questionIndex];
+
+  async function loadLatest() {
+    setLoading(true);
+    setError('');
+    cancelSpeech();
+    try {
+      const response = await fetch(githubRawUrl(source), { cache: 'no-store' });
+      if (!response.ok) throw new Error(`GitHub 回傳 ${response.status}`);
+      const parsed = parseDraftQuestions(await response.text());
+      if (!parsed.length) throw new Error('MD 裡找不到題目標題');
+      setQuestions(parsed);
+      setQuestionIndex((current) => Math.min(current, parsed.length - 1));
+      setLoadedAt(new Date());
+    } catch (reason) {
+      setQuestions([]);
+      setError(reason instanceof Error ? reason.message : '無法載入 GitHub MD');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    setQuestionIndex(0);
+    setPreviewState('answering');
+    void loadLatest();
+    return cancelSpeech;
+    // source uniquely identifies the selected MD.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sourceIndex]);
+
+  const order = useMemo(() => question ? readingOrder(question) : [], [question]);
+  const repetitions = useMemo(() => findAdjacentRepetitions(order), [order]);
+  const approvedCount = questions.filter((item) => /已核准|核准/.test(item.status)).length;
+
+  function chooseQuestion(next: number) {
+    cancelSpeech();
+    setQuestionIndex(next);
+    setPreviewState('answering');
+  }
+
+  return (
+    <main className="min-h-screen bg-slate-100 text-slate-800">
+      <header className="border-b border-slate-200 bg-white px-4 py-4 shadow-sm">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-end gap-3">
+          <div className="mr-auto">
+            <p className="text-xs font-bold tracking-widest text-teal-600">成人審稿工具｜不寫入孩子進度</p>
+            <h1 className="text-xl font-black">古文 MD 實際題目預覽</h1>
+          </div>
+          <label className="text-xs font-bold text-slate-500">
+            教材
+            <select
+              value={sourceIndex}
+              onChange={(event) => setSourceIndex(Number(event.target.value))}
+              className="mt-1 block rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800"
+            >
+              {DRAFT_SOURCES.map((item, index) => <option key={item.lessonId} value={index}>{item.title}</option>)}
+            </select>
+          </label>
+          <label className="text-xs font-bold text-slate-500">
+            題目
+            <select
+              value={questionIndex}
+              onChange={(event) => chooseQuestion(Number(event.target.value))}
+              disabled={!questions.length}
+              className="mt-1 block max-w-72 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800"
+            >
+              {questions.map((item, index) => (
+                <option key={`${item.number}-${item.line}`} value={index}>
+                  第 {item.number} 題｜{item.title} {item.status ? `（${item.status}）` : ''}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button type="button" onClick={() => void loadLatest()} className="rounded-lg bg-slate-800 px-4 py-2 text-sm font-bold text-white">
+            ↻ 重新讀取 GitHub
+          </button>
+        </div>
+      </header>
+
+      {loading && <p className="mx-auto max-w-7xl p-8 text-center text-slate-500">正在讀取 GitHub 分支上的 MD……</p>}
+      {error && <p className="mx-auto mt-8 max-w-xl rounded-xl border border-red-200 bg-red-50 p-4 text-center text-red-700">讀取失敗：{error}</p>}
+
+      {!loading && question && (
+        <div className="mx-auto grid max-w-7xl gap-5 p-4 lg:grid-cols-[minmax(0,1fr)_360px]">
+          <section>
+            <div className="mb-3 flex flex-wrap items-center gap-2 text-xs">
+              <span className="rounded-full bg-teal-100 px-2.5 py-1 font-bold text-teal-700">
+                GitHub MD：{questions.length} 題／{approvedCount} 題標示核准
+              </span>
+              <span className="text-slate-400">讀取時間：{loadedAt?.toLocaleTimeString('zh-TW')}</span>
+            </div>
+
+            <div className="mx-auto max-w-2xl space-y-4">
+              <div className="rounded-2xl bg-white p-5 shadow">
+                <div className="mb-4 flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-xs text-slate-400">第 {question.number} 題｜{question.status || '未標示狀態'}</p>
+                    <h2 className="text-lg font-black text-slate-800">{question.title}</h2>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => speakSequence(order.map((item) => item.text))}
+                    className="rounded-lg bg-sky-50 px-3 py-2 text-xs font-bold text-sky-700"
+                  >
+                    🔊 依頁面順序全部播放
+                  </button>
+                </div>
+
+                {question.target && (
+                  <div className="mb-4 text-center">
+                    <p className="text-xs text-slate-400">待破解的目標句</p>
+                    <AudioLine field={question.target} label="目標句" className="mt-1 justify-center text-lg font-semibold" />
+                  </div>
+                )}
+
+                {question.intro && <AudioLine field={question.intro} label="引導語" className="mb-4 justify-center text-center text-sm text-slate-600" />}
+
+                {!!question.clues.length && (
+                  <div className="mb-4 space-y-2">
+                    {question.clues.map((clue, index) => (
+                      <div key={`${clue.line}-${index}`} className="space-y-2 rounded-xl border-2 border-slate-200 bg-slate-50 px-4 py-3">
+                        <p className="text-xs font-black text-slate-400">線索 {index + 1}</p>
+                        <AudioLine field={clue} label={`線索 ${index + 1}`} className="font-medium" />
+                        {clue.meaning && (
+                          <AudioLine field={clue.meaning} label={`線索 ${index + 1} 已破解為`} className="pl-1 text-xs text-slate-500" />
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {question.question && <AudioLine field={question.question} label="提問" className="mb-3 justify-center text-center text-sm font-semibold" />}
+
+                <div className="space-y-2">
+                  {question.options.map((option, index) => {
+                    const correct = previewState === 'correct' && index === question.correctIndex;
+                    const wrong = previewState === 'wrong' && index === (question.correctIndex === 0 ? 1 : 0);
+                    return (
+                      <div
+                        key={`${option.line}-${index}`}
+                        className={`flex items-start gap-2 rounded-xl border-2 px-4 py-3 ${
+                          correct ? 'border-emerald-400 bg-emerald-50' : wrong ? 'border-red-300 bg-red-50' : 'border-slate-200 bg-slate-50'
+                        }`}
+                      >
+                        <button type="button" onClick={() => speak(option.text)} className="text-sky-500" aria-label={`播放選項 ${index + 1}`}>🔊</button>
+                        <span className="font-bold text-slate-400">{index + 1}.</span>
+                        <p>{option.text}</p>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {previewState === 'wrong' && question.retryHint && (
+                  <AudioLine field={question.retryHint} label="答錯提示" className="mt-3 justify-center text-center text-sm text-red-500" />
+                )}
+
+                {previewState === 'correct' && (
+                  <div className="mt-4 space-y-3 rounded-xl bg-emerald-50 p-4">
+                    {question.correctFeedback && <AudioLine field={question.correctFeedback} label="答對回饋" className="font-bold text-emerald-700" />}
+                    {question.explanation && <AudioLine field={question.explanation} label="詳解" className="text-sm leading-relaxed text-slate-600" />}
+                    {question.key && <AudioLine field={question.key} label="密碼鑰匙" className="rounded-lg bg-white p-3 text-sm font-bold text-indigo-700" />}
+                  </div>
+                )}
+              </div>
+            </div>
+          </section>
+
+          <aside className="space-y-4">
+            <div className="rounded-2xl bg-white p-4 shadow">
+              <h3 className="font-black">切換作答畫面</h3>
+              <div className="mt-3 grid grid-cols-3 gap-2">
+                {([
+                  ['answering', '作答前'],
+                  ['wrong', '第一次答錯'],
+                  ['correct', '答對後'],
+                ] as const).map(([value, label]) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => setPreviewState(value)}
+                    className={`rounded-lg px-2 py-2 text-xs font-bold ${previewState === value ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600'}`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="rounded-2xl bg-white p-4 shadow">
+              <h3 className="font-black">MD 抓取檢查</h3>
+              {question.diagnostics.length ? (
+                <ul className="mt-2 space-y-1 text-sm text-red-600">
+                  {question.diagnostics.map((diagnostic) => <li key={diagnostic}>⚠ {diagnostic}</li>)}
+                </ul>
+              ) : (
+                <p className="mt-2 text-sm font-bold text-emerald-600">✓ 題目主要欄位完整</p>
+              )}
+              <a
+                href={githubEditUrl(source, question.line)}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-3 inline-block text-sm font-bold text-sky-700 underline"
+              >
+                在 GitHub 查看這一題（第 {question.line} 行）↗
+              </a>
+            </div>
+
+            <div className="rounded-2xl bg-white p-4 shadow">
+              <h3 className="font-black">實際排列與朗讀順序</h3>
+              <ol className="mt-2 space-y-1 text-xs text-slate-600">
+                {order.map((item, index) => <li key={`${item.label}-${index}`}>{index + 1}. {item.label}</li>)}
+              </ol>
+            </div>
+
+            <div className={`rounded-2xl p-4 shadow ${repetitions.length ? 'border border-amber-300 bg-amber-50' : 'bg-white'}`}>
+              <h3 className="font-black">相鄰重複提醒</h3>
+              {repetitions.length ? (
+                <ul className="mt-2 space-y-2 text-sm text-amber-800">
+                  {repetitions.map((warning, index) => (
+                    <li key={`${warning.first}-${warning.second}-${index}`}>
+                      ⚠「{warning.first}」→「{warning.second}」：{warning.reason}
+                    </li>
+                  ))}
+                </ul>
+              ) : <p className="mt-2 text-sm text-emerald-600">✓ 沒有偵測到緊鄰的明顯重複</p>}
+            </div>
+
+            <p className="px-1 text-xs leading-relaxed text-slate-500">
+              這是成人草稿預覽，直接讀取 GitHub 分支上的 MD，使用與正式 App 相同的瀏覽器 TTS 處理；不會寫入進度、金幣、星星或徽章。正式 App 仍只在你明確核准後同步。
+            </p>
+          </aside>
+        </div>
+      )}
+    </main>
+  );
+}

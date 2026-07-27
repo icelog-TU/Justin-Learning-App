@@ -21,6 +21,7 @@ import GuwenHome from './pages/GuwenHome';
 import GuwenLessonDecode from './pages/GuwenLessonDecode';
 import SettingsPage from './pages/SettingsPage';
 import TtsAuditPage from './pages/TtsAuditPage';
+import GuwenDraftPreview from './pages/GuwenDraftPreview';
 import { AppDataProvider } from './lib/AppDataContext';
 
 export default function App() {
@@ -28,6 +29,7 @@ export default function App() {
     <AppDataProvider>
       <HashRouter>
         <Routes>
+          <Route path="/guwen-draft-preview" element={<GuwenDraftPreview />} />
           <Route element={<Layout />}>
             <Route path="/" element={<Home />} />
             <Route path="/idioms" element={<IdiomsBrowse />} />
