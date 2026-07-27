@@ -1,4 +1,4 @@
-# 古文破譯家：markdown 教材 → `GuwenLesson` 建置模板
+# 古文破譯家：Markdown v1 教材 → `GuwenLesson` 建置模板
 
 This is a field-by-field cheatsheet for turning an approved lesson-markdown document (GPT-collaborated,
 "全文核准，可交付 App 實作") into a `GuwenLesson` object in `src/data/guwenLesson.ts`. It captures the
@@ -9,6 +9,12 @@ flagged below; those still need a real read of the specific document.
 Read `.claude/skills/design-guwen-decoding/SKILL.md` and the "Why the evidence-lesson format exists" /
 "Authoring checklist for a new lesson" sections of `../SKILL.md` first — this file only covers the
 mechanical markdown→field mapping, not the pedagogical design rules.
+
+## 0. 唯一 Markdown 格式
+
+所有新舊教材一律先符合 repo 根目錄的 `GUWEN-MARKDOWN-FORMAT.md` v1。本模板只解釋標準欄位如何
+映射到 App schema，不再把歷史別名視為等價正式格式。禁止自行使用 `App 引導語`、`推理提問`、
+`提交假說`、`正解`、`答錯提示`、`線索類型與來源` 等舊標題。
 
 ## 1. Section header → field mapping
 
@@ -22,18 +28,18 @@ mechanical markdown→field mapping, not the pedagogical design rules.
 | `# 第N題｜破解「X」` | one `EvidenceStep`/`LocalInferenceStep`/`StoryReasoningStep` |
 | `# 第N題｜把密碼放回「XYZ」` / `組合問題` | one `ReconstructionStep` (only if it also has `選項`/`正解` — see §3) |
 | `## 待破解的目標句` | `targetSentence` — strip the `【】` brackets, keep the plain classical substring; it must literally appear inside (or contain) one entry of `sentences` — the app's "currently reading" highlight during full-text playback matches by substring, not by id |
-| `## App 引導語` | `intro` |
-| `## 古文線索一` / `二` | `clues: [ClassicalClue, ClassicalClue]` — `text` = the clue sentence verbatim, `highlight` = the bracketed substring, `source` = the nested `### 出處` |
-| `### 已破解為` | `clue.unlockedMeaning` — **omit this field entirely** (not an empty string) whenever the doc itself omits it or marks it "故意不給白話翻譯" (see §4) |
-| `## 破譯問題` | `question` |
+| `## 孩子端｜麻煩古文破譯家幫忙` | `intro` |
+| `### 線索一` / `二` | `clues: [ClassicalClue, ClassicalClue]` — `text` = the clue sentence verbatim, `highlight` = the bracketed substring, `source` = the nested `#### 出處（成人資料）` |
+| `#### 已破解為` | `clue.unlockedMeaning` — **omit this field entirely** (not an empty string) whenever the doc itself omits it or marks it "故意不給白話翻譯" (see §4) |
+| `## 請古文破譯家提交解法` | `question` |
 | `## 選項` | `options` (array, in doc order) |
-| `## 正解` | `correctIndex` (0-based index into `options`) |
+| `## 正確答案` | `correctIndex` (0-based index into `options`) |
 | `## 答對回饋` | `correctFeedback` |
-| `## 答錯提示` | `retryHint` |
+| `## 第一次答錯提示` | `retryHint` |
 | `## 詳解` (+ any trailing `### 放回本篇`/`### 證據邊界`/`### 本題線索來源` paragraphs) | `explanation` — concatenate all of it with `\n\n` between paragraphs, in the doc's own order |
 | `## 破解後放回原文` | `finalDraftLine` — **only the new incremental clause**, not the whole cumulative sentence (see §5) — and **only present when the doc has this section at all** (see §6) |
 | `## 已知線索` / `## 已有的密碼鑰匙` (a table) | `keys: DecodingKey[]` on a `ReconstructionStep` — copy the table's own wording verbatim, do not add your own annotations (see §7) |
-| `## 本題要取得的密碼鑰匙（作答後才顯示）` | `keyAwarded: { code, decodedEvidence }` — copy verbatim; **never** let this text leak into `intro`/`question` (the doc's own "編輯提醒：不得出現在孩子作答前" is already enforced by the app only ever displaying `keyAwarded` after a correct answer) |
+| `## 本題取得的密碼鑰匙（作答後才顯示）` | `keyAwarded: { code, decodedEvidence }` — copy verbatim; **never** let this text leak into `intro`/`question` (the doc's own "編輯提醒：不得出現在孩子作答前" is already enforced by the app only ever displaying `keyAwarded` after a correct answer) |
 | A prose note like "「其」會把後面的東西連回前文中的人物" that isn't inside a formal `## 已有的密碼鑰匙` table | fold it as a sentence into that step's `intro`, ahead of the App 引導語 text — it's safe context (explains an *already-known* code), not an answer leak |
 | A "已學密碼：直接調用，不重新教學" table at the top of the document (codes taught in a *previous* lesson) | do **not** create a step for these at all — just use the doc's own wording directly inside whichever `keys`/`intro` text references them later |
 

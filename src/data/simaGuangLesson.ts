@@ -18,7 +18,7 @@ export const simaGuangLesson: GuwenLesson = {
   contentRevision: '2026-07-27-concise-questions-revision',
   title: '司馬光破甕救友',
   source: '《宋史．司馬光傳》',
-  introHeadline: '古文破譯家，可以請你幫個忙嗎？',
+  introHeadline: '請古文破譯家接受委託',
   introSpokenLine:
     '我找到一篇古文。開頭是一群孩子在一起，後來有個孩子突然遇到了危險。可是有些古老的字詞，我還看不明白。\n\n我找到了幾條其他古文線索，但要怎麼解讀，得請你這位專家來判斷。你願意幫我把事情經過一點一點讀回來嗎？',
   introPronunciationCues: [

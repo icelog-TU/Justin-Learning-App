@@ -8,7 +8,7 @@ export const shouZhuDaiTuLesson: GuwenLesson = {
   contentRevision: '2026-07-27-rewrite-v1',
   title: '守株待兔',
   source: '《韓非子．五蠹》',
-  introHeadline: 'AI 前來求助',
+  introHeadline: '請古文破譯家接受委託',
   introSpokenLine:
     '古文破譯家，我找到一篇和農夫、兔子有關的古文。\n\n我看得出來，一次意外發生後，農夫改變了原本的生活；可是他為什麼這樣做，最後又發生了什麼事，我還讀不完整。\n\n我已經找到一些其他古文留下的線索。想請你幫我比較證據，一步一步重建這個故事。',
   introClosingLine: '準備好後，我們就從農夫田裡那個陌生的東西開始。',

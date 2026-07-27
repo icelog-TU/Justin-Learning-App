@@ -7,7 +7,7 @@ export const wangRongLesson: GuwenLesson = {
   "contentRevision": "2026-07-27-concise-prompts-revision",
   "title": "王戎不取道旁李",
   "source": "劉義慶《世說新語．雅量》",
-  "introHeadline": "古文破譯家，新任務來了！",
+  "introHeadline": "請古文破譯家接受委託",
   "introSpokenLine": "我找到一篇七歲孩子的故事。\n\n別人看到滿樹李子都跑了過去，王戎卻站著不動。古文裡寫了原因，只是有些古老的字詞今天不容易讀懂。我們一起找線索破解吧。",
   "acceptMissionLabel": "接受破譯任務",
   "fullText": "王戎七歲，嘗與諸小兒遊。看道邊李樹多子折枝，諸兒競走取之，唯戎不動。人問之，答曰：「樹在道邊而多子，此必苦李。」取之，信然。",

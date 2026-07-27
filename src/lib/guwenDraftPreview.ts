@@ -164,7 +164,7 @@ function consolidatedClueSources(sections: Section[]): Map<number, DraftField> {
       if (parsed) result.set(currentNumber, parsed);
     };
     section.lines.forEach((line, index) => {
-      const start = line.match(/^\s*-\s*線索([一二三四五六七八九十\d]+)(?:為|：|:)\s*(.*)$/);
+      const start = line.match(/^\s*-\s*線索([一二三四五六七八九十\d]+)(?:為|是|：|:)\s*(.*)$/);
       if (start) {
         save();
         currentNumber = parseQuestionNumber(start[1]);
@@ -187,7 +187,9 @@ function consolidatedClueSources(sections: Section[]): Map<number, DraftField> {
 function optionFields(sections: Section[]): DraftField[] {
   const explicitOptions = sections.find((section) => /^選項$/.test(section.heading));
   const interactiveOptions = sections.find((section) => /^(畫面初始顯示順序|待判斷.*敘述)/.test(section.heading));
-  const submitOptions = sections.find((section) => /^(提交假說|提交重建結果|提交排序結果|提交證據檢查)/.test(section.heading));
+  const submitOptions = sections.find((section) =>
+    /^(請古文破譯家提交解法|提交假說|提交重建結果|提交排序結果|提交證據檢查)/.test(section.heading),
+  );
   const candidates = [explicitOptions ?? interactiveOptions ?? submitOptions].filter((section): section is Section => Boolean(section));
   const options: DraftField[] = [];
   for (const section of candidates) {
@@ -229,15 +231,23 @@ function parseSections(lines: string[], offset: number): Section[] {
 function parseOneQuestion(header: RegExpMatchArray, lines: string[], start: number): DraftQuestion {
   const sections = parseSections(lines, start + 1);
   const target = field(firstSection(sections, [
+    /^本輪處理的句子$/,
     /本輪處理.*(?:句子|範圍)/,
     /本題處理.*(?:目標句|範圍)/,
     /待破解.*目標句/,
     /待重建.*目標句/,
     /放回.*原文/,
   ]));
-  const introSection = firstSection(sections, [/App 引導語/, /孩子端.*幫忙/, /麻煩古文破譯家/, /古文破譯家.*任務/]);
+  const introSection = firstSection(sections, [
+    /^孩子端｜麻煩古文破譯家幫忙$/,
+    /App 引導語/,
+    /孩子端.*幫忙/,
+    /麻煩古文破譯家/,
+    /古文破譯家.*任務/,
+  ]);
   const intro = field(introSection);
   let question = field(firstSection(sections, [
+    /^請古文破譯家提交解法$/,
     /^題目$/,
     /^比較任務/,
     /^推理提問/,
@@ -253,7 +263,7 @@ function parseOneQuestion(header: RegExpMatchArray, lines: string[], start: numb
   ]));
   const interactiveSection = firstSection(sections, [/畫面初始顯示順序/, /待判斷.*敘述/]);
   if (!question && interactiveSection) question = intro;
-  const correctAnswer = field(firstSection(sections, [/^正解$/, /^正確答案$/, /^正確順序$/]));
+  const correctAnswer = field(firstSection(sections, [/^正確答案$/, /^正解$/, /^正確順序$/]));
   const correctMatch = correctAnswer?.text.match(/^\s*([1-9]\d*)[.、]/);
   const correctIndex = correctMatch ? Number(correctMatch[1]) - 1 : undefined;
   const clues: DraftClue[] = [];
@@ -279,7 +289,7 @@ function parseOneQuestion(header: RegExpMatchArray, lines: string[], start: numb
     );
     const nearbySections = sections.slice(index + 1, nextClueIndex >= 0 ? nextClueIndex : sections.length);
     const directSource = field(nearbySections.find((candidate) =>
-      /^(?:出處|來源)|線索類型與出處/.test(candidate.heading),
+      /^(?:出處|來源|線索類型)|線索類型與出處/.test(candidate.heading),
     ));
     const clueNumber = clues.length + 1;
     clues.push({
@@ -314,7 +324,12 @@ function parseOneQuestion(header: RegExpMatchArray, lines: string[], start: numb
     correctFeedback: field(firstSection(sections, [/^答對回饋/])),
     retryHint: field(firstSection(sections, [/^第一次答錯提示/, /^答錯提示/])),
     explanation: field(firstSection(sections, [/^詳解/])),
-    key: field(firstSection(sections, [/本題要取得的密碼鑰匙/, /^取得密碼鑰匙/, /密碼鑰匙收入工具箱/])),
+    key: field(firstSection(sections, [
+      /^本題取得的密碼鑰匙（作答後才顯示）$/,
+      /本題要取得的密碼鑰匙/,
+      /^取得密碼鑰匙/,
+      /密碼鑰匙收入工具箱/,
+    ])),
     diagnostics,
   };
 }

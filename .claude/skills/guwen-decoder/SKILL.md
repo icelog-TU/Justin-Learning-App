@@ -9,6 +9,18 @@ description: Design spec and content-authoring guide for the "古文破譯家" (
 
 The user has explicitly asked that every future requirement, fix, or rule they raise about this feature gets folded into this file **without being asked each time** — they don't want to have to judge what's "worth" documenting themselves. So: after resolving any guwen-decoder request (bug fix, new UX rule, content-authoring decision), update this file in the same session, before considering the task done. Err toward adding — a rule that turns out to be obvious in hindsight costs nothing sitting here; a rule that's missing gets silently violated by a future session with no memory of why it mattered. Keep entries concrete (what broke / what was asked, and the fix), not just abstract principles.
 
+## All lesson masters use one enforceable Markdown format
+
+`GUWEN-MARKDOWN-FORMAT.md` v1 is the only current heading, hierarchy, question-branch, and clue-source-placement
+contract for every lesson master. Historical aliases such as `App 引導語`, `推理提問`, `提交假說`, `正解`,
+`答錯提示`, and consolidated `線索類型與來源` are migration inputs only, never valid new output. The permanent
+check is `npm run check:guwen:master-format`.
+
+Format migration is not content approval. It may rename/relevel headings, move adult-only source metadata next
+to its clue, and repeat the unchanged full text for adult review. It must not alter any approved child-facing
+classical or modern copy. Keep a committed child-copy fingerprint for all masters and make the format check fail
+if a later structural migration changes that copy without an explicit, separately reviewed update.
+
 ## Adult GitHub-MD preview must preserve review position and expose speech controls
 
 The unlinked adult route `/#/guwen-draft-preview` is part of the approval workflow before Markdown is synchronized
