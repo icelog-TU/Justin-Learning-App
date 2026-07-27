@@ -354,6 +354,10 @@ The user caught this by using the app themselves: at every "把所有密碼鑰�
 
 **Lesson for future authoring:** `RevealStep` should be rare enough that seeing several in one lesson is itself worth double-checking against the current source doc, not just assumed correct because it shipped that way before — a step type existing in the schema and being genuinely warranted by the *current* approved content are two different things, and content can be revised after implementation without anyone thinking to re-check which step types are still justified.
 
+## Keep a child-facing reasoning request concise when the options already carry the comparison
+
+When the user explicitly removes a repeated evidence recap from a `story_reasoning` screen, preserve the approved short request and let the options carry the concrete candidate groupings. Do not reinsert the same preceding sentences as a numbered evidence list or add a second question that restates the request. If the approved `intro` already ends with the exact request, set `question` to that same trailing sentence so `questionRepeatsIntro()` and `stepIntroLeadIn()` render and speak it exactly once.
+
 ## Open / pending decisions (check with the user before assuming)
 
 As of this writing, seven lessons exist in `guwenLessons` (in display order): `wangRongLesson` (王戎不取道旁李), `simaGuangLesson` (司馬光破甕救友), `keZhouQiuJianLesson` (刻舟求劍), `shouZhuDaiTuLesson` (守株待兔), `yaMiaoZhuZhangLesson` (揠苗助長), `yanErDaoZhongLesson` (掩耳盜鐘), and `zhengRenMaiLuLesson` (鄭人買履). All seven are implemented in the evidence-lesson format; the 2026-07-26 王戎 replacement has 22 regular steps plus ordering and strict multi-select closings.
