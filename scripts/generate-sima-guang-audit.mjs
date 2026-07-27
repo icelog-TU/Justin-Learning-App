@@ -4,6 +4,26 @@ const sourcePath = new URL('../02-guwen-simaguang-decoder-content.md', import.me
 const outputPath = new URL('../src/data/simaGuangPronunciationAudit.ts', import.meta.url);
 const reportPath = new URL('../lessons/02-guwen-simaguang-polyphonic-stage1.md', import.meta.url);
 const lines = fs.readFileSync(sourcePath, 'utf8').split(/\r?\n/);
+const previousCatalog = fs.existsSync(outputPath)
+  ? fs.readFileSync(outputPath, 'utf8')
+  : '';
+const previousSpeechUnitIdByExactText = new Map();
+const previousCatalogRowByExactText = new Map();
+
+for (const line of previousCatalog.split(/\r?\n/)) {
+  const rowMatch = line.match(/^\s*(\{.*\}),$/);
+  if (!rowMatch) continue;
+  try {
+    const row = JSON.parse(rowMatch[1]);
+    if (row.questionId && row.speechUnitId && row.text) {
+      const exactTextKey = `${row.questionId}\u0000${row.text}`;
+      previousSpeechUnitIdByExactText.set(exactTextKey, row.speechUnitId);
+      previousCatalogRowByExactText.set(exactTextKey, row);
+    }
+  } catch {
+    // Generated TypeScript contains non-JSON object lines outside the row catalog.
+  }
+}
 
 const playableHeadings = new Set([
   'App 引導語',
@@ -187,6 +207,9 @@ function addUnit(rawText, lineNumber) {
   const text = cleanMarkdown(rawText);
   if (!text) return;
   unitCount += 1;
+  const questionId =
+    lessonPart === 'opening' ? 'opening' : `question-${lessonPart.slice(1)}`;
+  const generatedSpeechUnitId = `${lessonPart}-speech-${String(unitCount).padStart(3, '0')}`;
   const occurrences = new Map();
   const targets = [];
   [...text].forEach((character, characterIndex) => {
@@ -202,9 +225,10 @@ function addUnit(rawText, lineNumber) {
   });
   rawUnits.push({
     order: rawUnits.length,
-    questionId:
-      lessonPart === 'opening' ? 'opening' : `question-${lessonPart.slice(1)}`,
-    speechUnitId: `${lessonPart}-speech-${String(unitCount).padStart(3, '0')}`,
+    questionId,
+    speechUnitId:
+      previousSpeechUnitIdByExactText.get(`${questionId}\u0000${text}`) ??
+      generatedSpeechUnitId,
     source: `《司馬光破甕救友》${lessonPart === 'opening' ? '任務開場' : `第${lessonPart.slice(1)}題`}｜${heading}（主檔第 ${lineNumber} 行）`,
     text,
     targets,
@@ -257,6 +281,32 @@ const groupKey = (target) =>
   `${target.character}|${target.zhuyin}|${target.usage}|${target.groupTtsBehavior}`;
 const uncovered = new Set(targetUnits.flatMap((unit) => unit.targets.map(groupKey)));
 const selectedUnits = [];
+
+for (const unit of targetUnits) {
+  const exactTextKey = `${unit.questionId}\u0000${unit.text}`;
+  const previousRow = previousCatalogRowByExactText.get(exactTextKey);
+  if (!previousRow) continue;
+  const retainedTargets = [];
+  for (const previousTarget of previousRow.targets) {
+    const target = unit.targets.find(
+      (candidate) =>
+        candidate.character === previousTarget.character &&
+        candidate.occurrence === previousTarget.occurrence &&
+        candidate.zhuyin === previousTarget.zhuyin &&
+        candidate.usage === previousTarget.usage &&
+        candidate.cueMode === previousTarget.cueMode,
+    );
+    if (!target) continue;
+    const key = groupKey(target);
+    if (!uncovered.has(key)) continue;
+    const { groupTtsBehavior: _groupTtsBehavior, ...catalogTarget } = target;
+    retainedTargets.push(catalogTarget);
+    uncovered.delete(key);
+  }
+  if (retainedTargets.length > 0) {
+    selectedUnits.push({ ...unit, targets: retainedTargets });
+  }
+}
 
 while (uncovered.size > 0) {
   const candidates = targetUnits

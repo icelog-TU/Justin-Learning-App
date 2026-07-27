@@ -371,6 +371,12 @@ For an approved graded reconstruction, preserve this minimal child-facing struct
 
 Let the options carry missing-action, added-detail, direction, order, or evidence-boundary differences. Do not restate those differences before the child answers. Audit the entire rendered and spoken screen as one unit; if removing a sentence leaves the task equally clear and answerable, remove it.
 
+## Keep formal TTS speech-unit IDs stable across copy revisions
+
+Formal pronunciation results are keyed to a `speechUnitId` as well as exact fingerprints. A generator must not assign those IDs only from the current positional order: deleting a heading, shortening an intro, or moving an unchanged utterance would then rename the utterance and orphan a valid device-listening result even though its exact playable text did not change.
+
+When regenerating an existing lesson catalog, first read the previous generated catalog and preserve the prior `speechUnitId` for every unchanged `(questionId, exact playable text)` pair. Only genuinely new or changed utterances receive a new available ID. Fingerprints still decide whether a target result is current; stable IDs prevent unrelated copy edits from invalidating unchanged evidence.
+
 ## Open / pending decisions (check with the user before assuming)
 
 As of this writing, seven lessons exist in `guwenLessons` (in display order): `wangRongLesson` (王戎不取道旁李), `simaGuangLesson` (司馬光破甕救友), `keZhouQiuJianLesson` (刻舟求劍), `shouZhuDaiTuLesson` (守株待兔), `yaMiaoZhuZhangLesson` (揠苗助長), `yanErDaoZhongLesson` (掩耳盜鐘), and `zhengRenMaiLuLesson` (鄭人買履). All seven are implemented in the evidence-lesson format; the 2026-07-26 王戎 replacement has 22 regular steps plus ordering and strict multi-select closings.
