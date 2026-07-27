@@ -35,10 +35,39 @@ assert.equal(matchesTtsAuditListeningFilter('pending', 'all'), true);
 const ids = new Set<string>();
 const wangRongGroupKeys = new Set<string>();
 const simaGuangGroupKeys = new Set<string>();
+const shouZhuDaiTuGroupKeys = new Set<string>();
 let wangRongItemCount = 0;
 let wangRongTargetCount = 0;
 let simaGuangItemCount = 0;
 let simaGuangTargetCount = 0;
+let shouZhuDaiTuItemCount = 0;
+let shouZhuDaiTuTargetCount = 0;
+
+function fourthLessonTtsCondition(
+  displayText: string,
+  target: { character: string; occurrence: number },
+): string {
+  let seen = 0;
+  const characters = [...displayText];
+  const index = characters.findIndex((character) => {
+    if (character !== target.character) return false;
+    seen += 1;
+    return seen === target.occurrence;
+  });
+  const before = characters[index - 1] ?? '';
+  const after = characters.slice(index + 1).join('');
+  if (target.character === '得' && /^「?[兔履]/.test(after)) return '德';
+  if (target.character === '著' && /^[遠遊履]/.test(after)) return '濁';
+  if (target.character === '重' && before === '輕') return '仲';
+  if (
+    target.character === '當' &&
+    ((before === '相' && after.startsWith('於')) || after.startsWith('作'))
+  ) {
+    return '蕩';
+  }
+  if (target.character === '行' && before === '進') return '形';
+  return '原字';
+}
 
 for (const item of GUWEN_PRONUNCIATION_AUDIT_CATALOG) {
   assert(!ids.has(item.id), `重複的正式候選 ID：${item.id}`);
@@ -75,9 +104,17 @@ for (const item of GUWEN_PRONUNCIATION_AUDIT_CATALOG) {
       simaGuangGroupKeys.add(groupKey);
       simaGuangTargetCount += 1;
     }
+    if (item.lessonId === 'shou-zhu-dai-tu') {
+      const ttsCondition = fourthLessonTtsCondition(item.displayText, target);
+      const groupKey = `${target.character}|${target.zhuyin}|${target.usage}|${ttsCondition}`;
+      assert(!shouZhuDaiTuGroupKeys.has(groupKey), `第四篇有重複讀音群組：${groupKey}`);
+      shouZhuDaiTuGroupKeys.add(groupKey);
+      shouZhuDaiTuTargetCount += 1;
+    }
   }
   if (item.lessonId === 'wang-rong-bu-qu-dao-pang-li') wangRongItemCount += 1;
   if (item.lessonId === 'sima-guang-po-weng') simaGuangItemCount += 1;
+  if (item.lessonId === 'shou-zhu-dai-tu') shouZhuDaiTuItemCount += 1;
 
   const current = {
     auditRevision: item.auditRevision,
@@ -97,13 +134,16 @@ assert.equal(wangRongItemCount, 24, '第一篇精簡引導版應有 23 個代表
 assert.equal(wangRongTargetCount, 41, '第一篇 20 題版應涵蓋 40 個讀音群組及 1 個 exact 例外 target');
 assert.equal(simaGuangItemCount, 26, '第二篇七題修訂後應有 26 個代表語音單元');
 assert.equal(simaGuangTargetCount, 61, '第二篇七題修訂後應涵蓋 61 個讀音群組');
+assert.equal(shouZhuDaiTuItemCount, 35, '第四篇應有 35 個代表語音單元');
+assert.equal(shouZhuDaiTuTargetCount, 71, '第四篇應涵蓋 71 個讀音群組');
 assert(
   GUWEN_PRONUNCIATION_AUDIT_CATALOG.every(
     (item) =>
       item.lessonId === 'wang-rong-bu-qu-dao-pang-li' ||
-      item.lessonId === 'sima-guang-po-weng',
+      item.lessonId === 'sima-guang-po-weng' ||
+      item.lessonId === 'shou-zhu-dai-tu',
   ),
-  '正式實聽 catalog 只能包含目前正式建檔的第一、二篇',
+  '正式實聽 catalog 只能包含目前正式建檔的第一、二、四篇',
 );
 
 const sample = GUWEN_PRONUNCIATION_AUDIT_CATALOG[0];
