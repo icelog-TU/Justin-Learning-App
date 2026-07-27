@@ -104,6 +104,22 @@ The user rewrote 王戎 from scratch (GPT-collaborated, "全文核准") in this 
 
 All lesson-format texts share `AppData.guwenProgress` (`{decodedWordIds, completedAt, timesCompleted?, contentRevision?}` — a lesson's `decodedWordIds` holds solved *step* ids), the shared reward constants (`COIN_PER_GUWEN_WORD`/`STAR_PER_GUWEN_WORD`/`GUWEN_TEXT_COMPLETE_BONUS_*`), and the same pause-capable playback pattern and post-correct celebration sequence. When an approved lesson is replaced in place under the same stable `lessonId`, set a new `GuwenLesson.contentRevision`; reads must ignore an older revision and mutations must start a clean progress record for the new revision, so an old completion cannot unlock or discount the replacement lesson.
 
+### A correct answer must teach the core meaning before rewards or navigation appear
+
+For every regular lesson step, selecting the correct option starts a gated four-stage flow:
+
+1. hide the options and immediately show the first blank-line-separated paragraph of `correctFeedback`;
+2. auto-play that exact paragraph in full, with a pause/restart control;
+3. only after the utterance ends (with a conservative tracked fallback for a stalled Web Speech `onend`) record the solved step, award coins/stars, and start the roll-up celebration;
+4. only after the celebration settles show the complete feedback/explanation and the next-step button.
+
+The first paragraph is the mandatory teaching payload: it tells the child what the correct option means before
+attention shifts to counting rewards. Do not let the reward animation or next-step button appear while it is still
+playing. Do not auto-play that first paragraph a second time after the reward; post-reward narration starts with any
+remaining `correctFeedback` paragraphs and then the full `explanation`. Keep every approved string unchanged—the
+shared component controls only timing and visibility. Store and clear the core-feedback fallback timer on every exit,
+reset, or step change, and guard reward start by step id so `onend` and the fallback cannot grant the same reward twice.
+
 ### The closing screens need the same "lock circle" + audio treatment as regular steps — this was missed on first ship
 
 A real bug the user caught via screenshots: the three closing screens (sequence-ordering, causal-chain, multi-select) rendered with **no chip row at the top and no audio anywhere** — no auto-played intro, no 🔊 button on any card/node/option. Both were oversights from treating the closing screens as a separate, bolted-on feature rather than continuing the same step-chain UX the rest of the lesson already has.

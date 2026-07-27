@@ -176,7 +176,7 @@ locked → available → attempted_wrong → solved
 1. `locked`：先備題尚未完成，不可進入。
 2. `available`：先顯示引導語與兩條古文線索，再顯示問題與選項。
 3. `attempted_wrong`：顯示 `retryHint`，保留三個選項供再次比較；不得直接標示正解。
-4. `solved`：顯示 `correctFeedback`，允許展開完整 `explanation`，並發放密碼鑰匙。
+4. `solved`：先顯示並自動播放 `correctFeedback` 的第一段核心正解；播放完成後才發放本題獎勵並播放獎勵動畫，動畫結束後才顯示完整 `correctFeedback`、`explanation`、密碼鑰匙與下一題按鈕。
 5. 完成目前短句後，把破解結果放回連續原文，再解鎖下一步。
 6. 只有 `finalVerification.prerequisiteStepIds` 全部完成，才能解鎖白話驗證卷軸。
 
@@ -281,7 +281,7 @@ Coding agent 可以主動檢視並提出：
 
 - 未完成先備題時，後續題目保持鎖定；
 - 答錯只顯示提示，不直接公布正解；
-- 答對後顯示短回饋，詳解可展開；
+- 答對後先完整播放答對回饋第一段；播放結束前不得出現獎勵動畫或下一題按鈕，播放結束後才依序顯示獎勵、完整詳解與下一步；
 - 密碼鑰匙只在對應步驟完成後取得；
 - 返回課程時能恢復已完成進度；
 - 全文白話文在全部必要步驟完成前不可見；

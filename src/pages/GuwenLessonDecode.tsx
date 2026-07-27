@@ -43,6 +43,7 @@ import {
 import { numberToChineseWords } from '../lib/chineseNumber';
 
 type Phase = 'intro' | 'listening' | 'steps' | 'complete';
+type CorrectFlowStage = 'core-feedback' | 'reward' | 'details';
 /** Which closing screen is showing. Not every lesson has all three (see closingStepsList below). */
 type ClosingStageKind = 'ordering' | 'causal' | 'multiselect';
 
@@ -60,6 +61,8 @@ const PRAISE_LINES = [
 const CELEBRATION_TICKS = 10;
 const CELEBRATION_TICK_MS = 140;
 const PRAISE_FALLBACK_MS = 4500;
+const CORE_FEEDBACK_MIN_FALLBACK_MS = 12000;
+const CORE_FEEDBACK_MS_PER_CHARACTER = 450;
 
 interface CelebrationState {
   stepId: string;
@@ -288,6 +291,7 @@ export default function GuwenLessonDecode() {
     return 'intro';
   });
   const [feedback, setFeedback] = useState<'correct' | null>(null);
+  const [correctFlowStage, setCorrectFlowStage] = useState<CorrectFlowStage | null>(null);
   const [wrongIndex, setWrongIndex] = useState<number | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
@@ -309,6 +313,8 @@ export default function GuwenLessonDecode() {
   const badgeClaimSubmittedRef = useRef(false);
   const celebrationTimeoutRef = useRef<number | null>(null);
   const celebrationPraiseFallbackRef = useRef<number | null>(null);
+  const coreFeedbackFallbackRef = useRef<number | null>(null);
+  const rewardStartedForStepRef = useRef<string | null>(null);
   // Which step is on screen right now — deliberately its own state (not derived fresh from solvedIds on
   // every render, the way `wordIndex` in GuwenDecode.tsx is separate state too). If this were computed as
   // `findCurrentStep(lesson, solvedIds)` directly, the *instant* the last step's answer is recorded,
@@ -566,8 +572,14 @@ export default function GuwenLessonDecode() {
         window.clearTimeout(celebrationPraiseFallbackRef.current);
         celebrationPraiseFallbackRef.current = null;
       }
+      if (coreFeedbackFallbackRef.current !== null) {
+        window.clearTimeout(coreFeedbackFallbackRef.current);
+        coreFeedbackFallbackRef.current = null;
+      }
       setCelebration(null);
       setCelebrationPaused(false);
+      setCorrectFlowStage(null);
+      rewardStartedForStepRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, currentStep?.id]);
@@ -620,6 +632,7 @@ export default function GuwenLessonDecode() {
       const stepId = celebration.stepId;
       const timer = window.setTimeout(() => {
         setCelebration(null);
+        setCorrectFlowStage('details');
         scheduleExplanationFor(stepId);
       }, 700);
       return () => window.clearTimeout(timer);
@@ -766,6 +779,7 @@ export default function GuwenLessonDecode() {
   function scheduleExplanationFor(stepId: string) {
     const step = lesson!.steps.find((s) => s.id === stepId);
     if (!step) return;
+    const [, ...remainingFeedbackParagraphs] = speechParagraphs(step.correctFeedback);
     const id = `explain-${stepId}`;
     explainTimeoutRef.current = window.setTimeout(() => {
       explainTimeoutRef.current = null;
@@ -773,7 +787,7 @@ export default function GuwenLessonDecode() {
       setPlaybackPaused(false);
       speakSequence(
         [
-          ...feedbackSpeechUnits(step.correctFeedback),
+          ...remainingFeedbackParagraphs,
           ...(step.pronunciationCues?.correctFeedback?.map((cue) => cue.speechText) ?? []),
           step.explanation.replace(/\n+/g, ' '),
         ],
@@ -782,8 +796,16 @@ export default function GuwenLessonDecode() {
     }, 250);
   }
 
-  function markStepSolved(step: LessonStep) {
-    setFeedback('correct');
+  function beginStepReward(step: LessonStep) {
+    if (rewardStartedForStepRef.current === step.id) return;
+    rewardStartedForStepRef.current = step.id;
+    if (coreFeedbackFallbackRef.current !== null) {
+      window.clearTimeout(coreFeedbackFallbackRef.current);
+      coreFeedbackFallbackRef.current = null;
+    }
+    setPlaybackId((cur) => (cur === `core-feedback-${step.id}` ? null : cur));
+    setPlaybackPaused(false);
+    setCorrectFlowStage('reward');
     recordGuwenWord(lesson!.id, step.id, lesson!.contentRevision);
     reward(guwenCoinAmount, guwenStarAmount);
     playSuccessChime();
@@ -795,6 +817,42 @@ export default function GuwenLessonDecode() {
     });
     armPraiseFallback(step.id);
     tickCelebration(step.id, 0);
+  }
+
+  function playCoreFeedback(step: LessonStep) {
+    const coreFeedback = speechParagraphs(step.correctFeedback)[0] ?? step.correctFeedback;
+    const id = `core-feedback-${step.id}`;
+    if (coreFeedbackFallbackRef.current !== null) {
+      window.clearTimeout(coreFeedbackFallbackRef.current);
+    }
+    coreFeedbackFallbackRef.current = window.setTimeout(
+      () => beginStepReward(step),
+      Math.max(CORE_FEEDBACK_MIN_FALLBACK_MS, coreFeedback.length * CORE_FEEDBACK_MS_PER_CHARACTER),
+    );
+    setPlaybackId(id);
+    setPlaybackPaused(false);
+    speakSequence([coreFeedback], () => beginStepReward(step));
+  }
+
+  function markStepSolved(step: LessonStep) {
+    setFeedback('correct');
+    setCorrectFlowStage('core-feedback');
+    rewardStartedForStepRef.current = null;
+    playCoreFeedback(step);
+  }
+
+  function toggleCoreFeedback(step: LessonStep) {
+    const id = `core-feedback-${step.id}`;
+    if (playbackId === id && !playbackPaused) {
+      pauseSpeech();
+      setPlaybackPaused(true);
+      if (coreFeedbackFallbackRef.current !== null) {
+        window.clearTimeout(coreFeedbackFallbackRef.current);
+        coreFeedbackFallbackRef.current = null;
+      }
+      return;
+    }
+    playCoreFeedback(step);
   }
 
   function toggleCelebrationPause() {
@@ -835,11 +893,17 @@ export default function GuwenLessonDecode() {
       window.clearTimeout(celebrationPraiseFallbackRef.current);
       celebrationPraiseFallbackRef.current = null;
     }
+    if (coreFeedbackFallbackRef.current !== null) {
+      window.clearTimeout(coreFeedbackFallbackRef.current);
+      coreFeedbackFallbackRef.current = null;
+    }
     cancelSpeech();
     setPlaybackId(null);
     setPlaybackPaused(false);
     setCelebration(null);
     setCelebrationPaused(false);
+    setCorrectFlowStage(null);
+    rewardStartedForStepRef.current = null;
   }
 
   function handleSelect(index: number) {
@@ -855,6 +919,7 @@ export default function GuwenLessonDecode() {
   function handleNextStep() {
     stopStepSpeech();
     setFeedback(null);
+    setCorrectFlowStage(null);
     setWrongIndex(null);
     // solvedIds already includes the just-solved step (recordGuwenWord already landed), so this looks up
     // whichever step should come after it — or nothing, if that was the last one.
@@ -1043,6 +1108,7 @@ export default function GuwenLessonDecode() {
     stopStepSpeech();
     setConfirmReset(false);
     setFeedback(null);
+    setCorrectFlowStage(null);
     setWrongIndex(null);
     setReviewStepId(null);
     setIsPlaying(false);
@@ -1925,7 +1991,27 @@ export default function GuwenLessonDecode() {
               </button>
             )}
 
-            {feedback === 'correct' && celebration && (
+            {feedback === 'correct' && correctFlowStage === 'core-feedback' && (
+              <div className="bg-emerald-50 border-2 border-emerald-300 rounded-xl p-4">
+                <div className="flex items-start justify-between gap-2">
+                  <p className="font-bold text-emerald-700">
+                    {speechParagraphs(currentStep.correctFeedback)[0] ?? currentStep.correctFeedback}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => toggleCoreFeedback(currentStep)}
+                    aria-label="暫停或重新播放核心解說"
+                    className="text-emerald-600 shrink-0"
+                  >
+                    {playbackLabel(`core-feedback-${currentStep.id}`, '🔊', '⏸', '▶️')}
+                  </button>
+                </div>
+                <p className="mt-2 text-xs font-semibold text-emerald-600">
+                  聽完這段核心解說後，就會領取本題獎勵。
+                </p>
+              </div>
+            )}
+            {feedback === 'correct' && correctFlowStage === 'reward' && celebration && (
               <div className="bg-gradient-to-br from-amber-50 to-orange-50 border-2 border-amber-300 rounded-xl p-5 space-y-3 text-center">
                 <p className="text-lg font-bold text-orange-700">
                   {celebration.stage === 'settled' ? '🎉 太棒了！' : '✨ 答對了！'}
@@ -1948,7 +2034,7 @@ export default function GuwenLessonDecode() {
                 </button>
               </div>
             )}
-            {feedback === 'correct' && !celebration && (
+            {feedback === 'correct' && correctFlowStage === 'details' && !celebration && (
               <div className="bg-emerald-50 rounded-xl p-4 space-y-2">
                 <div className="flex items-start justify-between gap-2">
                   <p className="font-bold text-emerald-700">{currentStep.correctFeedback}</p>
@@ -1976,7 +2062,7 @@ export default function GuwenLessonDecode() {
                 )}
               </div>
             )}
-            {feedback === 'correct' && (
+            {feedback === 'correct' && correctFlowStage === 'details' && (
               <button
                 type="button"
                 onClick={handleNextStep}
