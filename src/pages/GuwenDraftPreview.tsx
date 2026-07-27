@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   DRAFT_SOURCES,
   findAdjacentRepetitions,
@@ -8,7 +9,7 @@ import {
   type DraftField,
   type DraftQuestion,
 } from '../lib/guwenDraftPreview';
-import { cancelSpeech, speak, speakSequence } from '../lib/speech';
+import { cancelSpeech, pauseSpeech, resumeSpeech, speakSequence } from '../lib/speech';
 
 type PreviewState = 'answering' | 'wrong' | 'correct';
 
@@ -25,26 +26,53 @@ function Highlighted({ text }: { text: string }) {
   );
 }
 
-function AudioLine({ field, label, className = '' }: { field: DraftField; label: string; className?: string }) {
+type Playback = {
+  id: string;
+  label: string;
+  paused: boolean;
+};
+
+type AudioLineProps = {
+  field: DraftField;
+  id: string;
+  label: string;
+  activePlayback?: Playback;
+  className?: string;
+  onToggle: (id: string, label: string, texts: string[]) => void;
+};
+
+function AudioLine({ field, id, label, activePlayback, className = '', onToggle }: AudioLineProps) {
+  const isActive = activePlayback?.id === id;
   return (
     <div className={className}>
       <div className="flex items-start gap-2">
         <button
           type="button"
-          onClick={() => speakSequence([field.text, ...(field.pronunciationCues ?? [])])}
-          aria-label={`播放${label}`}
+          onClick={() => onToggle(id, label, [field.text, ...(field.pronunciationCues ?? [])])}
+          aria-label={isActive ? `${activePlayback.paused ? '繼續' : '暫停'}${label}` : `播放${label}`}
           className="shrink-0 text-sky-500"
         >
-          🔊
+          {isActive ? (activePlayback.paused ? '▶️' : '⏸') : '🔊'}
         </button>
         <p className="whitespace-pre-line"><Highlighted text={field.text} /></p>
       </div>
-      {field.pronunciationCues?.map((cue) => (
-        <div key={cue} className="mt-1.5 flex items-start gap-2 rounded-lg bg-amber-50 px-2.5 py-2 text-left text-xs font-medium text-amber-800">
-          <button type="button" onClick={() => speak(cue)} aria-label={`播放${label}讀音提示`} className="shrink-0 text-sky-500">🔊</button>
+      {field.pronunciationCues?.map((cue, index) => {
+        const cueId = `${id}-cue-${index}`;
+        const cueIsActive = activePlayback?.id === cueId;
+        return (
+        <div key={`${cue}-${index}`} className="mt-1.5 flex items-start gap-2 rounded-lg bg-amber-50 px-2.5 py-2 text-left text-xs font-medium text-amber-800">
+          <button
+            type="button"
+            onClick={() => onToggle(cueId, `${label}讀音提示`, [cue])}
+            aria-label={cueIsActive ? `${activePlayback.paused ? '繼續' : '暫停'}${label}讀音提示` : `播放${label}讀音提示`}
+            className="shrink-0 text-sky-500"
+          >
+            {cueIsActive ? (activePlayback.paused ? '▶️' : '⏸') : '🔊'}
+          </button>
           <p>{cue}</p>
         </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
@@ -71,25 +99,34 @@ function readingOrder(question: DraftQuestion) {
 }
 
 export default function GuwenDraftPreview() {
-  const params = new URLSearchParams(window.location.hash.split('?')[1] ?? '');
-  const initialLesson = params.get('lesson');
+  const [, setSearchParams] = useSearchParams();
+  const initialParams = new URLSearchParams(window.location.hash.split('?')[1] ?? '');
+  const initialLesson = initialParams.get('lesson');
+  const initialQuestion = Number(initialParams.get('question'));
+  const initialPreviewState = initialParams.get('state');
   const [sourceIndex, setSourceIndex] = useState(() => {
     const found = DRAFT_SOURCES.findIndex((source) => source.lessonId === initialLesson);
     return found >= 0 ? found : 0;
   });
   const [questions, setQuestions] = useState<DraftQuestion[]>([]);
-  const [questionIndex, setQuestionIndex] = useState(0);
-  const [previewState, setPreviewState] = useState<PreviewState>('answering');
+  const [questionIndex, setQuestionIndex] = useState(
+    Number.isInteger(initialQuestion) && initialQuestion >= 0 ? initialQuestion : 0,
+  );
+  const [previewState, setPreviewState] = useState<PreviewState>(
+    initialPreviewState === 'wrong' || initialPreviewState === 'correct' ? initialPreviewState : 'answering',
+  );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [loadedAt, setLoadedAt] = useState<Date>();
+  const [playback, setPlayback] = useState<Playback>();
+  const playbackToken = useRef(0);
   const source = DRAFT_SOURCES[sourceIndex];
   const question = questions[questionIndex];
 
   async function loadLatest() {
     setLoading(true);
     setError('');
-    cancelSpeech();
+    stopPlayback();
     try {
       const response = await fetch(githubRawUrl(source), { cache: 'no-store' });
       if (!response.ok) throw new Error(`GitHub 回傳 ${response.status}`);
@@ -107,22 +144,76 @@ export default function GuwenDraftPreview() {
   }
 
   useEffect(() => {
-    setQuestionIndex(0);
-    setPreviewState('answering');
     void loadLatest();
-    return cancelSpeech;
     // source uniquely identifies the selected MD.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sourceIndex]);
+
+  useEffect(() => {
+    const next = new URLSearchParams();
+    next.set('lesson', source.lessonId);
+    next.set('question', String(questionIndex));
+    next.set('state', previewState);
+    setSearchParams(next, { replace: true });
+  }, [previewState, questionIndex, setSearchParams, source.lessonId]);
+
+  useEffect(() => () => {
+    playbackToken.current += 1;
+    cancelSpeech();
+  }, []);
 
   const order = useMemo(() => question ? readingOrder(question) : [], [question]);
   const repetitions = useMemo(() => findAdjacentRepetitions(order), [order]);
   const approvedCount = questions.filter((item) => /已核准|核准/.test(item.status)).length;
 
   function chooseQuestion(next: number) {
-    cancelSpeech();
+    stopPlayback();
     setQuestionIndex(next);
     setPreviewState('answering');
+  }
+
+  function chooseSource(next: number) {
+    stopPlayback();
+    setSourceIndex(next);
+    setQuestionIndex(0);
+    setPreviewState('answering');
+  }
+
+  function choosePreviewState(next: PreviewState) {
+    stopPlayback();
+    setPreviewState(next);
+  }
+
+  function stopPlayback() {
+    playbackToken.current += 1;
+    cancelSpeech();
+    setPlayback(undefined);
+  }
+
+  function togglePause() {
+    setPlayback((current) => {
+      if (!current) return current;
+      if (current.paused) {
+        resumeSpeech();
+        return { ...current, paused: false };
+      }
+      pauseSpeech();
+      return { ...current, paused: true };
+    });
+  }
+
+  function togglePlayback(id: string, label: string, texts: string[]) {
+    if (playback?.id === id) {
+      togglePause();
+      return;
+    }
+    playbackToken.current += 1;
+    const token = playbackToken.current;
+    cancelSpeech();
+    setPlayback({ id, label, paused: false });
+    speakSequence(texts, () => {
+      if (playbackToken.current === token) setPlayback(undefined);
+    });
   }
 
   return (
@@ -137,7 +228,7 @@ export default function GuwenDraftPreview() {
             教材
             <select
               value={sourceIndex}
-              onChange={(event) => setSourceIndex(Number(event.target.value))}
+              onChange={(event) => chooseSource(Number(event.target.value))}
               className="mt-1 block rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800"
             >
               {DRAFT_SOURCES.map((item, index) => <option key={item.lessonId} value={index}>{item.title}</option>)}
@@ -186,37 +277,39 @@ export default function GuwenDraftPreview() {
                   </div>
                   <button
                     type="button"
-                    onClick={() => speakSequence(order.map((item) => item.text))}
+                    onClick={() => togglePlayback('whole-page', '依頁面順序全部播放', order.map((item) => item.text))}
                     className="rounded-lg bg-sky-50 px-3 py-2 text-xs font-bold text-sky-700"
                   >
-                    🔊 依頁面順序全部播放
+                    {playback?.id === 'whole-page'
+                      ? (playback.paused ? '▶️ 繼續整頁播放' : '⏸ 暫停整頁播放')
+                      : '🔊 依頁面順序全部播放'}
                   </button>
                 </div>
 
                 {question.target && (
                   <div className="mb-4 text-center">
                     <p className="text-xs text-slate-400">待破解的目標句</p>
-                    <AudioLine field={question.target} label="目標句" className="mt-1 justify-center text-lg font-semibold" />
+                    <AudioLine field={question.target} id="target" label="目標句" activePlayback={playback} onToggle={togglePlayback} className="mt-1 justify-center text-lg font-semibold" />
                   </div>
                 )}
 
-                {question.intro && <AudioLine field={question.intro} label="引導語" className="mb-4 justify-center text-center text-sm text-slate-600" />}
+                {question.intro && <AudioLine field={question.intro} id="intro" label="引導語" activePlayback={playback} onToggle={togglePlayback} className="mb-4 justify-center text-center text-sm text-slate-600" />}
 
                 {!!question.clues.length && (
                   <div className="mb-4 space-y-2">
                     {question.clues.map((clue, index) => (
                       <div key={`${clue.line}-${index}`} className="space-y-2 rounded-xl border-2 border-slate-200 bg-slate-50 px-4 py-3">
                         <p className="text-xs font-black text-slate-400">線索 {index + 1}</p>
-                        <AudioLine field={clue} label={`線索 ${index + 1}`} className="font-medium" />
+                        <AudioLine field={clue} id={`clue-${index}`} label={`線索 ${index + 1}`} activePlayback={playback} onToggle={togglePlayback} className="font-medium" />
                         {clue.meaning && (
-                          <AudioLine field={clue.meaning} label={`線索 ${index + 1} 已破解為`} className="pl-1 text-xs text-slate-500" />
+                          <AudioLine field={clue.meaning} id={`clue-${index}-meaning`} label={`線索 ${index + 1} 已破解為`} activePlayback={playback} onToggle={togglePlayback} className="pl-1 text-xs text-slate-500" />
                         )}
                       </div>
                     ))}
                   </div>
                 )}
 
-                {question.question && <AudioLine field={question.question} label="提問" className="mb-3 justify-center text-center text-sm font-semibold" />}
+                {question.question && <AudioLine field={question.question} id="question" label="提問" activePlayback={playback} onToggle={togglePlayback} className="mb-3 justify-center text-center text-sm font-semibold" />}
 
                 <div className="space-y-2">
                   {question.options.map((option, index) => {
@@ -229,7 +322,14 @@ export default function GuwenDraftPreview() {
                           correct ? 'border-emerald-400 bg-emerald-50' : wrong ? 'border-red-300 bg-red-50' : 'border-slate-200 bg-slate-50'
                         }`}
                       >
-                        <button type="button" onClick={() => speak(option.text)} className="text-sky-500" aria-label={`播放選項 ${index + 1}`}>🔊</button>
+                        <button
+                          type="button"
+                          onClick={() => togglePlayback(`option-${index}`, `選項 ${index + 1}`, [option.text])}
+                          className="text-sky-500"
+                          aria-label={playback?.id === `option-${index}` ? `${playback.paused ? '繼續' : '暫停'}選項 ${index + 1}` : `播放選項 ${index + 1}`}
+                        >
+                          {playback?.id === `option-${index}` ? (playback.paused ? '▶️' : '⏸') : '🔊'}
+                        </button>
                         <span className="font-bold text-slate-400">{index + 1}.</span>
                         <p>{option.text}</p>
                       </div>
@@ -238,14 +338,14 @@ export default function GuwenDraftPreview() {
                 </div>
 
                 {previewState === 'wrong' && question.retryHint && (
-                  <AudioLine field={question.retryHint} label="答錯提示" className="mt-3 justify-center text-center text-sm text-red-500" />
+                  <AudioLine field={question.retryHint} id="retry-hint" label="答錯提示" activePlayback={playback} onToggle={togglePlayback} className="mt-3 justify-center text-center text-sm text-red-500" />
                 )}
 
                 {previewState === 'correct' && (
                   <div className="mt-4 space-y-3 rounded-xl bg-emerald-50 p-4">
-                    {question.correctFeedback && <AudioLine field={question.correctFeedback} label="答對回饋" className="font-bold text-emerald-700" />}
-                    {question.explanation && <AudioLine field={question.explanation} label="詳解" className="text-sm leading-relaxed text-slate-600" />}
-                    {question.key && <AudioLine field={question.key} label="密碼鑰匙" className="rounded-lg bg-white p-3 text-sm font-bold text-indigo-700" />}
+                    {question.correctFeedback && <AudioLine field={question.correctFeedback} id="correct-feedback" label="答對回饋" activePlayback={playback} onToggle={togglePlayback} className="font-bold text-emerald-700" />}
+                    {question.explanation && <AudioLine field={question.explanation} id="explanation" label="詳解" activePlayback={playback} onToggle={togglePlayback} className="text-sm leading-relaxed text-slate-600" />}
+                    {question.key && <AudioLine field={question.key} id="key" label="密碼鑰匙" activePlayback={playback} onToggle={togglePlayback} className="rounded-lg bg-white p-3 text-sm font-bold text-indigo-700" />}
                   </div>
                 )}
               </div>
@@ -264,7 +364,7 @@ export default function GuwenDraftPreview() {
                   <button
                     key={value}
                     type="button"
-                    onClick={() => setPreviewState(value)}
+                    onClick={() => choosePreviewState(value)}
                     className={`rounded-lg px-2 py-2 text-xs font-bold ${previewState === value ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600'}`}
                   >
                     {label}
@@ -316,6 +416,20 @@ export default function GuwenDraftPreview() {
               這是成人草稿預覽，直接讀取 GitHub 分支上的 MD，使用與正式 App 相同的瀏覽器 TTS 處理；不會寫入進度、金幣、星星或徽章。正式 App 仍只在你明確核准後同步。
             </p>
           </aside>
+        </div>
+      )}
+
+      {playback && (
+        <div className="fixed inset-x-3 bottom-3 z-50 mx-auto flex max-w-md items-center gap-3 rounded-2xl border border-sky-200 bg-white/95 px-4 py-3 shadow-2xl backdrop-blur">
+          <span className="min-w-0 flex-1 truncate text-sm font-bold text-slate-700">
+            {playback.paused ? '已暫停：' : '正在播放：'}{playback.label}
+          </span>
+          <button type="button" onClick={togglePause} className="rounded-lg bg-sky-100 px-3 py-2 text-sm font-bold text-sky-700">
+            {playback.paused ? '▶️ 繼續' : '⏸ 暫停'}
+          </button>
+          <button type="button" onClick={stopPlayback} className="rounded-lg bg-slate-100 px-3 py-2 text-sm font-bold text-slate-600">
+            ⏹ 停止
+          </button>
         </div>
       )}
     </main>
