@@ -10,6 +10,6 @@ export const GUWEN_CHILD_BASELINE: Record<string, ChildSnapshot> = {
   '05-guwen-yamiaozhuzhang-decoder-content.md': { questionCount: 9, hash: '6b76a8f58a94afd8f0a7dd14674ce6436316dedfe31d53d52de14f078ba310c8' },
   '06-guwen-yanerdaozhong-decoder-content.md': { questionCount: 21, hash: 'a46ab6b5a40db9b5d6adee0782f966d25920ce5001c591951e93ef093cfce8ba' },
   '07-guwen-zhengrenmailv-decoder-content.md': { questionCount: 20, hash: '0cf1fddd3a30acbf34265a38e179dc140d210d9c25700224369e85e5b261c5d0' },
-  '08-guwen-changganrucheng-decoder-content.md': { questionCount: 7, hash: 'ad700f20a8ca58d43be324eee620148fda6a3fc053b8bdfe9d9eb8ad49b3ed7a' },
+  '08-guwen-changganrucheng-decoder-content.md': { questionCount: 10, hash: '700001de62f8dcc52f0068713256e4e48af7f8956c68c5ca6d920ed620015321' },
   '09-guwen-yangshizi-decoder-content.md': { questionCount: 9, hash: '132f7d0ac1343c60f2586012909e5576a103bde250e8e00ab16398793ca80733' },
 };

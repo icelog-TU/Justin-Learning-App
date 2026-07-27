@@ -23,7 +23,7 @@
 | 5 | 揠苗助長 | `05-guwen-yamiaozhuzhang-decoder-content.md` | 開場及第 1–6 題核准；第 7–9 題待審 | 審核第 7–9 題 |
 | 6 | 掩耳盜鐘 | `06-guwen-yanerdaozhong-decoder-content.md` | 全文 21 題與收尾核准 | 待 App 實作或驗收 |
 | 7 | 鄭人買履 | `07-guwen-zhengrenmailv-decoder-content.md` | 20 題與 App 線上驗收完成 | 依實際使用回饋調整 |
-| 8 | 長竿入城 | **待使用者確認**：`08-guwen-changganrucheng-decoder-content.md` 或 `lessons/08-guwen-changganrucheng-decoder-content.md` | 兩份內容不同；不得自行選擇或合併 | 確認哪份升為 active，另一份標 archived 或 draft-rewrite |
+| 8 | 長竿入城 | `08-guwen-changganrucheng-decoder-content.md` | 任務開場及第 1–9 題核准；第 10 題待審 | 審核第 10 題 |
 | 9 | 楊氏之子 | `09-guwen-yangshizi-decoder-content.md` | 第 1–7 題核准；開場及第 8–9 題待審 | 審核開場、第 8–9 題 |
 
 ## 已知版本關係
@@ -40,9 +40,8 @@
 
 ### 第八篇
 
-- 根目錄版本記錄到較早進度。
-- `lessons/` 版本記錄到第 9 題核准、第 10 題待審。
-- 在使用者確認 active 前，兩份都不得修改、刪除或交付 App。
+- `08-guwen-changganrucheng-decoder-content.md` 是 active 主檔。
+- 原 `lessons/` 副本的較新教材內容已遷入 active 主檔並轉為 Markdown v1；重複副本已移除。
 
 ## 共用資料狀態
 
