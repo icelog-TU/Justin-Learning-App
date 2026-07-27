@@ -118,6 +118,14 @@ Do not open with “這個字有……意思” or list dictionary senses.
 
 After decoding the necessary parts, display the acquired “密碼鑰匙” and ask the child to combine them in original order.
 
+For a graded reconstruction screen, do not narrate the reconstruction task more than once. Use the shortest child-facing sequence:
+
+1. `下面是我們已經取得的密碼鑰匙。`
+2. the key table;
+3. `「原文句子」最符合下面哪一個選項？`
+
+Do not add another sentence saying which keys will be combined, what scene must be rebuilt, or which evidence boundary must be checked. Put those distinctions in the options. Review the whole screen for semantic repetition, not just the length of each individual sentence.
+
 Use distractors derived from earlier clue scenes when helpful. Explicitly distinguish “the other text used as evidence” from “what happens in the current story.”
 
 ### 8. Update the model with local context
