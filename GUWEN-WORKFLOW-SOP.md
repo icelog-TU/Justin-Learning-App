@@ -22,14 +22,27 @@ npm run check:guwen:master-format
 
 ## GitHub MD 成人草稿預覽（正式 App 同步前）
 
-當教材是在對話中修改、由 agent commit/push 到既有分支時，使用下列核准流程：
+當教材是在對話中修改、由 agent commit/push 到既有分支時，預設採用「對話提出要求、直接審實際預覽」的核准流程：
 
-1. 只修改並推送教材 MD，不先改 `src/data/guwenLesson.ts`。
-2. 開啟 `https://icelog-tu.github.io/Justin-Learning-App/#/guwen-draft-preview`。
-3. 選擇篇目與題目；預覽頁會直接讀取
-   `claude/chinese-learning-app-justin-yjcfam` 分支上的 MD。若頁面已開著，按「重新讀取 GitHub」取得最新版本。
-4. 分別檢查「作答前／第一次答錯／答對後」、頁面排列、各段播放及右側的缺欄與相鄰重複提醒。
-5. 教材擁有者明確核准後，才將該版 MD 同步到正式孩子 App。
+1. 教材擁有者在該篇對話中指定篇次、題號與修改要求；不必審讀原始 MD 排版。
+2. agent 只修改該篇唯一教材主檔並完成格式檢查，不先改 `src/data/guwenLesson.ts`。
+3. agent 將草稿 commit、push 到既有分支後，在對話中回傳：
+   - 本次修改重點；
+   - 可直接開啟指定篇目、指定題目的成人預覽連結。
+4. 新交付的連結一律使用人類題號：
+
+   `https://icelog-tu.github.io/Justin-Learning-App/#/guwen-draft-preview?lesson=<lessonId>&questionNumber=<題號>&state=answering`
+
+   例如第七篇第十題：
+
+   `https://icelog-tu.github.io/Justin-Learning-App/#/guwen-draft-preview?lesson=zheng-ren-mai-lv&questionNumber=10&state=answering`
+
+   舊連結的零起算 `question=<索引>` 只保留向後相容；agent 不得再把它當成新審稿連結交付。
+5. 教材擁有者直接在預覽頁檢查孩子實際會看見與聽見的內容，包括「作答前／第一次答錯／答對後」、正式排列、線索出處與逐段／整頁 TTS；MD 只是唯一資料來源，不是主要審稿介面。
+6. 若需修改，agent 回到同一主檔修正、push，並回傳同一題的直接連結；預覽頁已開啟時可按「重新讀取 GitHub」。
+7. 只有教材擁有者明確核准後，才將該版 MD 同步到正式孩子 App。
+
+草稿階段的純教材文字修改通常只需 commit、push 主檔；成人預覽器會在執行時讀取該分支，不必每次重建或部署正式 App。預覽器本身的程式改動，以及核准後的正式 App 同步，才依完整建置與部署流程處理。
 
 此路由是成人審稿工具，不列入孩子入口，也不寫入進度、金幣、星星或徽章。它使用正式 App
 的瀏覽器 TTS 處理路徑，但不取代中央多音字實聽稽核；正式上線仍須依本 SOP 與中央資料庫結果處理。

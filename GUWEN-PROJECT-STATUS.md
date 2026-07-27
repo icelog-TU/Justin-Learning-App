@@ -11,6 +11,7 @@
 
 - 路由：`#/guwen-draft-preview`（不放入孩子端導覽）
 - 資料來源：執行時直接讀取既有 GitHub 分支上的九篇教材 MD；不讀正式 App 的 TypeScript 課程資料
+- 審稿交付：對話中完成指定題草稿後，回傳修改重點與 `lesson=<lessonId>&questionNumber=<人類題號>&state=answering` 的直接預覽連結；教材擁有者審孩子實際看見、聽見的內容，不以原始 MD 為主要審稿介面
 - 功能：篇目／題目切換、作答前三狀態、正式排列順序、逐段與整頁 TTS、MD 行號來源、缺欄診斷、相鄰重複提醒
 - 唯一格式：九篇主檔已於 2026-07-27 遷移至 `GUWEN-MARKDOWN-FORMAT.md` v1；題目大標題、孩子端求助欄、提交解法欄與逐條線索出處使用同一名稱與層級
 - 內容保護：`npm run check:guwen:master-format` 同時核對九篇 catalog、194 條線索出處、每題完整原文與遷移前孩子端指紋

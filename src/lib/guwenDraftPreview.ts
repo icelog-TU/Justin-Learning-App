@@ -47,6 +47,14 @@ export const DRAFT_SOURCES: DraftSource[] = [
   { lessonId: 'yang-shi-zhi-zi', title: '第九篇｜楊氏之子', path: '09-guwen-yangshizi-decoder-content.md' },
 ];
 
+export function draftQuestionIndexByNumber(
+  questions: DraftQuestion[],
+  questionNumber: number,
+): number {
+  const found = questions.findIndex((question) => question.number === questionNumber);
+  return found >= 0 ? found : 0;
+}
+
 type Section = {
   heading: string;
   level: number;

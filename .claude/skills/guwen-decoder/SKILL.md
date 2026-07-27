@@ -31,6 +31,18 @@ resume, and stop controls while continuing to use the shared production `speakSe
 Changing lesson, question, or preview state must cancel the previous utterance so audio from two review contexts
 cannot overlap.
 
+The default review handoff is preview-first, not raw-Markdown-first. When the user asks for a draft of question N in
+a lesson-specific conversation, update only that lesson's unique master, validate it, commit and push it to the
+existing branch, then reply with a concise change summary and a direct production preview link. New links must use
+the human-facing question number:
+
+`/#/guwen-draft-preview?lesson=<lessonId>&questionNumber=<N>&state=answering`
+
+Never hand off the legacy zero-based `question=<index>` form, although the page may continue to accept old links.
+The user reviews the child-visible layout and child-audible speech in the preview. A draft-only copy change normally
+needs only the master-file commit and push because the preview reads that branch at runtime; do not synchronize or
+redeploy the formal child App until the user explicitly approves the draft and requests that next step.
+
 Every classical-clue card in this adult preview must also show its source as small gray text directly under the
 clue content. Sources are display-only and must not enter whole-page or individual speech playback. The parser
 must support both a nearby `出處` / `線索類型與出處` section and older masters that consolidate numbered entries

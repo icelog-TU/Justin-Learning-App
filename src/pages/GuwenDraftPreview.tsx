@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
   DRAFT_SOURCES,
+  draftQuestionIndexByNumber,
   findAdjacentRepetitions,
   githubEditUrl,
   githubRawUrl,
@@ -102,15 +103,23 @@ export default function GuwenDraftPreview() {
   const [, setSearchParams] = useSearchParams();
   const initialParams = new URLSearchParams(window.location.hash.split('?')[1] ?? '');
   const initialLesson = initialParams.get('lesson');
-  const initialQuestion = Number(initialParams.get('question'));
+  const initialQuestionNumber = Number(initialParams.get('questionNumber'));
+  const initialLegacyQuestionIndex = Number(initialParams.get('question'));
   const initialPreviewState = initialParams.get('state');
+  const requestedQuestionNumber = useRef(
+    Number.isInteger(initialQuestionNumber) && initialQuestionNumber >= 1
+      ? initialQuestionNumber
+      : undefined,
+  );
   const [sourceIndex, setSourceIndex] = useState(() => {
     const found = DRAFT_SOURCES.findIndex((source) => source.lessonId === initialLesson);
     return found >= 0 ? found : 0;
   });
   const [questions, setQuestions] = useState<DraftQuestion[]>([]);
   const [questionIndex, setQuestionIndex] = useState(
-    Number.isInteger(initialQuestion) && initialQuestion >= 0 ? initialQuestion : 0,
+    Number.isInteger(initialLegacyQuestionIndex) && initialLegacyQuestionIndex >= 0
+      ? initialLegacyQuestionIndex
+      : 0,
   );
   const [previewState, setPreviewState] = useState<PreviewState>(
     initialPreviewState === 'wrong' || initialPreviewState === 'correct' ? initialPreviewState : 'answering',
@@ -133,7 +142,14 @@ export default function GuwenDraftPreview() {
       const parsed = parseDraftQuestions(await response.text());
       if (!parsed.length) throw new Error('MD 裡找不到題目標題');
       setQuestions(parsed);
-      setQuestionIndex((current) => Math.min(current, parsed.length - 1));
+      setQuestionIndex((current) => {
+        const requested = requestedQuestionNumber.current;
+        requestedQuestionNumber.current = undefined;
+        if (requested !== undefined) {
+          return draftQuestionIndexByNumber(parsed, requested);
+        }
+        return Math.min(current, parsed.length - 1);
+      });
       setLoadedAt(new Date());
     } catch (reason) {
       setQuestions([]);
@@ -150,12 +166,13 @@ export default function GuwenDraftPreview() {
   }, [sourceIndex]);
 
   useEffect(() => {
+    if (!question) return;
     const next = new URLSearchParams();
     next.set('lesson', source.lessonId);
-    next.set('question', String(questionIndex));
+    next.set('questionNumber', String(question.number));
     next.set('state', previewState);
     setSearchParams(next, { replace: true });
-  }, [previewState, questionIndex, setSearchParams, source.lessonId]);
+  }, [previewState, question, setSearchParams, source.lessonId]);
 
   useEffect(() => () => {
     playbackToken.current += 1;

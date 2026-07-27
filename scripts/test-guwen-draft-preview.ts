@@ -1,6 +1,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { DRAFT_SOURCES, parseDraftQuestions } from '../src/lib/guwenDraftPreview';
+import {
+  DRAFT_SOURCES,
+  draftQuestionIndexByNumber,
+  parseDraftQuestions,
+} from '../src/lib/guwenDraftPreview';
 
 let failed = false;
 
@@ -52,6 +56,20 @@ for (const example of representativeSources) {
       console.error(`  ERROR: ${example.path} 第 ${example.question} 題線索 ${index + 1} 沒有抓到「${needle}」出處`);
     }
   });
+}
+
+const seventhLessonSource = DRAFT_SOURCES.find((source) => source.lessonId === 'zheng-ren-mai-lv');
+if (!seventhLessonSource) {
+  failed = true;
+  console.error('  ERROR: 找不到第七篇鄭人買履的成人預覽來源');
+} else {
+  const markdown = fs.readFileSync(path.resolve(seventhLessonSource.path), 'utf8');
+  const questions = parseDraftQuestions(markdown);
+  const questionIndex = draftQuestionIndexByNumber(questions, 10);
+  if (questions[questionIndex]?.number !== 10) {
+    failed = true;
+    console.error('  ERROR: questionNumber=10 沒有對應到第七篇第十題');
+  }
 }
 
 if (failed) process.exit(1);
