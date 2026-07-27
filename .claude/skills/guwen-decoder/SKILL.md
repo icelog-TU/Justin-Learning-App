@@ -111,14 +111,17 @@ For every regular lesson step, selecting the correct option starts a gated four-
 1. hide the options and immediately show the first blank-line-separated paragraph of `correctFeedback`;
 2. auto-play that exact paragraph in full, with a pause/restart control;
 3. only after the utterance ends (with a conservative tracked fallback for a stalled Web Speech `onend`) record the solved step, award coins/stars, and start the roll-up celebration;
-4. only after the celebration settles show the complete feedback/explanation and the next-step button.
+4. keep the already-played core-feedback card visible while the reward appears underneath it;
+5. after the celebration settles, keep the core card in place and add a visually separate `詳解` card underneath it, followed by the next-step button.
 
 The first paragraph is the mandatory teaching payload: it tells the child what the correct option means before
 attention shifts to counting rewards. Do not let the reward animation or next-step button appear while it is still
-playing. Do not auto-play that first paragraph a second time after the reward; post-reward narration starts with any
-remaining `correctFeedback` paragraphs and then the full `explanation`. Keep every approved string unchanged—the
-shared component controls only timing and visibility. Store and clear the core-feedback fallback timer on every exit,
-reset, or step change, and guard reward start by step id so `onend` and the fallback cannot grant the same reward twice.
+playing. The core card must not disappear during the reward and must not be merged back into the detail card afterward.
+Do not auto-play that first paragraph a second time after the reward; the `詳解` card and its playback control contain
+only any remaining `correctFeedback` paragraphs plus the full `explanation`, so the visible block matches the audible
+starting point. Keep every approved string unchanged—the shared component controls only timing, grouping, labels, and
+visibility. Store and clear the core-feedback fallback timer on every exit, reset, or step change, and guard reward
+start by step id so `onend` and the fallback cannot grant the same reward twice.
 
 ### The closing screens need the same "lock circle" + audio treatment as regular steps — this was missed on first ship
 

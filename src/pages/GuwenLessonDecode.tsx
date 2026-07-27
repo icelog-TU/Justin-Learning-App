@@ -151,6 +151,18 @@ function speechParagraphs(text: string): string[] {
   return text.split(/\n{2,}/).map((line) => line.trim()).filter(Boolean);
 }
 
+function coreFeedbackText(step: LessonStep): string {
+  return speechParagraphs(step.correctFeedback)[0] ?? step.correctFeedback;
+}
+
+function detailSpeechLines(step: LessonStep): string[] {
+  return [
+    ...speechParagraphs(step.correctFeedback).slice(1),
+    ...(step.pronunciationCues?.correctFeedback?.map((cue) => cue.speechText) ?? []),
+    step.explanation.replace(/\n+/g, ' '),
+  ].filter(Boolean);
+}
+
 /** The full auto-play script for a step, as separate lines (queued with speakSequence so each one fully
  * finishes before the next starts). Clues/keys are part of the auto-play here — the child needs to hear all
  * the evidence before the question makes sense, mirroring the guwen-decoder skill's 'pattern' puzzle rule. */
@@ -779,20 +791,12 @@ export default function GuwenLessonDecode() {
   function scheduleExplanationFor(stepId: string) {
     const step = lesson!.steps.find((s) => s.id === stepId);
     if (!step) return;
-    const [, ...remainingFeedbackParagraphs] = speechParagraphs(step.correctFeedback);
     const id = `explain-${stepId}`;
     explainTimeoutRef.current = window.setTimeout(() => {
       explainTimeoutRef.current = null;
       setPlaybackId(id);
       setPlaybackPaused(false);
-      speakSequence(
-        [
-          ...remainingFeedbackParagraphs,
-          ...(step.pronunciationCues?.correctFeedback?.map((cue) => cue.speechText) ?? []),
-          step.explanation.replace(/\n+/g, ' '),
-        ],
-        () => setPlaybackId((cur) => (cur === id ? null : cur)),
-      );
+      speakSequence(detailSpeechLines(step), () => setPlaybackId((cur) => (cur === id ? null : cur)));
     }, 250);
   }
 
@@ -820,7 +824,7 @@ export default function GuwenLessonDecode() {
   }
 
   function playCoreFeedback(step: LessonStep) {
-    const coreFeedback = speechParagraphs(step.correctFeedback)[0] ?? step.correctFeedback;
+    const coreFeedback = coreFeedbackText(step);
     const id = `core-feedback-${step.id}`;
     if (coreFeedbackFallbackRef.current !== null) {
       window.clearTimeout(coreFeedbackFallbackRef.current);
@@ -843,6 +847,10 @@ export default function GuwenLessonDecode() {
 
   function toggleCoreFeedback(step: LessonStep) {
     const id = `core-feedback-${step.id}`;
+    if (correctFlowStage !== 'core-feedback') {
+      togglePlayback(id, coreFeedbackText(step));
+      return;
+    }
     if (playbackId === id && !playbackPaused) {
       pauseSpeech();
       setPlaybackPaused(true);
@@ -1991,24 +1999,28 @@ export default function GuwenLessonDecode() {
               </button>
             )}
 
-            {feedback === 'correct' && correctFlowStage === 'core-feedback' && (
+            {feedback === 'correct' && (
               <div className="bg-emerald-50 border-2 border-emerald-300 rounded-xl p-4">
+                <p className="mb-2 text-xs font-extrabold tracking-wide text-emerald-600">核心解答</p>
                 <div className="flex items-start justify-between gap-2">
-                  <p className="font-bold text-emerald-700">
-                    {speechParagraphs(currentStep.correctFeedback)[0] ?? currentStep.correctFeedback}
-                  </p>
+                  <p className="font-bold text-emerald-700">{coreFeedbackText(currentStep)}</p>
                   <button
                     type="button"
                     onClick={() => toggleCoreFeedback(currentStep)}
+                    disabled={correctFlowStage === 'reward'}
                     aria-label="暫停或重新播放核心解說"
-                    className="text-emerald-600 shrink-0"
+                    className="text-emerald-600 shrink-0 disabled:cursor-not-allowed disabled:opacity-40"
                   >
-                    {playbackLabel(`core-feedback-${currentStep.id}`, '🔊', '⏸', '▶️')}
+                    {correctFlowStage === 'reward'
+                      ? '✓'
+                      : playbackLabel(`core-feedback-${currentStep.id}`, '🔊', '⏸', '▶️')}
                   </button>
                 </div>
-                <p className="mt-2 text-xs font-semibold text-emerald-600">
-                  聽完這段核心解說後，就會領取本題獎勵。
-                </p>
+                {correctFlowStage === 'core-feedback' && (
+                  <p className="mt-2 text-xs font-semibold text-emerald-600">
+                    聽完這段核心解說後，就會領取本題獎勵。
+                  </p>
+                )}
               </div>
             )}
             {feedback === 'correct' && correctFlowStage === 'reward' && celebration && (
@@ -2035,26 +2047,25 @@ export default function GuwenLessonDecode() {
               </div>
             )}
             {feedback === 'correct' && correctFlowStage === 'details' && !celebration && (
-              <div className="bg-emerald-50 rounded-xl p-4 space-y-2">
+              <div className="bg-sky-50 border-2 border-sky-200 rounded-xl p-4 space-y-2">
                 <div className="flex items-start justify-between gap-2">
-                  <p className="font-bold text-emerald-700">{currentStep.correctFeedback}</p>
+                  <p className="text-xs font-extrabold tracking-wide text-sky-700">詳解</p>
                   <button
                     type="button"
                     onClick={() =>
-                      togglePlayback(`explain-${currentStep.id}`, [
-                        ...feedbackSpeechUnits(currentStep.correctFeedback),
-                        ...(currentStep.pronunciationCues?.correctFeedback?.map((cue) => cue.speechText) ?? []),
-                        currentStep.explanation.replace(/\n+/g, ' '),
-                      ])
+                      togglePlayback(`explain-${currentStep.id}`, detailSpeechLines(currentStep))
                     }
                     aria-label="聽這段說明"
-                    className="text-emerald-600 shrink-0"
+                    className="text-sky-600 shrink-0"
                   >
                     {playbackLabel(`explain-${currentStep.id}`, '🔊', '⏸', '▶️')}
                   </button>
                 </div>
+                {speechParagraphs(currentStep.correctFeedback).slice(1).map((paragraph) => (
+                  <p key={paragraph} className="font-bold text-sky-800">{paragraph}</p>
+                ))}
                 {renderPronunciationCues(currentStep.pronunciationCues?.correctFeedback)}
-                <p className="text-sm text-emerald-700 whitespace-pre-line">{currentStep.explanation}</p>
+                <p className="text-sm text-sky-800 whitespace-pre-line">{currentStep.explanation}</p>
                 {currentStep.keyAwarded && (
                   <p className="text-xs text-amber-600 bg-white/70 rounded-lg p-2">
                     🔑 你破解了一把新密碼：{currentStep.keyAwarded.code} ＝ {currentStep.keyAwarded.decodedEvidence}
