@@ -78,7 +78,9 @@ function readingFor(character, text, characterIndex) {
     case '還':
       return known('ㄏㄞˊ', '孩', '仍然、尚未');
     case '幾':
-      return known('ㄐㄧˇ', '己', '多少');
+      return /幾乎/.test(around)
+        ? known('ㄐㄧ', '機', '接近、差一點')
+        : known('ㄐㄧˇ', '己', '多少');
     case '為':
       return /為什麼|因為/.test(around)
         ? known('ㄨㄟˋ', '胃', '為什麼或因為')
