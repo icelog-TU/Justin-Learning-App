@@ -79,22 +79,6 @@ type Lesson = {
   finalVerification: FinalVerification;
 };
 
-type PronunciationAuditCatalogItem = {
-  id: string;
-  lessonId: string;
-  questionId: string;
-  speechUnitId: string;
-  text: string;
-  targets: Array<{
-    character: string;
-    occurrence: number;
-    zhuyin: string;
-    homophoneCue: string;
-    usage: string;
-    cueMode: "known_usage" | "unresolved_target";
-  }>;
-};
-
 type StepBase = {
   id: string;
   type:
@@ -173,20 +157,11 @@ type FinalVerification = {
 - `uncertainty` 必須可顯示，不能併入正解後遺失；
 - 編輯者備註不得打包成孩子端 lesson step；
 - 最終白話文必須是受條件控制的欄位，不能出現在初始畫面資料中而被 UI 提前渲染。
-- 自第四篇起，編寫每題時只保存明確的「會播放／只顯示」欄位邊界，不逐題建立多音字候選表或提示；第一至第三篇既有表格保留、不回溯修改。全篇核准定稿後才正式掃描任務開場、本篇原文、App 引導語、古文線索、破解白話、任務／題目、選項、答對回饋與答錯提示。詳解、成人／出處及純顯示文字排除；白名單內不得按風險漏掉多音字。
-- 先合併完全相同句子，再按字形、指定讀音、讀音相關用法及相同 TTS／voice 條件分組，每組留一個代表 target，以最少完整代表句覆蓋所有群組後批次加入 `src/data/guwenPronunciationAudit.ts`。
-- 每個待實聽語音單元先加入 `src/data/guwenPronunciationAudit.ts`，再交由 `/#/tts-audit` 在目標裝置播放；臨時貼入網頁的句子只算待分類，不算正式建檔。
-- 實聽台讓使用者對每個目標位置分別選擇「念對／念錯」；同句多目標全部選完後，必須把逐目標 `targetResults[]` 寫入獨立的 Firestore 多音字資料庫並顯示回傳成功或失敗。localStorage 只作離線備份，不得當成唯一結果來源。
-- 只有使用者可以在孩子實際裝置親耳聽完後選擇「念對／念錯」。Coding agent、自動測試與捕捉到的 TTS 文字都不能驗證可聽見的發音，不得代填結果。
-- App 實作或教材交付前執行 `npm run tts:audit:pull`。中央確認念對者不建立孩子端提示；中央確認念錯者在每個受影響的朗讀位置，緊接完整整句另顯示一行正確讀音，不改寫原句。
+- 教材排版與發音直接在 `/#/guwen-draft-preview` 一起審核，正式實作後再於孩子 App 複核；不另做全文多音字掃描、catalog 建檔、實聽台上傳、中央回傳或兩階段結案。
+- 多音字實聽狀態不得作為教材核准、App 實作、commit、push 或部署的前置條件；既有 audit 資料只供歷史追溯，未經使用者明確要求不再擴充。
+- 預覽與正式 App 必須共用 `speak()`／`ttsSafe()`，並提供暫停、繼續與停止。實際念錯時以窄範圍 TTS 規則修正，不改孩子看到的古文原字，並測試鄰近用法不受誤傷。
 - 讀音提示必須用原句中的完整詞語定位目標字，禁止只寫「這裡」。若該字／詞仍是本題待破解目標，只提示讀音而不解釋意思，例如：`「得活」的得，發音同道德的德（ㄉㄜˊ）。`；若不是待破解目標，必須加入它在該句中的確切意思，例如：`「得活」的得，當作「得到……／能夠……」時，發音同道德的德（ㄉㄜˊ）。`
-- 同一 App 頁面內，同一字詞、同一讀音、同一用法只在第一次出現的完整句子下方顯示並朗讀一次提示；後續重複出現不再加註。換頁後只在新頁第一次出現處提示。每個實際語音單元仍須保留 TTS 讀音控制、catalog 建檔與真人實聽，不得把「不重複顯示」誤作「不用校對」。
-- 完整語音文字、TTS 輸入或目標字出現位置改變時，舊實測紀錄失效，必須重新建檔與實聽。
-- catalog 與 result 必須保存 exact `displayText`、`ttsInput`、`auditRevision`、`targetFingerprint`、`utteranceFingerprint` 與逐目標 `targetResults[]`；只有指紋全部相符且每個目標都有判定的結果才可產生教材結論。舊單目標結果可相容讀取；舊多目標整句沒有逐目標判定時列為待複驗。
-- 百篇教材對話統一以 `GUWEN-POLYPHONIC-AUDIT-RUNBOOK.md` 的兩階段短指令啟動；實作者必須自行讀取該檔，不得要求使用者為每篇重貼長版流程。
-- 正式 App 與實聽台必須共用同一個 zh-TW voice 選擇函式；result 保存實際 voice name、voiceURI、lang 與 default。瀏覽器未提供 voice 清單時必須標記為未解析系統預設。
-- 臨時貼入實聽台的「待分類」句子只作本機測試，不得寫入中央正式 catalog；先加入 `src/data/guwenPronunciationAudit.ts` 才能中央回傳。
-- 中央歷史可以日後用來統計經常念對的字、句型或 voice，但目前不得形成跨句永久白名單。只有 exact utterance、TTS input、目標位置、revision 與適用語音環境相符的有效結果才能沿用；免測政策必須另行實作並由使用者核准。
+- 同一 App 頁面內，同一字詞、同一讀音、同一用法若需要提示，只在第一次出現的完整句子下方顯示並朗讀一次；後續重複出現不再加註，換頁後再依該頁需要判斷。
 
 ## 6. 互動狀態與解鎖順序
 

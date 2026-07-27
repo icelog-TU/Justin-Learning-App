@@ -345,27 +345,14 @@ Firebase Web 設定不是伺服器密鑰；真正存取控制必須由 Firebase 
 
 測試時可 monkey-patch `window.speechSynthesis.speak` 與 `cancel` 捕捉送出的文字；不要整個替換唯讀的 `speechSynthesis` 物件，也不要替換原生 `SpeechSynthesisUtterance` 建構子。
 
-### 多音字 TTS 實聽台
+### App 預覽中的排版與發音審稿
 
-- 所有開始正式多音字第一／第二階段、App 實作／交付，或修改 TTS、讀音提示與多音字資料的 agent，除本文件外，必須在修改前完整閱讀 `GUWEN-TTS-CENTRAL-DATABASE-HANDOFF.md`；固定流程另見 `GUWEN-WORKFLOW-SOP.md` 的「全文定稿後的批次多音字查核流程」與「多音字 TTS 實聽台的固定入口與用法」。
-- 百篇教材的日常操作入口為 `GUWEN-POLYPHONIC-AUDIT-RUNBOOK.md`。使用者只需以「第 N 篇已經定稿，執行第一階段」與「第 N 篇已經全部實聽完成，讀回並套用」兩句短指令啟動；agent 必須自行讀取 Runbook，不得要求重貼長版流程。
-- 專用路由：`/#/tts-audit`；不放入孩子的主選單，由教材編輯者直接開啟。
-- 頁面：`src/pages/TtsAuditPage.tsx`。
-- 每篇教材完成後，只掃任務開場、本篇原文、App 引導語、古文線索、破解白話、任務／題目、選項、答對回饋、答錯提示；詳解、成人／出處與純顯示文字排除。白名單內全部多音字都要盤點，再按字形、指定讀音、讀音相關用法及相同 TTS／voice 條件去重，每組只留一個代表 target，以最少完整代表句覆蓋所有群組。
-- 自第四篇起，逐題編寫只標示「會播放／只顯示」，不維護逐題候選表、不預加讀音提示；全文核准後才進入上述正式批次。第一至第三篇既有表格保留，不回溯修改。
-- Agent 負責找字、整理完整句子、批次建正式 catalog、部署與讀回；agent 和自動化測試都不能聽見 Web Speech 的實際發音，不得代替使用者按「念對／念錯」。判定權只屬於在孩子實際裝置逐句聽完的使用者。
-- 所有播放都呼叫正式 App 的 `speak()`，因此會經過同一套 `ttsSafe()` 修音規則。
-- 正式候選資料：`src/data/guwenPronunciationAudit.ts`；每筆依篇章、題號、穩定語音單元 ID 與目標字具體出現位置建檔。
-- 雲端讀寫：`src/lib/ttsAuditCloud.ts`。沿用既有匿名 Firebase Authentication，但使用獨立的 `families/GUWENTTS-*` 文件；不得併入孩子的 `AppData`。
-- 每個多音字目標各有自己的「念對／念錯」判定；同一句有多個目標時，全部選完才寫入中央資料庫。中央 schema v3 保存逐目標結果，不能用整句單一狀態掩蓋「一字念對、一字念錯」。
-- 寫入後畫面必須顯示成功、失敗或重送狀態；成功寫入會產生回傳編號。另提供「重新同步全部結果」作為補送入口。
-- 可一次貼入多行完整語音單元、逐句或依序播放，並複製包含裝置與可見 `zh-TW` 聲音資訊的備份。臨時加入者標為「待分類」，正式使用前要補進候選資料檔。
-- 有效「念對／念錯」可套用到同一已核准讀音群組的所有白名單位置，但不得跨不同讀音、用法或 TTS／voice 條件。念錯群組需逐位置就近顯示提示，不改寫原句。
-- 獨立 localStorage key `guwen-tts-audit-v1` 只作離線備份與舊版資料遷移；它不是正式資料庫，也不得同步到孩子的 Firestore 學習資料。
-- 編輯代理開始多音字工作時先執行 `npm run tts:audit:pull`，讀回中央資料庫後再更新教材主檔與孩子端提示。
-- `getTtsInput()` 只供成人測試頁查看實際送入語音引擎的文字；正式孩子畫面仍顯示原文。
-- 中央資料庫 schema v3 會把 `displayText`、`ttsInput`、`auditRevision`、目標指紋、語音單元指紋與逐目標 `targetResults[]` 同時保存在 catalog/result；只有完全相符且每個目標都有判定的 result 才能產生有效結論，舊結果保留但顯示待複驗。舊版無逐目標資料的單目標結果可相容讀取，多目標整句必須重測。
-- 正式 App 與實聽台共用 `selectZhTwVoice()`；若瀏覽器提供 zh-TW voice，會明確設定並回傳 name／voiceURI／lang／default，否則標記為 `unresolved_default`。
+- 古文的排版與發音不再拆成獨立多音字工程；成人直接在 `/#/guwen-draft-preview` 檢查 GitHub MD，正式實作後再於孩子 App 檢查同一套播放行為。
+- 預覽與正式 App 的所有朗讀都走共用 `speak()`／`ttsSafe()`，並提供暫停、繼續與停止。切換篇目、題目或作答狀態時要停止上一段語音。
+- 審稿時逐畫面檢查作答前、第一次答錯與答對後的可見排列和實際朗讀；出處與成人資料只顯示、不朗讀。
+- 發現實際念錯時，在同一輪審稿內以最窄範圍修正 `ttsSafe()` 或該語音單元的 TTS 行為，保留孩子看到的古文原字與真實古文線索，並加入防止誤傷鄰近用法的測試。
+- 不再要求全文多音字掃描、候選去重、正式 catalog 建檔、實聽台上傳、中央回傳或第二階段讀回。這些都不是教材核准、App 實作、commit、push 或部署的前置條件。
+- 舊 `/#/tts-audit`、`src/data/guwenPronunciationAudit.ts`、`src/lib/ttsAuditCloud.ts` 與既有 Firestore／stage 紀錄暫時保留作歷史資料；除非使用者明確要求維護舊系統，不得為新篇新增資料或重新啟動舊流程。
 
 ### 音效
 
