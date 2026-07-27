@@ -1,11 +1,4 @@
 interface:
-  display_name: "古文破譯教材與實作"
-  short_description: "忠實保留古文原文，協作改善白話教材內容與 App 互動設計"
-  default_prompt: "Use $design-guwen-decoding to implement this lesson faithfully and propose any modern-copy or interaction improvements for approval."
-policy:
-  products:
-    - chatgpt
-    - codex
-    - api
-    - atlas
-  allow_implicit_invocation: true
+  display_name: "古文教材設計與審稿"
+  short_description: "設計、重寫與審核古文破譯家教材，不處理正式 App 實作"
+  default_prompt: "Use $design-guwen-decoding to work only on the active lesson curriculum content and approval scope."

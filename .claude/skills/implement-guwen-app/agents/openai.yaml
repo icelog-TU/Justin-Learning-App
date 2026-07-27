@@ -1,0 +1,4 @@
+interface:
+  display_name: "古文正式 App 實作"
+  short_description: "把已核准教材忠實轉入正式 App，維護互動、進度、獎勵與 TTS"
+  default_prompt: "Use $implement-guwen-app to implement the approved active lesson without changing its curriculum content."

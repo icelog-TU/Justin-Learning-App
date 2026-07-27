@@ -1,9 +1,16 @@
 # Repository instructions
 
-Before changing any file, read `FULL-SITE-HANDOFF.md` completely.
+Use the existing branch `claude/chinese-learning-app-justin-yjcfam`; do not create another branch. Before editing, fetch the remote branch, inspect `git status`, preserve existing work, and reread every target file from the remote latest version.
 
-Use the existing branch `claude/chinese-learning-app-justin-yjcfam`; do not create another branch. If the task touches 古文破譯家, also follow `GUWEN-WORKFLOW-SOP.md`, `GUWEN-PROJECT-STATUS.md`, the relevant lesson master file, and the two skills under `.claude/skills/`.
+Choose one primary task path:
 
-Pronunciation is reviewed together with layout in the GitHub MD App preview and, after implementation, in the formal App. Do not start a separate polyphonic-character scan, create or update a pronunciation-audit catalog, ask the user to complete the old listening page, pull central audit results, or wait for a listening result before committing, pushing, deploying, or implementing approved content. If the preview exposes a real pronunciation problem, fix the narrowly scoped TTS behavior in the normal preview-review cycle without changing the displayed classical text. The existing audit page, catalog, cloud records, stage reports, and two audit handoff files are retained only as historical infrastructure and are not delivery gates unless the user explicitly asks to maintain or inspect that legacy system.
+- **古文教材設計、撰寫或審稿**：read `GUWEN-WORKFLOW-SOP.md`, then use `.claude/skills/design-guwen-decoding/SKILL.md`. Read only the target lesson master, its row in `GUWEN-PROJECT-STATUS.md`, relevant entries in `guwen-decoder-learned-keys.md`, and conditional references named by the skill.
+- **核准古文教材轉入正式 App、古文 UI、進度、獎勵或 TTS 實作**：read `FULL-SITE-HANDOFF.md`, `GUWEN-WORKFLOW-SOP.md`, then use `.claude/skills/implement-guwen-app/SKILL.md`. Treat the approved lesson master as immutable content.
+- **只修教材 Markdown 結構或預覽解析**：also read `GUWEN-MARKDOWN-FORMAT.md`.
+- **維護整個古文工作流程或 skill**：read both skills and the shared workflow files, but do not load lesson masters unless needed to verify a concrete conflict.
 
-Current code and the explicit instructions in the user's active task take precedence over stale historical documentation. Run the validation required by `FULL-SITE-HANDOFF.md` before delivery.
+Do not load both skills for a single-path task. Use both only when the user explicitly requests content changes and App implementation together; handle those as separate approval and implementation passes.
+
+Pronunciation is reviewed with layout in `/#/guwen-draft-preview` and again in the formal App after implementation. Do not start a separate polyphonic scan, build or update an audit catalog, ask for old listening-page decisions, pull central audit results, or make legacy audit state a gate for approval, implementation, commit, push, or deployment. Legacy audit files and cloud records are historical unless the user explicitly asks to maintain that system.
+
+The user's active instruction has highest priority. Current code and the active lesson master outrank historical documents. Run task-appropriate validation before delivery.

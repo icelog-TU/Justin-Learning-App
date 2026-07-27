@@ -8,8 +8,9 @@ import { shouZhuDaiTuLesson } from './shouZhuDaiTuLesson';
  * guwen.ts. Cross-text clues here must be REAL classical excerpts (never modern-Chinese sentences), each
  * with a pre-unlocked vernacular gloss and a traceable source, and the child reconstructs multi-part
  * phrases from separately-decoded "decoding keys" before the full text's translation is ever revealed.
- * See .claude/skills/design-guwen-decoding/SKILL.md and .claude/skills/guwen-decoder/SKILL.md for the full
- * design contract this format follows. This is the only active classical-text lesson model in the app.
+ * See .claude/skills/design-guwen-decoding/SKILL.md for curriculum rules and
+ * .claude/skills/implement-guwen-app/SKILL.md for the production implementation contract.
+ * This is the only active classical-text lesson model in the app.
  */
 
 export interface PronunciationCue {

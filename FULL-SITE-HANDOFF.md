@@ -9,15 +9,10 @@
 
 1. Clone repo，切到既有的 `claude/chinese-learning-app-justin-yjcfam`；不要建立新分支。
 2. 完整閱讀本文件。
-3. 若工作涉及「古文破譯家」，再依序閱讀：
-   - `GUWEN-WORKFLOW-SOP.md`
-   - `GUWEN-PROJECT-STATUS.md`
-   - `design-standard.md`
-   - `guwen-decoder-learned-keys.md`
-   - `.claude/skills/guwen-decoder/SKILL.md`
-   - `.claude/skills/design-guwen-decoding/SKILL.md`
-   - `.claude/skills/design-guwen-decoding/references/app-implementation-contract.md`
-   - 本次涉及的唯一教材主檔
+3. 若工作涉及「古文破譯家」，先由 `AGENTS.md` 與 `GUWEN-WORKFLOW-SOP.md` 判斷任務路徑：
+   - 教材設計／審稿只使用 `.claude/skills/design-guwen-decoding/SKILL.md` 與該篇 active 主檔；不必為純教材工作閱讀本文件其餘全站章節。
+   - 已核准教材轉 App、古文 UI、進度、獎勵或 TTS 程式修改，使用 `.claude/skills/implement-guwen-app/SKILL.md`，並按該 skill 的條件載入實作 references。
+   - 不得因任務涉及古文就同時全文載入兩個 skill、整份進度表與完整鑰匙庫。
 4. 若工作涉及朗讀或發音，完整閱讀 `src/lib/speech.ts` 中 `ttsSafe()` 上方的活文件註解。
 5. 安裝鎖定版本依賴並確認基準：
 
@@ -288,7 +283,9 @@ Firebase Web 設定不是伺服器密鑰；真正存取控制必須由 Firebase 
 
 ## 10. 古文破譯家
 
-完整規格以古文 SOP、skill、進度表及教材主檔為準。本節只列全站接手摘要。
+完整任務路由以古文 SOP 為準。本節只列正式 App 的全站接手摘要；教材設計規則由
+`.claude/skills/design-guwen-decoding/SKILL.md` 負責，App 實作規則由
+`.claude/skills/implement-guwen-app/SKILL.md` 負責。
 
 核心學習鏈：
 
@@ -394,7 +391,7 @@ git status --short
 ## 14. 已知維護注意事項
 
 1. `README.md` 可能落後於現行雲端同步與功能規模；本文件與程式碼優先。
-2. Repo 目前有根目錄與 `lessons/` 下內容不同的《長竿入城》檔案，以及兩份內容不同的 design standard。處理古文前必須依 SOP、最新進度表與使用者確認唯一主檔，不得自行刪除或合併。
+2. Repo 允許保留孩子實測後重寫前的教材版本，但 `GUWEN-PROJECT-STATUS.md` 必須明列每篇 active 路徑。Archived、draft-rewrite 與 active 不得互相覆蓋；狀態未確認時不得自行選檔、刪除或合併。
 3. `GachaPage.tsx` 的部分靜態說明可能仍只提到 2 的 n 次方，但目前角色池已擴充至八個 base。
 4. npm 依賴掃描可能回報安全風險；不要未經評估就執行 `npm audit fix --force`，因為它可能帶來破壞性升級。
 
