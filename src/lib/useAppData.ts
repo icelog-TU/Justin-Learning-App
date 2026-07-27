@@ -12,6 +12,7 @@ import {
   earnRewards,
   rollGacha as rollGachaMutation,
   giveHeart as giveHeartMutation,
+  markCharacterInteractionSeen as markCharacterInteractionSeenMutation,
   recordChainLink,
   updateLongestChain,
   addCustomIdiom as addCustomIdiomMutation,
@@ -166,6 +167,16 @@ export function useAppData() {
     return outcome.success;
   }, []);
 
+  const markCharacterInteractionSeen = useCallback((id: string, tierIndex: number) => {
+    setData((prev) => ({
+      ...markCharacterInteractionSeenMutation(
+        { ...prev, seenCharacterInteractions: { ...prev.seenCharacterInteractions } },
+        id,
+        tierIndex,
+      ),
+    }));
+  }, []);
+
   const addChainLink = useCallback(() => {
     setData((prev) => ({ ...recordChainLink({ ...prev }) }));
   }, []);
@@ -241,6 +252,7 @@ export function useAppData() {
     reward,
     rollGacha,
     giveHeart,
+    markCharacterInteractionSeen,
     addChainLink,
     reportChainLength,
     celebration,

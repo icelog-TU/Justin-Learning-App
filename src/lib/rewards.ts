@@ -156,6 +156,16 @@ export function characterMaxHearts(id: string): number {
   return parsed.exponent;
 }
 
+export function characterInteractionTierCount(maxHearts: number): number {
+  return Math.max(1, Math.round(maxHearts / 2));
+}
+
+/** Zero-based interaction position -> the heart count that unlocks it. */
+export function characterInteractionRequiredHearts(tierIndex: number, maxHearts: number): number {
+  const tierCount = characterInteractionTierCount(maxHearts);
+  return Math.round(((tierIndex + 1) / tierCount) * maxHearts);
+}
+
 export function characterLabelFromId(id: string): string {
   const parsed = parseCharacterId(id);
   if (parsed.kind === 'square') return formatSquareCharacterLabel(parsed.squareBase);

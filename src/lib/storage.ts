@@ -14,6 +14,8 @@ import {
   cubeCharacterId,
   ownedCubeCharacterCount,
   characterMaxHearts,
+  characterInteractionTierCount,
+  characterInteractionRequiredHearts,
   type GachaResult,
 } from './rewards';
 import type { CustomChainEntry } from './chainGame';
@@ -93,6 +95,8 @@ export interface AppData {
   dailyEarnings: Record<string, DailyEarning>;
   /** character id ("base^exponent") -> hearts given so far */
   characters: Record<string, number>;
+  /** character id -> zero-based interaction positions Justin has already opened */
+  seenCharacterInteractions: Record<string, number[]>;
   /** Consecutive gacha rolls since the last brand-new character — drives the pity guarantee. */
   gachaPityCounter: number;
   chainStats: ChainStats;
@@ -122,6 +126,7 @@ function emptyData(): AppData {
     totalStarsEarned: 0,
     dailyEarnings: {},
     characters: {},
+    seenCharacterInteractions: {},
     gachaPityCounter: 0,
     chainStats: { totalLinks: 0, longestChain: 0 },
     customIdioms: [],
@@ -170,13 +175,34 @@ export function reconcileLearningDates(data: AppData): AppData {
 }
 
 /**
+ * The old app only remembered opened interactions in component state. There is no honest way to distinguish
+ * which legacy unlocked buttons Justin opened, so mark all currently unlocked ones as seen during the one-time
+ * schema migration. This avoids falsely presenting as many as 25 old interactions as brand-new after upgrading;
+ * interactions unlocked later still start unseen and sparkle normally.
+ */
+function migrateLegacySeenCharacterInteractions(characters: Record<string, number>): Record<string, number[]> {
+  return Object.fromEntries(
+    Object.entries(characters).map(([id, hearts]) => {
+      const maxHearts = characterMaxHearts(id);
+      const seen = Array.from({ length: characterInteractionTierCount(maxHearts) }, (_, index) => index)
+        .filter((index) => hearts >= characterInteractionRequiredHearts(index, maxHearts));
+      return [id, seen];
+    }),
+  );
+}
+
+/**
  * Fills in any fields missing from `partial` with their empty-state default. Needed anywhere data can
  * come from outside this running app version — localStorage from an older build, or a cloud snapshot
  * pushed before a field like guwenProgress existed — since a field that's simply absent (not just empty)
  * would otherwise crash any code that assumes every AppData key is always present.
  */
 export function normalizeAppData(partial: Partial<AppData>): AppData {
-  return reconcileLearningDates(reconcileLongestChain({ ...emptyData(), ...partial }));
+  const normalized = { ...emptyData(), ...partial };
+  if (partial.seenCharacterInteractions === undefined) {
+    normalized.seenCharacterInteractions = migrateLegacySeenCharacterInteractions(normalized.characters);
+  }
+  return reconcileLearningDates(reconcileLongestChain(normalized));
 }
 
 export function loadData(): AppData {
@@ -333,6 +359,16 @@ export function giveHeart(data: AppData, id: string): { data: AppData; success: 
   data.stars -= HEART_COST_STARS;
   data.characters[id] = hearts + 1;
   return { data, success: true };
+}
+
+export function markCharacterInteractionSeen(data: AppData, id: string, tierIndex: number): AppData {
+  const current = data.seenCharacterInteractions[id] ?? [];
+  if (current.includes(tierIndex)) return data;
+  data.seenCharacterInteractions = {
+    ...data.seenCharacterInteractions,
+    [id]: [...current, tierIndex].sort((a, b) => a - b),
+  };
+  return data;
 }
 
 export function recordChainLink(data: AppData): AppData {

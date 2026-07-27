@@ -5,17 +5,22 @@ import {
   HEART_COST_STARS,
   parseCharacterId,
   formatBigNumber,
-  characterValue,
   characterValueFromId,
   characterLabelFromId,
   characterMaxHearts,
   characterColor,
   maxExponentForBase,
   characterCollectionIndexFromId,
+  characterInteractionTierCount,
+  characterInteractionRequiredHearts,
   SQUARE_CHARACTER_COUNT,
   CUBE_CHARACTER_COUNT,
 } from '../lib/rewards';
 import { numberToChineseWords } from '../lib/chineseNumber';
+import {
+  characterInteractionTemplateIndex,
+  characterNumberInteractionMessage,
+} from '../lib/characterInteractions';
 import { speak } from '../lib/speech';
 import { playPageEnterSound, playHeartSound, playInteractionSound, playUnlockFanfare } from '../lib/sound';
 
@@ -75,8 +80,8 @@ const TEMPLATES: {
 }[] = [
   { icon: '👋', label: '打招呼', message: (base, exponent) => `你好！我是 ${base} 的 ${exponent} 次方！` },
   {
-    icon: '💬', label: '聊聊天', message: (base, exponent) =>
-      `如果每次都變成 ${base} 倍，重複 ${exponent} 次，會變成原來的 ${formatBigNumber(characterValue(base, exponent))} 倍！`,
+    icon: '💬', label: '聊聊天', message: (base, _exponent, requiredHearts) =>
+      characterNumberInteractionMessage(base, requiredHearts),
   },
   { icon: '🍽️', label: '一起吃飯', message: (base, exponent) => `我們一起吃了${pick(FOODS, seedFor(base, exponent, 2))}，好好吃！` },
   { icon: '🎤', label: '一起唱歌', message: (base, exponent) => `我們一起唱了《${pick(SONGS, seedFor(base, exponent, 3))}》，唱得好開心！` },
@@ -120,16 +125,19 @@ const TEMPLATES: {
  * Each character receives a different deterministic walk through the 33 templates. Seven is coprime with 33,
  * so a character never repeats a template before all 33 have been visited. The collection index changes the
  * starting point for every character. A unique memory code is also appended to every message, which makes the
- * complete interaction text globally unique across all 368 characters even when two activities share a theme.
+ * complete interaction text globally unique across the whole collection even when two activities share a theme.
  */
 function buildInteractionTiers(id: string, base: number, exponent: number, maxHearts: number): InteractionTier[] {
-  const tierCount = Math.max(1, Math.round(maxHearts / 2));
+  const tierCount = characterInteractionTierCount(maxHearts);
   const characterIndex = characterCollectionIndexFromId(id);
   const label = characterLabelFromId(id);
   const tiers: InteractionTier[] = [];
   for (let i = 1; i <= tierCount; i++) {
-    const requiredHearts = Math.round((i / tierCount) * maxHearts);
-    const templateIndex = (characterIndex + (i - 1) * 7) % TEMPLATES.length;
+    const requiredHearts = characterInteractionRequiredHearts(i - 1, maxHearts);
+    // Justin wants the four-heart/second interaction to always explain the character's multiplication.
+    // Swap its former activity into the one position that previously held the number template, leaving every
+    // other deterministic activity unchanged and preserving the no-duplicates guarantee.
+    const templateIndex = characterInteractionTemplateIndex(characterIndex, i - 1, TEMPLATES.length);
     const template = TEMPLATES[templateIndex];
     const memoryCode = `${characterIndex + 1}-${i}`;
     tiers.push({
@@ -169,12 +177,11 @@ function buildHeartParticles(idSeed: number): HeartParticle[] {
 export default function CharacterDetailPage() {
   const { id: rawId } = useParams<{ id: string }>();
   const id = rawId ? decodeURIComponent(rawId) : '';
-  const { data, giveHeart } = useAppDataContext();
+  const { data, giveHeart, markCharacterInteractionSeen } = useAppDataContext();
   const [message, setMessage] = useState<string | null>(null);
   const [justUnlocked, setJustUnlocked] = useState<number | null>(null);
   const [heartParticles, setHeartParticles] = useState<HeartParticle[]>([]);
   const [shaking, setShaking] = useState(false);
-  const [seenTiers, setSeenTiers] = useState<Set<number>>(new Set());
   const particleIdRef = useRef(0);
 
   useEffect(() => { playPageEnterSound(); }, []);
@@ -200,6 +207,7 @@ export default function CharacterDetailPage() {
   const isFull = hearts >= maxHearts;
   const canGiveHeart = !isFull && data.stars >= HEART_COST_STARS;
   const tiers = buildInteractionTiers(id, base, exponent, maxHearts);
+  const seenTiers = new Set(data.seenCharacterInteractions[id] ?? []);
   const value = characterValueFromId(id);
   const label = characterLabelFromId(id);
   const color = characterColor(
@@ -242,7 +250,7 @@ export default function CharacterDetailPage() {
     setMessage(tier.message);
     playInteractionSound();
     speak(tier.message);
-    setSeenTiers((prev) => new Set(prev).add(index));
+    markCharacterInteractionSeen(id, index);
   }
 
   return (
