@@ -344,6 +344,10 @@ Known Playwright gotcha in this feature specifically: `page.click('text=開始�
 
 Every one of 守株待兔's "把密碼放回「XYZ」" reconstruction sections has real `選項`/`正解`/`答錯提示` in the source doc — none needed `RevealStep`. Don't assume a new lesson needs `RevealStep` just because 刻舟求劍 used several; check each "組合問題" section's own content for actual options before deciding (see the authoring template's §3).
 
+### Preserve an approved pre-accept full-text opening as one screen
+
+The rewritten 守株待兔 opening explicitly orders three pieces before the child accepts the mission: the AI request, the complete unchanged classical text, then a short readiness line. The shared lesson model now supports `missionOpeningFullText` plus `introClosingLine`; use these when a master file specifies that order, so the accept action enters question 1 directly instead of inserting the legacy extra listening screen. Split blank-line-separated opening and step-intro paragraphs into separate TTS utterances, matching the formal audit catalog's exact playable units.
+
 ### 刻舟求劍's six `RevealStep`s all got converted to graded reconstruction steps — a real bug, not a design choice that changed
 
 The user caught this by using the app themselves: at every "把所有密碼鑰匙組合起來" moment in 刻舟求劍, the screen showed the assembled sentence and a single continue button — no question, no options, nothing to actually do. "小孩子讀完這一頁沒有互動，直接按按鈕就跳到下一題了。" This wasn't a deliberate "no genuine distractor exists" case (the one legitimate reason `RevealStep` exists, per the bullet above) — it was simply never re-examined after the format's `RevealStep` type was introduced *for this lesson specifically*. The user had ChatGPT rewrite every one of these moments into a real multiple-choice question and supplied the revised markdown; the fix was applying that content, not inventing new questions from scratch.

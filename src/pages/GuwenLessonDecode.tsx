@@ -145,6 +145,10 @@ function stepIntroLeadIn(step: LessonStep): string {
   return step.intro.trim().slice(0, step.intro.trim().length - step.question.trim().length).trim();
 }
 
+function speechParagraphs(text: string): string[] {
+  return text.split(/\n{2,}/).map((line) => line.trim()).filter(Boolean);
+}
+
 /** The full auto-play script for a step, as separate lines (queued with speakSequence so each one fully
  * finishes before the next starts). Clues/keys are part of the auto-play here — the child needs to hear all
  * the evidence before the question makes sense, mirroring the guwen-decoder skill's 'pattern' puzzle rule. */
@@ -152,7 +156,7 @@ function stepAutoPlayLines(step: LessonStep): string[] {
   const lines: string[] = [
     step.targetSentence,
     ...(step.pronunciationCues?.targetSentence?.map((cue) => cue.speechText) ?? []),
-    step.intro,
+    ...speechParagraphs(step.intro),
     ...(step.pronunciationCues?.intro?.map((cue) => cue.speechText) ?? []),
   ];
   if (step.type === 'evidence') {
@@ -422,10 +426,12 @@ export default function GuwenLessonDecode() {
   useEffect(() => {
     if (phase !== 'intro' || !lesson) return;
     speakSequence([
-      lesson.introSpokenLine,
+      ...(lesson.missionOpeningFullText
+        ? speechParagraphs(lesson.introSpokenLine)
+        : [lesson.introSpokenLine]),
       ...(lesson.introPronunciationCues?.map((cue) => cue.speechText) ?? []),
-      `標題是《${lesson.title}》。`,
-      INTRO_HINT,
+      ...(lesson.missionOpeningFullText ? [lesson.fullText] : [`標題是《${lesson.title}》。`]),
+      lesson.introClosingLine ?? INTRO_HINT,
     ]);
     return () => cancelSpeech();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1726,7 +1732,7 @@ export default function GuwenLessonDecode() {
                 style={{ animation: 'ceremony-claim-message 0.45s cubic-bezier(.2,.9,.3,1.2) both' }}
               >
                 <p className="text-xl font-black text-yellow-100">
-                  恭喜你得到第 {badgeNumber} 枚徽章！
+                  {lesson.badgeClaimSuccessMessage ?? `恭喜你得到第 ${badgeNumber} 枚徽章！`}
                 </p>
                 <p className="mt-1 text-sm font-medium text-cyan-100">徽章已加入你的收藏</p>
               </div>
@@ -1767,14 +1773,32 @@ export default function GuwenLessonDecode() {
             <p className="text-xs text-gray-400">{lesson.source}</p>
             <p className="text-gray-600 whitespace-pre-line">{lesson.introSpokenLine}</p>
             {renderPronunciationCues(lesson.introPronunciationCues)}
-            {renderPassage()}
-            <p className="text-sm text-gray-400">{INTRO_HINT}</p>
+            {lesson.missionOpeningFullText ? (
+              <>
+                <p className="text-lg font-semibold leading-relaxed text-gray-800">{lesson.fullText}</p>
+                <button
+                  type="button"
+                  onClick={() => togglePlayback('intro-full-text', lesson.fullText)}
+                  className="text-sm font-medium text-sky-600"
+                >
+                  {playbackLabel('intro-full-text', '🔊 播放全文', '⏸ 暫停播放', '▶️ 重新播放')}
+                </button>
+              </>
+            ) : (
+              renderPassage()
+            )}
+            <p className="text-sm text-gray-400">{lesson.introClosingLine ?? INTRO_HINT}</p>
           </div>
           <button
             type="button"
             onClick={() => {
-              speak(INTRO_LINE);
-              setPhase('listening');
+              if (lesson.missionOpeningFullText) {
+                cancelSpeech();
+                setPhase('steps');
+              } else {
+                speak(INTRO_LINE);
+                setPhase('listening');
+              }
             }}
             className="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-xl py-3"
           >

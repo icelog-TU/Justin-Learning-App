@@ -1,6 +1,7 @@
 import { zhengRenMaiLuLesson } from './zhengRenMaiLuLesson';
 import { wangRongLesson } from './wangRongLesson';
 import { simaGuangLesson } from './simaGuangLesson';
+import { shouZhuDaiTuLesson } from './shouZhuDaiTuLesson';
 
 /**
  * 古文破譯家 — "Lesson" format: a stricter evidence-based methodology than the original GuwenWord model in
@@ -243,6 +244,10 @@ export interface GuwenLesson {
   introHeadline?: string;
   /** App 開場白 — spoken on the intro screen. */
   introSpokenLine: string;
+  /** Optional approved line shown after the full text and before the mission-accept action. */
+  introClosingLine?: string;
+  /** Keeps an approved opening's full-text playback and mission acceptance on the same screen. */
+  missionOpeningFullText?: boolean;
   introPronunciationCues?: PronunciationCue[];
   acceptMissionLabel?: string;
   fullText: string;
@@ -263,6 +268,7 @@ export interface GuwenLesson {
   finalVerification: FinalVerification;
   badgeName?: string;
   badgeClaimLabel?: string;
+  badgeClaimSuccessMessage?: string;
   /** Places the first badge-claim action after the completed verification scroll instead of in an auto dialog. */
   badgeClaimMode?: 'scroll-end';
   /** Keeps the source lesson's audited option sequence instead of applying the legacy balancing adapter. */
@@ -1557,7 +1563,7 @@ export const keZhouQiuJianLesson: GuwenLesson = {
 
 export { wangRongLesson };
 
-export const shouZhuDaiTuLesson: GuwenLesson = {
+export const legacyShouZhuDaiTuLesson: GuwenLesson = {
   id: 'shou-zhu-dai-tu',
   title: '守株待兔',
   source: '《韓非子・五蠹》',
