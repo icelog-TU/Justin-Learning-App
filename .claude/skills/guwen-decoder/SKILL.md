@@ -358,6 +358,18 @@ The user caught this by using the app themselves: at every "把所有密碼鑰�
 
 When the user explicitly removes a repeated evidence recap from a `story_reasoning` screen, preserve the approved short request and let the options carry the concrete candidate groupings. Do not reinsert the same preceding sentences as a numbered evidence list or add a second question that restates the request. If the approved `intro` already ends with the exact request, set `question` to that same trailing sentence so `questionRepeatsIntro()` and `stepIntroLeadIn()` render and speak it exactly once.
 
+## Keep graded reconstruction screens to one key notice and one direct question
+
+The user found reconstruction screens especially tiring because the same task was often repeated across `intro`, the key table, and `question`: first announcing that the keys were ready, then describing how to combine them, then asking which complete scene was correct. Each sentence looked defensible alone, but the full screen repeated one instruction three times.
+
+For an approved graded reconstruction, preserve this minimal child-facing structure:
+
+1. `下面是我們已經取得的密碼鑰匙。`
+2. the existing key table;
+3. `「原文句子」最符合下面哪一個選項？`
+
+Let the options carry missing-action, added-detail, direction, order, or evidence-boundary differences. Do not restate those differences before the child answers. Audit the entire rendered and spoken screen as one unit; if removing a sentence leaves the task equally clear and answerable, remove it.
+
 ## Open / pending decisions (check with the user before assuming)
 
 As of this writing, seven lessons exist in `guwenLessons` (in display order): `wangRongLesson` (王戎不取道旁李), `simaGuangLesson` (司馬光破甕救友), `keZhouQiuJianLesson` (刻舟求劍), `shouZhuDaiTuLesson` (守株待兔), `yaMiaoZhuZhangLesson` (揠苗助長), `yanErDaoZhongLesson` (掩耳盜鐘), and `zhengRenMaiLuLesson` (鄭人買履). All seven are implemented in the evidence-lesson format; the 2026-07-26 王戎 replacement has 22 regular steps plus ordering and strict multi-select closings.
