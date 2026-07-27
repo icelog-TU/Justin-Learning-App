@@ -95,8 +95,8 @@ for (const item of GUWEN_PRONUNCIATION_AUDIT_CATALOG) {
 
 assert.equal(wangRongItemCount, 22, '第一篇應有 21 個代表句及 1 個 exact 例外語音單元');
 assert.equal(wangRongTargetCount, 42, '第一篇應涵蓋 41 個讀音群組及 1 個 exact 例外 target');
-assert.equal(simaGuangItemCount, 27, '第二篇減量後應有 27 個代表語音單元');
-assert.equal(simaGuangTargetCount, 62, '第二篇減量後應涵蓋 62 個讀音群組');
+assert.equal(simaGuangItemCount, 26, '第二篇七題修訂後應有 26 個代表語音單元');
+assert.equal(simaGuangTargetCount, 61, '第二篇七題修訂後應涵蓋 61 個讀音群組');
 assert(
   GUWEN_PRONUNCIATION_AUDIT_CATALOG.every(
     (item) =>

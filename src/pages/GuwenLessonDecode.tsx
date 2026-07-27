@@ -1079,6 +1079,15 @@ export default function GuwenLessonDecode() {
     );
   }
 
+  function excludeAlreadyDisplayedPronunciationCues(
+    cues?: PronunciationCue[],
+    alreadyDisplayed?: PronunciationCue[],
+  ) {
+    if (!cues?.length) return undefined;
+    const displayedTexts = new Set(alreadyDisplayed?.map((cue) => cue.displayText) ?? []);
+    return cues.filter((cue) => !displayedTexts.has(cue.displayText));
+  }
+
   function renderClue(clue: ClassicalClue, i: number) {
     return (
       <div key={i} className="rounded-xl border-2 border-gray-200 bg-gray-50 px-4 py-3 space-y-1.5">
@@ -1798,7 +1807,12 @@ export default function GuwenLessonDecode() {
                     </button>
                     <span className="text-sm text-gray-600">{s}</span>
                   </div>
-                  {renderPronunciationCues(lesson.sentencePronunciationCues?.[i])}
+                  {renderPronunciationCues(
+                    excludeAlreadyDisplayedPronunciationCues(
+                      lesson.sentencePronunciationCues?.[i],
+                      lesson.fullTextPronunciationCues,
+                    ),
+                  )}
                 </div>
               ))}
             </div>
