@@ -53,12 +53,13 @@ Do not restore the deleted word-puzzle format. Reuse shared types and components
 
 For a regular graded step:
 
-1. Hide options and show the first blank-line-separated paragraph of `correctFeedback` as an independent core-answer card.
-2. Auto-play that paragraph completely.
+1. Hide options and show the complete `correctFeedback` field as an independent core-answer card.
+2. Auto-play the complete core answer.
 3. Keep the core card visible; only then show rewards underneath and run the reward animation.
-4. After rewards settle, add a separate `詳解` card containing only remaining `correctFeedback` paragraphs and `explanation`.
-5. Start detail playback at the detail content; never replay the core answer.
-6. Show keys and the next-step action only after the required teaching and reward sequence.
+4. After rewards settle, add a separate `詳解` card containing only `explanation`; never move extra `correctFeedback` paragraphs into it.
+5. Start detail playback at `explanation`; never replay the core answer.
+6. Show keys and the next-step action when the detail card appears. Detail reading or playback is optional and must never gate the next step.
+7. If the child chooses the next step while detail audio is playing, cancel that playback and advance immediately.
 
 Track and clear delayed playback or fallback timers. Guard reward writes so speech `onend` and a fallback cannot grant twice.
 

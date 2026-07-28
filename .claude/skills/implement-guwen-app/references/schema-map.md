@@ -27,9 +27,9 @@
 | `## 請古文破譯家提交解法` | `question` |
 | `## 選項` | `options`，照核准順序 |
 | `## 正確答案` | `correctIndex`，轉為零起算 |
-| `## 答對回饋` | `correctFeedback` |
+| `## 答對回饋` | `correctFeedback`；完整欄位即核心解答，不以空行切出詳解 |
 | `## 第一次答錯提示` | `retryHint` |
-| `## 詳解` | `explanation` |
+| `## 詳解` | `explanation`；獨立、可跳過的補充內容 |
 | `## 本題取得的密碼鑰匙（作答後才顯示）` | `keyAwarded` |
 | `## 放回原文` | 必要時形成該 step 的 incremental `finalDraftLine` |
 | `## 成人編輯備註（不進入孩子端、不朗讀）` | 不進 child-facing lesson data |

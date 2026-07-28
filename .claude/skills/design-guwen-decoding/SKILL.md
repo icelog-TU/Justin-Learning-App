@@ -68,7 +68,8 @@ For each useful target:
 - Clues are short, source-traceable, grammatically sufficient, and use the target compatibly.
 - Options are short, parallel, plausible, and test one thing.
 - The full lesson's correct-position sequence has no easy pattern.
-- Correct feedback immediately states the acquired key.
+- `答對回饋` is one concise, independently understandable core-answer paragraph that immediately states the judgment or acquired key.
+- Evidence comparison, distractor analysis, and other optional elaboration belong only in `詳解`; follow the exact boundary in `../../../GUWEN-MARKDOWN-FORMAT.md`.
 - Adult/source notes remain outside child-facing playback.
 - The lesson stays near 20 questions and never exceeds 22.
 
