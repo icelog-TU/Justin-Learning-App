@@ -27,7 +27,7 @@ export default function ChainLinksDetailPage() {
       </Link>
 
       <div>
-        <h2 className="text-xl font-bold text-gray-800">🔗 成語接龍紀錄</h2>
+        <h2 className="text-xl font-bold text-gray-800">🔗 成語接龍師紀錄</h2>
         <p className="text-sm text-gray-500">看看每一天接了哪些成語。</p>
       </div>
 

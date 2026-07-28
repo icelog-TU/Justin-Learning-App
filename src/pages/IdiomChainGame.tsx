@@ -338,7 +338,7 @@ export default function IdiomChainGame() {
   return (
     <div className="space-y-4">
       <div>
-        <h2 className="text-xl font-bold text-gray-800">成語接龍</h2>
+        <h2 className="text-xl font-bold text-gray-800">成語接龍師</h2>
         <p className="text-sm text-gray-500">
           接一個開頭是這個字、或是<span className="font-semibold text-teal-600">讀音相同</span>的成語，可以無限接下去！
         </p>

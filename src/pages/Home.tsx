@@ -6,7 +6,7 @@ const CARDS = [
   {
     to: '/idioms/chain',
     icon: '🔗',
-    title: '成語接龍',
+    title: '成語接龍師',
     desc: '用打字或語音接成語，可以無限接下去',
     color: 'bg-teal-100 text-teal-700',
   },

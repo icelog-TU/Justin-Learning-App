@@ -258,7 +258,7 @@ export default function IdiomAssociationGame() {
     setRoundComplete(true);
     setShowCelebration(true);
 
-    // Each row's own reward was already paid out in handleSubmitRow (same rate as 成語接龍's per-idiom
+    // Each row's own reward was already paid out in handleSubmitRow (same rate as 成語接龍師's per-idiom
     // reward). On top of that: solving all 4 positions earns an extra completion bonus, and — only the
     // first time this exact character is fully cracked — it may also cross a new milestone in the
     // 已破解的字 collection, which pays out its own escalating bonus.

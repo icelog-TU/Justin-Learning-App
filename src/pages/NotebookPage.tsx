@@ -16,7 +16,7 @@ export default function NotebookPage() {
 
       {bookmarks.length === 0 ? (
         <div className="bg-white rounded-2xl shadow p-8 text-center text-gray-400 text-sm">
-          還沒有收藏任何成語喔！在「成語接龍」的提示卡片或接龍紀錄上按 ☆ 就可以收藏。
+          還沒有收藏任何成語喔！在「成語接龍師」的提示卡片或接龍紀錄上按 ☆ 就可以收藏。
         </div>
       ) : (
         <div className="space-y-3">

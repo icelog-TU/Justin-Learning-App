@@ -163,7 +163,7 @@ export default function ProgressPage() {
       </div>
 
       <div className="bg-white rounded-2xl shadow p-5">
-        <h3 className="font-bold text-gray-800 mb-2">📜 成語接龍歷史紀錄</h3>
+        <h3 className="font-bold text-gray-800 mb-2">📜 成語接龍師歷史紀錄</h3>
         <p className="text-sm text-gray-600 mb-3">
           已經玩了 {data.chainRoundHistory.length} 輪，點一輪可以展開看接了哪些成語
         </p>

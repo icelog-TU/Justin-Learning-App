@@ -6,7 +6,7 @@ import CelebrationOverlay from './CelebrationOverlay';
 
 const NAV_ITEMS = [
   { to: '/', label: '首頁', icon: '🏠', end: true },
-  { to: '/idioms/chain', label: '成語接龍', icon: '🔗' },
+  { to: '/idioms/chain', label: '成語接龍師', icon: '🔗' },
   { to: '/idioms/association', label: '一字成語王', icon: '🎰' },
   { to: '/guwen', label: '古文破譯家', icon: '🏺' },
   { to: '/idioms', label: '成語卡片', icon: '📖' },
