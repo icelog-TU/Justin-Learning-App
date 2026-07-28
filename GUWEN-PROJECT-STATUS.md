@@ -22,7 +22,7 @@
 | 4 | 守株待兔 | `04-guwen-shouzhudaitu-decoder-content.md` | 18 題重寫版、收尾與 App 驗收完成 | 依實際使用回饋調整 |
 | 5 | 揠苗助長 | `05-guwen-yamiaozhuzhang-decoder-content.md` | 開場及第 1–11 題核准；第 12–14 題草稿待審 | 依序審核第 12–14 題 |
 | 6 | 掩耳盜鐘 | `06-guwen-yanerdaozhong-decoder-content.md` | 以舊版為底逐題重審；第 1–5 題及第 7 題已核准，開場仍待審；第 6 題教材內容待審且成人預覽另有顯示問題；第 8–9 題精簡修正版待審；第 10–21 題及收尾保留舊版待重審 | 審核第 8–9 題；第 6 題預覽問題另交 Codex 處理 |
-| 7 | 鄭人買履 | `07-guwen-zhengrenmailv-decoder-content.md` | 以舊版為底進行實測後重寫；第 1–2 題精簡草稿待審，第 3–20 題與收尾仍沿用原核准版本 | 審核第 1–2 題，再依孩子回饋繼續減量 |
+| 7 | 鄭人買履 | `07-guwen-zhengrenmailv-decoder-content.md` | 以舊版為底進行實測後重寫；第 1 題精簡重寫版已核准，第 2–4 題精簡草稿待審，第 5–20 題與收尾仍沿用原核准版本 | 審核第 2–4 題，再依孩子回饋繼續減量 |
 | 8 | 長竿入城 | `08-guwen-changganrucheng-decoder-content.md` | 任務開場及第 1–9 題核准；第 10 題待審 | 審核第 10 題 |
 | 9 | 楊氏之子 | `09-guwen-yangshizi-decoder-content.md` | 第 1–7 題核准；開場及第 8–9 題待審 | 審核開場、第 8–9 題 |
 
