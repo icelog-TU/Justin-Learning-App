@@ -290,6 +290,24 @@ export function GuwenMultiSelectList({
   );
 }
 
+export function GuwenAssistedAnswerButton({
+  label,
+  onReveal,
+}: {
+  label: string;
+  onReveal: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onReveal}
+      className="w-full rounded-xl border-2 border-amber-300 bg-amber-50 px-4 py-2.5 font-bold text-amber-800 hover:bg-amber-100"
+    >
+      {label}
+    </button>
+  );
+}
+
 export function GuwenCausalNodes({
   nodes,
   onPlay,

@@ -49,6 +49,7 @@ import {
 } from '../lib/rewards';
 import { numberToChineseWords } from '../lib/chineseNumber';
 import {
+  GuwenAssistedAnswerButton,
   GuwenCausalNodes,
   GuwenChoiceList,
   GuwenClueList,
@@ -1068,6 +1069,15 @@ export default function GuwenLessonDecode() {
     setOrderingSolved(true);
   }
 
+  function revealOrderingAnswer() {
+    const closing = lesson!.sequenceOrderingClosing!;
+    if (!beginClosingReward(closing.id)) return;
+    setOrderingArrangement([...closing.correctOrder]);
+    recordGuwenWord(lesson!.id, closing.id, lesson!.contentRevision);
+    setOrderingWrong(false);
+    setOrderingSolved(true);
+  }
+
   function handleContinueFromOrdering() {
     advanceClosingStage('ordering');
   }
@@ -1082,6 +1092,15 @@ export default function GuwenLessonDecode() {
     if (!beginClosingReward(closing.id)) return;
     recordGuwenWord(lesson!.id, closing.id, lesson!.contentRevision);
     setCausalChoice(i);
+    setCausalWrong(false);
+    setCausalSolved(true);
+  }
+
+  function revealCausalAnswer() {
+    const closing = lesson!.causalChainClosing!;
+    if (!beginClosingReward(closing.id)) return;
+    setCausalChoice(closing.correctIndex);
+    recordGuwenWord(lesson!.id, closing.id, lesson!.contentRevision);
     setCausalWrong(false);
     setCausalSolved(true);
   }
@@ -1109,6 +1128,17 @@ export default function GuwenLessonDecode() {
       return;
     }
     if (!beginClosingReward(closing.id)) return;
+    recordGuwenWord(lesson!.id, closing.id, lesson!.contentRevision);
+    setMultiSelectWrong(false);
+    setMultiSelectSolved(true);
+  }
+
+  function revealMultiSelectAnswer() {
+    const closing = lesson!.evidenceMultiSelectClosing!;
+    if (!beginClosingReward(closing.id)) return;
+    setMultiSelectChoice(new Set(
+      closing.options.flatMap((option, index) => option.correct ? [index] : []),
+    ));
     recordGuwenWord(lesson!.id, closing.id, lesson!.contentRevision);
     setMultiSelectWrong(false);
     setMultiSelectSolved(true);
@@ -1390,6 +1420,9 @@ export default function GuwenLessonDecode() {
           </p>
         )}
         {!orderingSolved && orderingWrong && <p className="text-sm text-red-500 text-center">{closing.retryHint}</p>}
+        {!orderingSolved && orderingWrong && (
+          <GuwenAssistedAnswerButton label="幫我排出正確順序" onReveal={revealOrderingAnswer} />
+        )}
         {!orderingSolved && (
           <button
             type="button"
@@ -1459,15 +1492,19 @@ export default function GuwenLessonDecode() {
         </div>
         <p className="text-sm text-gray-600 whitespace-pre-line">{closing.intro}</p>
         <p className="font-medium text-gray-800">{closing.question}</p>
-        {!causalSolved && (
-          <GuwenChoiceList
-            options={closing.options}
-            wrongIndex={causalWrong ? causalChoice : null}
-            labels="letter"
-            onChoose={handleSelectCausal}
-          />
-        )}
+        <GuwenChoiceList
+          options={closing.options}
+          correctIndex={closing.correctIndex}
+          wrongIndex={!causalSolved && causalWrong ? causalChoice : null}
+          revealCorrect={causalSolved}
+          readOnly={causalSolved}
+          labels="letter"
+          onChoose={handleSelectCausal}
+        />
         {!causalSolved && causalWrong && <p className="text-sm text-red-500 text-center">{closing.retryHint}</p>}
+        {!causalSolved && causalWrong && (
+          <GuwenAssistedAnswerButton label="幫我選出正確答案" onReveal={revealCausalAnswer} />
+        )}
         {causalSolved && renderClosingReward(closing.id)}
         {causalSolved && renderClosingCore(closing.id, closing.correctFeedback)}
         {causalSolved && closingCoreIsComplete(closing.id) && (
@@ -1549,6 +1586,9 @@ export default function GuwenLessonDecode() {
           onPlay={(option) => speak(option)}
         />
         {!multiSelectSolved && multiSelectWrong && <p className="text-sm text-red-500 text-center">{closing.retryHint}</p>}
+        {!multiSelectSolved && multiSelectWrong && (
+          <GuwenAssistedAnswerButton label="幫我勾出正確答案" onReveal={revealMultiSelectAnswer} />
+        )}
         {!multiSelectSolved && (
           <button
             type="button"

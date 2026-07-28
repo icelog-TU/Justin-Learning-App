@@ -49,6 +49,7 @@ Do not restore the deleted word-puzzle format. Reuse shared types and components
 6. Use shared reward constants and mutation paths; do not hard-code page-local rewards.
 7. Keep one low-pressure mission-acceptance screen and a separate full-text listening screen unless approved content says otherwise.
 8. Make sequence ordering touch-friendly with the existing drag handle, edge scrolling, position feedback, and keyboard fallback.
+9. For complex closing questions, provide the contract-defined assisted completion after the first incorrect attempt.
 
 ## Correct-answer sequence
 

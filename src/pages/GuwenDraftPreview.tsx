@@ -13,6 +13,7 @@ import {
 } from '../lib/guwenDraftPreview';
 import { cancelSpeech, pauseSpeech, resumeSpeech, speakSequence } from '../lib/speech';
 import {
+  GuwenAssistedAnswerButton,
   GuwenCausalNodes,
   GuwenChoiceList,
   GuwenClueList,
@@ -468,6 +469,21 @@ export default function GuwenDraftPreview() {
 
                 {previewState === 'wrong' && question.retryHint && (
                   <AudioLine field={question.retryHint} id="retry-hint" label="答錯提示" activePlayback={playback} onToggle={togglePlayback} className="mt-3 justify-center text-center text-sm text-red-500" />
+                )}
+
+                {previewState === 'wrong' && ['sequence', 'multiselect', 'causal'].includes(question.kind) && (
+                  <div className="mt-3">
+                    <GuwenAssistedAnswerButton
+                      label={
+                        question.kind === 'sequence'
+                          ? '幫我排出正確順序'
+                          : question.kind === 'multiselect'
+                            ? '幫我勾出正確答案'
+                            : '幫我選出正確答案'
+                      }
+                      onReveal={() => setPreviewState('correct')}
+                    />
+                  </div>
                 )}
 
                 {previewState === 'correct' && (
