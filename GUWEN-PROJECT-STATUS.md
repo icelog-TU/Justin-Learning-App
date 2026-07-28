@@ -21,7 +21,7 @@
 | 3 | 刻舟求劍 | `03-guwen-kezhouqiujian-decoder-content.md` | 第 1–11 題核准；第 12–13 題待審 | 審核第 12–13 題 |
 | 4 | 守株待兔 | `04-guwen-shouzhudaitu-decoder-content.md` | 18 題重寫版、收尾與 App 驗收完成 | 依實際使用回饋調整 |
 | 5 | 揠苗助長 | `05-guwen-yamiaozhuzhang-decoder-content.md` | 開場及第 1–6 題核准；第 7–9 題待審 | 審核第 7–9 題 |
-| 6 | 掩耳盜鐘 | `06-guwen-yanerdaozhong-decoder-content.md` | 全文 21 題與收尾核准 | 待 App 實作或驗收 |
+| 6 | 掩耳盜鐘 | `06-guwen-yanerdaozhong-decoder-content.md` | 以舊版為底逐題重審；開場與第 1 題精簡修正版待審；第 2–21 題及收尾保留舊版待重審 | 先審開場與第 1 題，再依新規則壓到 20 題內 |
 | 7 | 鄭人買履 | `07-guwen-zhengrenmailv-decoder-content.md` | 20 題與 App 線上驗收完成 | 依實際使用回饋調整 |
 | 8 | 長竿入城 | `08-guwen-changganrucheng-decoder-content.md` | 任務開場及第 1–9 題核准；第 10 題待審 | 審核第 10 題 |
 | 9 | 楊氏之子 | `09-guwen-yangshizi-decoder-content.md` | 第 1–7 題核准；開場及第 8–9 題待審 | 審核開場、第 8–9 題 |
