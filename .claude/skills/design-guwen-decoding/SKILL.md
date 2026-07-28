@@ -86,3 +86,4 @@ Mark which child-facing fields are playable and review their actual speech toget
 5. Commit, push, and reread the remote result before asking for review.
 6. Return only the review scope, two to five change highlights, approval state, validation result, and commit SHA; do not paste the full question or lesson.
 7. Provide both links required by `../../../GUWEN-WORKFLOW-SOP.md`: the fixed-branch GitHub MD link at the first target question and the adult preview link at that human question number with `state=answering`. Add `state=wrong` or `state=correct` only when that state changed.
+8. Follow the SOP's authoring boundary: verify the link parameters from repository sources, but do not open the preview page, request browser permission, or block delivery because browser access is unavailable.
