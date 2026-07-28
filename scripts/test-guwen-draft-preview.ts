@@ -274,6 +274,14 @@ if (!seventhLessonSource) {
 } else {
   const markdown = fs.readFileSync(path.resolve(seventhLessonSource.path), 'utf8');
   const questions = parseDraftQuestions(markdown);
+  const questionOne = questions.find((item) => item.number === 1);
+  if (
+    questionOne?.target?.text !== '鄭人有欲買【履】者。'
+    || questions.some((item) => /＝/.test(item.target?.text ?? ''))
+  ) {
+    failed = true;
+    console.error('  ERROR: 第七篇舊格式「放回原文」的已取得鑰匙被提前混入待破解目標句');
+  }
   const questionIndex = draftQuestionIndexByNumber(questions, 10);
   if (questions[questionIndex]?.number !== 10) {
     failed = true;

@@ -191,6 +191,21 @@ function field(
     : undefined;
 }
 
+function firstQuotedBlockField(section?: Section): DraftField | undefined {
+  if (!section) return undefined;
+  const lines: string[] = [];
+  let started = false;
+  for (const line of section.lines) {
+    if (/^\s*>/.test(line)) {
+      started = true;
+      lines.push(line);
+    } else if (started) {
+      break;
+    }
+  }
+  return lines.length ? field({ ...section, lines }) : undefined;
+}
+
 function matches(section: Section, patterns: RegExp[]): boolean {
   return patterns.some((pattern) => pattern.test(section.heading));
 }
@@ -404,8 +419,7 @@ function parseOneQuestion(header: RegExpMatchArray, lines: string[], start: numb
     /本題處理.*(?:目標句|範圍)/,
     /待破解.*目標句/,
     /待重建.*目標句/,
-    /放回.*原文/,
-  ]));
+  ])) ?? firstQuotedBlockField(firstSection(sections, [/放回.*原文/]));
   const introSection = firstSection(sections, [
     /^孩子端｜麻煩古文破譯家幫忙$/,
     /App 引導語/,
