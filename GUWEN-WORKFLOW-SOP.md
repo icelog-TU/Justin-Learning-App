@@ -100,11 +100,20 @@
 
 教材主檔是唯一資料來源；成人以 `/#/guwen-draft-preview` 審孩子實際看見與聽見的內容。
 
-新交付連結使用：
+教材對話完成本輪草稿後，先在 active 主檔標為草稿或待審，通過必要檢查並 push，再交付以下兩種可點連結：
+
+1. GitHub MD：固定分支上的 active 主檔，直接定位到本輪第一個目標題的標題行；多個不相鄰題目才分別列連結。
+2. 成人 App 狀態預覽：直接定位到本輪第一個目標題的作答前畫面。
+
+連結格式：
 
 ```text
+https://github.com/icelog-TU/Justin-Learning-App/blob/claude/chinese-learning-app-justin-yjcfam/<active主檔路徑>#L<該題標題行號>
+
 https://icelog-tu.github.io/Justin-Learning-App/#/guwen-draft-preview?lesson=<lessonId>&questionNumber=<人類題號>&state=answering
 ```
+
+預覽頁可切換作答前、第一次答錯與答對後。每輪固定提供 `state=answering`；只有本輪修改答錯提示或答對後內容時，才另附相同網址的 `state=wrong` 或 `state=correct`。
 
 純教材文字修改可更新主檔並 push，預覽器直接讀取固定分支；只有預覽器程式或正式 App 改動才需要完整建置與部署。
 
@@ -135,7 +144,8 @@ https://icelog-tu.github.io/Justin-Learning-App/#/guwen-draft-preview?lesson=<le
 3. 只在核准後更新鑰匙資料。
 4. 執行任務相關檢查。
 5. Commit、push，並從遠端回讀。
-6. 回覆重點、核准狀態、驗證結果與直接連結；不重貼整篇。
+6. 審稿回覆只列本輪範圍、2–5 點修改重點、待審／核准狀態、驗證結果與 commit SHA。
+7. 同時提供第 5 節規定的 GitHub MD 與成人 App 狀態預覽連結；不在對話重貼整篇或整題。只有使用者明確要求逐字比較時，才貼必要的最小片段。
 
 ## 8. 多對話並行與跨篇規則
 

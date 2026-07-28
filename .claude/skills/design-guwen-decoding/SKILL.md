@@ -76,12 +76,12 @@ For each useful target:
 
 Mark which child-facing fields are playable and review their actual speech together with layout in `/#/guwen-draft-preview`. Do not perform a separate polyphonic scan, create audit candidates or catalogs, use the old listening page, pull central results, or wait for legacy audit completion. Record a pronunciation cue only when normal preview review demonstrates a real need; never alter displayed classical text to fix speech.
 
-## Finish
+## Finish a review batch
 
-After an approved change:
-
-1. Update the same active master.
-2. Update only the target row in `GUWEN-PROJECT-STATUS.md`.
+1. Save new material in the same active master as draft or pending review; never label it approved early.
+2. Update only the target row in `GUWEN-PROJECT-STATUS.md` when its approval boundary or next step changed.
 3. Update the key registry only for approved new keys or reminders that actually occurred.
 4. Run `npm run check:guwen:master-format` when Markdown structure or formal content changed.
-5. Push and return the direct adult-preview link for the target human question number.
+5. Commit, push, and reread the remote result before asking for review.
+6. Return only the review scope, two to five change highlights, approval state, validation result, and commit SHA; do not paste the full question or lesson.
+7. Provide both links required by `../../../GUWEN-WORKFLOW-SOP.md`: the fixed-branch GitHub MD link at the first target question and the adult preview link at that human question number with `state=answering`. Add `state=wrong` or `state=correct` only when that state changed.
