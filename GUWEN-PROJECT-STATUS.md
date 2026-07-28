@@ -18,7 +18,7 @@
 |---:|---|---|---|---|
 | 1 | 王戎不取道旁李 | `lessons/01-guwen-wangrong-rewrite.md` | 20 題縮減重寫版已同步 App | 依實際使用回饋調整 |
 | 2 | 司馬光破甕救友 | `02-guwen-simaguang-decoder-content.md` | 全文核准，精簡版 App 已上線 | 依 App 預覽與使用回饋調整 |
-| 3 | 刻舟求劍 | `03-guwen-kezhouqiujian-decoder-content.md` | 第 1–11 題核准；第 12–13 題待審 | 審核第 12–13 題 |
+| 3 | 刻舟求劍 | `03-guwen-kezhouqiujian-decoder-content.md` | 任務開場與第 1–18 題核准；第 19–20 題草稿待審 | 審核第 19–20 題 |
 | 4 | 守株待兔 | `04-guwen-shouzhudaitu-decoder-content.md` | 18 題重寫版、收尾與 App 驗收完成 | 依實際使用回饋調整 |
 | 5 | 揠苗助長 | `05-guwen-yamiaozhuzhang-decoder-content.md` | 開場及第 1–6 題核准；第 7–9 題待審 | 審核第 7–9 題 |
 | 6 | 掩耳盜鐘 | `06-guwen-yanerdaozhong-decoder-content.md` | 以舊版為底逐題重審；開場與第 1 題精簡修正版待審；第 2–21 題及收尾保留舊版待重審 | 先審開場與第 1 題，再依新規則壓到 20 題內 |
