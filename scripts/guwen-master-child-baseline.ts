@@ -6,10 +6,12 @@ import type { ChildSnapshot } from './guwen-master-child-snapshot';
 // 重新建立第 1–8 篇解析指紋，讓完整詳解納入後續孩子端文字保護。
 // 2026-07-28：《刻舟求劍》第 4–8 題簡化修訂稿與第 13 題新線索版經使用者核准，
 // 同步更新第三篇孩子端保護指紋。
+// 2026-07-28：《刻舟求劍》第 19、20 題經使用者核准，第三篇新版全文完成，
+// 同步更新第三篇孩子端保護指紋。
 export const GUWEN_CHILD_BASELINE: Record<string, ChildSnapshot> = {
   'lessons/01-guwen-wangrong-rewrite.md': { questionCount: 20, hash: 'dd46c4423110b7b6b4dd21dfe04f37fdbd76f517c5c21af1c2ecf676cb2cdca4' },
   '02-guwen-simaguang-decoder-content.md': { questionCount: 18, hash: '27d5c4b77cb2a13889aa12105043c4ca776f36488bf34d49426131bda64718ba' },
-  '03-guwen-kezhouqiujian-decoder-content.md': { questionCount: 20, hash: 'ff6bd4613dbf185d246cfc0939e02ab17962335b24c2be9239eb344a6a10c750' },
+  '03-guwen-kezhouqiujian-decoder-content.md': { questionCount: 20, hash: '35a60b5c98d76e13be6f06f23a656dd394ad8d575d7944757508b9cb5c723cbb' },
   '04-guwen-shouzhudaitu-decoder-content.md': { questionCount: 18, hash: 'a8bb260c9673f078fa0a1ba81960c03446e86bc3d4e8fd1ab22fd628f462cbb9' },
   '05-guwen-yamiaozhuzhang-decoder-content.md': { questionCount: 9, hash: 'c1325136cdb1946cede737053f5f91e5faf50a714319cfa0aa084f9db5710752' },
   '06-guwen-yanerdaozhong-decoder-content.md': { questionCount: 21, hash: 'c9f5d5324d80a7ad3cb32ba94d4bed9cc1d7979274602acf3a088e2a3172be11' },
