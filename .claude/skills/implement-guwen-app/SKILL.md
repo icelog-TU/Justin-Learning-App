@@ -54,15 +54,16 @@ Do not restore the deleted word-puzzle format. Reuse shared types and components
 
 For a regular graded step:
 
-1. Hide options and show the complete `correctFeedback` field as an independent core-answer card.
-2. Auto-play the complete core answer. While it plays, provide the contract-defined skip action; a deliberate skip counts as completing the core playback.
-3. Keep the core card visible; only then show rewards underneath and run the reward animation.
-4. After rewards settle, add a separate `詳解` card containing only `explanation`; never move extra `correctFeedback` paragraphs into it.
-5. Start detail playback at `explanation`; never replay the core answer.
-6. Show keys and the next-step action when the detail card appears. Detail reading or playback is optional and must never gate the next step.
-7. If the child chooses the next step while detail audio is playing, cancel that playback and advance immediately.
+1. Hide options and immediately grant the once-only reward, success sound, and coin/star animation.
+2. After the reward settles, show and auto-play the complete `correctFeedback` as an independent core-answer card.
+3. While the core plays, allow pause, resume, and restart but keep detail and next-step actions locked. Do not offer a normal skip.
+4. After core playback completes, keep the core card visible and offer separate detail and next-step actions.
+5. Reveal `詳解` only when requested, containing only `explanation`; never auto-play it or move extra `correctFeedback` paragraphs into it.
+6. Show an awarded key with the post-core actions so it is not hidden behind optional detail.
+7. If speech is unavailable or fails, expose the contract-defined read-completion fallback only after a reasonable reading interval.
+8. If the child chooses the next step while detail audio is playing, cancel that playback and advance immediately.
 
-Track and clear delayed playback or fallback timers. Guard reward writes so speech `onend` and a fallback cannot grant twice.
+Track and clear delayed playback or fallback timers. Guard reward writes against rapid input; core speech callbacks must never grant rewards.
 
 ## Speech boundary
 

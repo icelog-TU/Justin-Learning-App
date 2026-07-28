@@ -164,6 +164,12 @@ export function getSelectedSpeechVoiceDetails(
   };
 }
 
+export function isSpeechSynthesisAvailable(): boolean {
+  return typeof window !== 'undefined'
+    && Boolean(window.speechSynthesis)
+    && typeof SpeechSynthesisUtterance !== 'undefined';
+}
+
 function queueSpeech(texts: string[], onDone?: () => void) {
   const selectedVoice = selectZhTwVoice();
   texts.map(ttsSafe).forEach((text, i) => {
@@ -178,7 +184,7 @@ function queueSpeech(texts: string[], onDone?: () => void) {
 
 /** Reads text aloud using the browser's built-in text-to-speech (no API cost, works offline once voices are installed). */
 export function speak(text: string, onEnd?: () => void) {
-  if (typeof window === 'undefined' || !window.speechSynthesis) {
+  if (!isSpeechSynthesisAvailable()) {
     onEnd?.();
     return;
   }
@@ -193,7 +199,7 @@ export function speak(text: string, onEnd?: () => void) {
  * partway through and jump straight to the next line).
  */
 export function speakSequence(texts: string[], onDone?: () => void) {
-  if (typeof window === 'undefined' || !window.speechSynthesis) {
+  if (!isSpeechSynthesisAvailable()) {
     onDone?.();
     return;
   }

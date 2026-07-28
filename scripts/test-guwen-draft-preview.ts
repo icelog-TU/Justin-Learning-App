@@ -170,6 +170,26 @@ if (
   console.error('  ERROR: 成人預覽解析器只能排除已知欄名，未依 Markdown 表格結構排除表頭');
 }
 
+const sixthLessonMarkdown = fs.readFileSync(path.resolve('06-guwen-yanerdaozhong-decoder-content.md'), 'utf8');
+const sixthLessonQuestionSix = parseDraftQuestions(sixthLessonMarkdown).find((item) => item.number === 6);
+const expectedSixthLessonQuestionSixKeys = [
+  ['欲', '想要'],
+  ['負', '把東西放在背上背著'],
+  ['走', '跑、跑開'],
+  ['則', '會接出後面的結果'],
+  ['不可', '不能'],
+];
+if (
+  sixthLessonQuestionSix?.preAnswerKeys.length !== expectedSixthLessonQuestionSixKeys.length
+  || expectedSixthLessonQuestionSixKeys.some(([code, decodedEvidence], index) => {
+    const actual = sixthLessonQuestionSix?.preAnswerKeys[index];
+    return actual?.code.text !== code || actual.decodedEvidence.text !== decodedEvidence;
+  })
+) {
+  failed = true;
+  console.error('  ERROR: 第六篇第 6 題沒有抓到五把段落式已取得密碼鑰匙');
+}
+
 if (
   thirdLessonQuestionSixteen?.title !== '破解「不亦……乎」'
   || thirdLessonQuestionSixteen.clues.length !== 2

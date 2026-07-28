@@ -361,6 +361,19 @@ function decodingKeyFields(section?: Section): DraftDecodingKey[] {
   if (!section) return [];
   const keys: DraftDecodingKey[] = [];
   section.lines.forEach((line, index) => {
+    const lineNumber = section.line + index + 1;
+    const inlineKey = line
+      .trim()
+      .replace(/^\s*>\s?/, '')
+      .match(/^🔑\s*[「【](.+?)[」】]\s*(.+?)。?$/);
+    if (inlineKey) {
+      const decodedEvidence = inlineKey[2].replace(/^(?:在這裡)?(?:表示|就是|是)\s*/, '');
+      keys.push({
+        code: { text: cleanInline(inlineKey[1]), heading: section.heading, line: lineNumber },
+        decodedEvidence: { text: cleanInline(decodedEvidence), heading: section.heading, line: lineNumber },
+      });
+      return;
+    }
     const cells = line
       .trim()
       .replace(/^\|/, '')
@@ -381,7 +394,6 @@ function decodingKeyFields(section?: Section): DraftDecodingKey[] {
         .map((cell) => cell.trim());
       if (nextCells.length >= 2 && nextCells.every((cell) => /^:?-{3,}:?$/.test(cell))) return;
     }
-    const lineNumber = section.line + index + 1;
     keys.push({
       code: { text: code, heading: section.heading, line: lineNumber },
       decodedEvidence: { text: decodedEvidence, heading: section.heading, line: lineNumber },
