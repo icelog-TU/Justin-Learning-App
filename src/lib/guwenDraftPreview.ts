@@ -544,8 +544,47 @@ function parseOneQuestion(header: RegExpMatchArray, lines: string[], start: numb
   };
 }
 
+function maskArchivedQuestionContent(lines: string[]): string[] {
+  const masked = [...lines];
+  let detailsDepth = 0;
+  let archivedDetailsDepth = 0;
+  let archivedTail = false;
+
+  lines.forEach((line, index) => {
+    const trimmed = line.trim();
+
+    if (archivedTail && /^<a\s+id=["']question-\d+["']\s*><\/a>$/i.test(trimmed)) {
+      archivedTail = false;
+    }
+
+    if (!archivedTail && /^#{1,3}\s+舊版.*以後\s*$/.test(trimmed)) {
+      archivedTail = true;
+    }
+
+    if (/^<details(?:\s[^>]*)?>$/i.test(trimmed)) {
+      detailsDepth += 1;
+      const nearbySummary = lines
+        .slice(index + 1, index + 4)
+        .find((candidate) => /<summary\b/i.test(candidate));
+      if (nearbySummary && /舊版|封存|歷史/.test(nearbySummary)) {
+        archivedDetailsDepth = detailsDepth;
+      }
+    }
+
+    if (archivedTail || archivedDetailsDepth > 0) masked[index] = '';
+
+    if (/^<\/details>$/i.test(trimmed)) {
+      if (archivedDetailsDepth === detailsDepth) archivedDetailsDepth = 0;
+      detailsDepth = Math.max(0, detailsDepth - 1);
+    }
+  });
+
+  return masked;
+}
+
 export function parseDraftQuestions(markdown: string): DraftQuestion[] {
-  const lines = markdown.replace(/\r\n/g, '\n').split('\n');
+  const originalLines = markdown.replace(/\r\n/g, '\n').split('\n');
+  const lines = maskArchivedQuestionContent(originalLines);
   const declaredTotalMatch = markdown.match(/新版預計總數[：:]\s*([一二三四五六七八九十百兩〇零\d]+)\s*題/);
   const declaredTotal = declaredTotalMatch ? parseQuestionNumber(declaredTotalMatch[1]) : undefined;
   const headers: Array<{ index: number; match: RegExpMatchArray }> = [];

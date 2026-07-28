@@ -94,6 +94,7 @@ const thirdLessonQuestions = parseDraftQuestions(thirdLessonMarkdown);
 const thirdLessonQuestionFour = thirdLessonQuestions.find((item) => item.number === 4);
 const thirdLessonQuestionFive = thirdLessonQuestions.find((item) => item.number === 5);
 const thirdLessonQuestionEight = thirdLessonQuestions.find((item) => item.number === 8);
+const thirdLessonQuestionSixteen = thirdLessonQuestions.find((item) => item.number === 16);
 const thirdLessonQuestionNineteen = thirdLessonQuestions.find((item) => item.number === 19);
 const thirdLessonQuestionTwenty = thirdLessonQuestions.find((item) => item.number === 20);
 if (thirdLessonQuestions.length !== 20 || thirdLessonQuestions.at(-1)?.number !== 20) {
@@ -135,6 +136,15 @@ if (thirdLessonQuestionEight?.preAnswerKeys.some((key) => key.code.text === '原
   console.error('  ERROR: 第三篇第 8 題把密碼表標題誤當成一把鑰匙');
 }
 if (
+  thirdLessonQuestionSixteen?.title !== '破解「不亦……乎」'
+  || thirdLessonQuestionSixteen.clues.length !== 2
+  || thirdLessonQuestionSixteen.clues.some((clue) => !/不亦/.test(clue.text))
+  || thirdLessonQuestionSixteen.preAnswerKeys.length !== 0
+) {
+  failed = true;
+  console.error('  ERROR: 第三篇第 16 題混入封存區或其他題目的線索／鑰匙');
+}
+if (
   thirdLessonQuestionNineteen?.kind !== 'sequence'
   || thirdLessonQuestionNineteen.sequenceCards.length !== 5
   || thirdLessonQuestionNineteen.sequenceCorrectOrder.join('') !== 'CEDAB'
@@ -172,6 +182,54 @@ const canonicalKeyExample = parseDraftQuestions(`
 if (canonicalKeyExample?.key?.text !== '【測】＝正式作答後鑰匙') {
   failed = true;
   console.error('  ERROR: 正式作答後密碼鑰匙欄位沒有正確解析');
+}
+
+const archivedBoundaryExample = parseDraftQuestions(`
+# 第 1 題（已核准）｜現行第一題
+## 孩子端｜麻煩古文破譯家幫忙
+現行引導
+### 線索一
+> 現行線索一
+### 線索二
+> 現行線索二
+## 請古文破譯家提交解法
+現行問題
+## 選項
+1. 甲
+2. 乙
+## 正確答案
+1. 甲
+## 答對回饋
+> 正確
+<details>
+<summary>舊版封存</summary>
+### 線索一
+> 不得混入的封存線索
+</details>
+## 舊版第二題以後
+### 線索二
+> 也不得混入的封存線索
+<a id="question-2"></a>
+# 第 2 題（已核准）｜現行第二題
+## 孩子端｜麻煩古文破譯家幫忙
+第二題引導
+## 請古文破譯家提交解法
+第二題問題
+## 選項
+1. 甲
+2. 乙
+## 正確答案
+1. 甲
+## 答對回饋
+> 正確
+`);
+if (
+  archivedBoundaryExample[0]?.clues.length !== 2
+  || archivedBoundaryExample[0].clues.some((clue) => /封存/.test(clue.text))
+  || archivedBoundaryExample[1]?.number !== 2
+) {
+  failed = true;
+  console.error('  ERROR: 成人預覽解析器沒有正確排除封存題目區段');
 }
 
 const seventhLessonSource = DRAFT_SOURCES.find((source) => source.lessonId === 'zheng-ren-mai-lv');
