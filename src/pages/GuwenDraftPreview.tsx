@@ -368,10 +368,55 @@ export default function GuwenDraftPreview() {
                 )}
 
                 {previewState === 'correct' && (
-                  <div className="mt-4 space-y-3 rounded-xl bg-emerald-50 p-4">
-                    {question.correctFeedback && <AudioLine field={question.correctFeedback} id="correct-feedback" label="答對回饋" activePlayback={playback} onToggle={togglePlayback} className="font-bold text-emerald-700" />}
-                    {question.explanation && <AudioLine field={question.explanation} id="explanation" label="詳解" activePlayback={playback} onToggle={togglePlayback} className="text-sm leading-relaxed text-slate-600" />}
-                    {question.key && <AudioLine field={question.key} id="key" label="密碼鑰匙" activePlayback={playback} onToggle={togglePlayback} className="rounded-lg bg-white p-3 text-sm font-bold text-indigo-700" />}
+                  <div className="mt-4 space-y-4">
+                    <section className="rounded-xl border-2 border-emerald-300 bg-emerald-50 p-4">
+                      <h3 className="mb-3 text-sm font-black text-emerald-700">
+                        核心解答
+                        <span className="ml-2 text-xs font-bold text-emerald-500">MD：答對回饋</span>
+                      </h3>
+                      {question.correctFeedback ? (
+                        <AudioLine
+                          field={question.correctFeedback}
+                          id="correct-feedback"
+                          label="核心解答"
+                          activePlayback={playback}
+                          onToggle={togglePlayback}
+                          className="font-bold text-emerald-800"
+                        />
+                      ) : (
+                        <p className="text-sm font-bold text-red-600">⚠ MD 沒有可顯示的「答對回饋」</p>
+                      )}
+                    </section>
+
+                    <section className="rounded-xl border-2 border-sky-200 bg-sky-50 p-4">
+                      <h3 className="mb-3 text-sm font-black text-sky-800">詳解</h3>
+                      {question.explanation ? (
+                        <AudioLine
+                          field={question.explanation}
+                          id="explanation"
+                          label="詳解"
+                          activePlayback={playback}
+                          onToggle={togglePlayback}
+                          className="text-sm leading-relaxed text-sky-950"
+                        />
+                      ) : (
+                        <p className="text-sm text-slate-500">本題 MD 沒有另外提供詳解。</p>
+                      )}
+                    </section>
+
+                    {question.key && (
+                      <section className="rounded-xl border-2 border-amber-200 bg-amber-50 p-4">
+                        <h3 className="mb-3 text-sm font-black text-amber-800">本題取得的密碼鑰匙</h3>
+                        <AudioLine
+                          field={question.key}
+                          id="key"
+                          label="本題取得的密碼鑰匙"
+                          activePlayback={playback}
+                          onToggle={togglePlayback}
+                          className="text-sm font-bold text-indigo-700"
+                        />
+                      </section>
+                    )}
                   </div>
                 )}
               </div>

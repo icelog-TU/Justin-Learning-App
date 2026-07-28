@@ -90,17 +90,28 @@ function cleanInline(text: string): string {
     .trim();
 }
 
-function sectionParts(section?: Section): { text: string; pronunciationCues: string[] } {
+function sectionParts(
+  section?: Section,
+  options: { preserveMixedParagraphs?: boolean } = {},
+): { text: string; pronunciationCues: string[] } {
   if (!section) return { text: '', pronunciationCues: [] };
   const quoted = section.lines
     .filter((line) => /^\s*>/.test(line))
     .map((line) => line.replace(/^\s*>\s?/, ''));
-  const source = quoted.length
-    ? quoted
-    : section.lines.filter((line) => {
+  const allContent = section.lines
+    .filter((line) => {
         const trimmed = line.trim();
-        return trimmed && !/^\|/.test(trimmed) && !/^\[↑/.test(trimmed);
-      });
+        return !/^\|/.test(trimmed)
+          && !/^\[↑/.test(trimmed)
+          && !/^---+$/.test(trimmed)
+          && !/^<a\b[^>]*><\/a>$/.test(trimmed);
+      })
+    .map((line) => line.replace(/^\s*>\s?/, ''));
+  const source = options.preserveMixedParagraphs
+    ? allContent
+    : quoted.length
+      ? quoted
+      : allContent.filter((line) => line.trim());
   const pronunciationCues = source
     .map(cleanInline)
     .filter((line) => /(?:念作|唸作|發音同).*[（(][ㄅ-ㄩ]/.test(line));
@@ -113,8 +124,11 @@ function sectionParts(section?: Section): { text: string; pronunciationCues: str
   return { text, pronunciationCues };
 }
 
-function field(section?: Section): DraftField | undefined {
-  const { text, pronunciationCues } = sectionParts(section);
+function field(
+  section?: Section,
+  options: { preserveMixedParagraphs?: boolean } = {},
+): DraftField | undefined {
+  const { text, pronunciationCues } = sectionParts(section, options);
   return section && text
     ? {
         text,
@@ -313,6 +327,22 @@ function parseOneQuestion(header: RegExpMatchArray, lines: string[], start: numb
   if (!question) diagnostics.push('找不到「請古文破譯家提交解法」');
   if (options.length < 2) diagnostics.push(`只抓到 ${options.length} 個選項`);
   if (!correctAnswer) diagnostics.push('找不到「正確答案」');
+  const correctFeedbackSection = firstSection(sections, [/^答對回饋/]);
+  const explanationSection = firstSection(sections, [/^詳解/]);
+  const canonicalChildKeySection = firstSection(sections, [/^本題取得的密碼鑰匙（作答後才顯示）$/]);
+  const legacyEditorialKeySection = firstSection(sections, [
+    /本題要取得的密碼鑰匙/,
+    /^取得密碼鑰匙/,
+    /密碼鑰匙收入工具箱/,
+  ]);
+  const legacyChildKeySection = legacyEditorialKeySection?.lines.some((line) => /^\s*>/.test(line))
+    ? legacyEditorialKeySection
+    : undefined;
+  const childKeySection = canonicalChildKeySection ?? legacyChildKeySection;
+  if (!correctFeedbackSection) diagnostics.push('找不到「答對回饋」');
+  if (legacyEditorialKeySection && !legacyChildKeySection && !canonicalChildKeySection) {
+    diagnostics.push(`「${legacyEditorialKeySection.heading}」不是孩子端作答後密碼鑰匙，不會顯示`);
+  }
   clues.forEach((clue, index) => {
     if (!clue.source) diagnostics.push(`線索 ${index + 1} 找不到出處`);
   });
@@ -329,15 +359,10 @@ function parseOneQuestion(header: RegExpMatchArray, lines: string[], start: numb
     options,
     correctIndex,
     correctAnswer,
-    correctFeedback: field(firstSection(sections, [/^答對回饋/])),
+    correctFeedback: field(correctFeedbackSection),
     retryHint: field(firstSection(sections, [/^第一次答錯提示/, /^答錯提示/])),
-    explanation: field(firstSection(sections, [/^詳解/])),
-    key: field(firstSection(sections, [
-      /^本題取得的密碼鑰匙（作答後才顯示）$/,
-      /本題要取得的密碼鑰匙/,
-      /^取得密碼鑰匙/,
-      /密碼鑰匙收入工具箱/,
-    ])),
+    explanation: field(explanationSection, { preserveMixedParagraphs: true }),
+    key: field(childKeySection),
     diagnostics,
   };
 }

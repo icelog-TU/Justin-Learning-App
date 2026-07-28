@@ -58,6 +58,47 @@ for (const example of representativeSources) {
   });
 }
 
+const thirdLessonMarkdown = fs.readFileSync(path.resolve('03-guwen-kezhouqiujian-decoder-content.md'), 'utf8');
+const thirdLessonQuestionFour = parseDraftQuestions(thirdLessonMarkdown).find((item) => item.number === 4);
+const expectedExplanationParts = [
+  '第一條線索中，碗原本在手中',
+  '第二條線索中，算袋原本也在手中',
+  '兩條線索共同出現的位置變化',
+  '【墜】＝從原來的位置往下掉',
+  '這把鑰匙說明的是移動方向',
+];
+for (const expected of expectedExplanationParts) {
+  if (!thirdLessonQuestionFour?.explanation?.text.includes(expected)) {
+    failed = true;
+    console.error(`  ERROR: 第三篇第 4 題詳解沒有完整抓到「${expected}」`);
+  }
+}
+if (thirdLessonQuestionFour?.key) {
+  failed = true;
+  console.error('  ERROR: 第三篇第 4 題的成人編輯欄位被誤顯示為孩子端密碼鑰匙');
+}
+for (const source of DRAFT_SOURCES) {
+  const markdown = fs.readFileSync(path.resolve(source.path), 'utf8');
+  for (const question of parseDraftQuestions(markdown)) {
+    if (/---|<a\b/i.test(question.explanation?.text ?? '')) {
+      failed = true;
+      console.error(`  ERROR: ${source.path} 第 ${question.number} 題詳解混入 Markdown 導航標記`);
+    }
+  }
+}
+
+const canonicalKeyExample = parseDraftQuestions(`
+# 第 1 題（測試）｜正式鑰匙欄位
+
+## 本題取得的密碼鑰匙（作答後才顯示）
+
+> 【測】＝正式作答後鑰匙
+`)[0];
+if (canonicalKeyExample?.key?.text !== '【測】＝正式作答後鑰匙') {
+  failed = true;
+  console.error('  ERROR: 正式作答後密碼鑰匙欄位沒有正確解析');
+}
+
 const seventhLessonSource = DRAFT_SOURCES.find((source) => source.lessonId === 'zheng-ren-mai-lv');
 if (!seventhLessonSource) {
   failed = true;
