@@ -10,6 +10,7 @@ import {
   rankCandidatesAtPosition,
   matchesTargetAtPosition,
   findByWord,
+  IDIOM_DATABASE_SCOPE_NOTE,
   maskHint,
   pickRandomCharacter,
   buildCharZhuyinMap,
@@ -306,7 +307,14 @@ export default function IdiomAssociationGame() {
     const entry = findByWord(pool, raw);
     if (!entry) {
       const canAdd = raw.length === 4 && raw[position - 1] === targetChar;
-      updateRow(position, { feedback: { type: 'error', message: '這個成語我們的題庫裡還沒有喔，換一個試試看？' } });
+      updateRow(position, {
+        feedback: {
+          type: 'info',
+          message: canAdd
+            ? `${IDIOM_DATABASE_SCOPE_NOTE}目前還沒有收錄「${raw}」。`
+            : `${IDIOM_DATABASE_SCOPE_NOTE}目前還沒有收錄「${raw}」；請先確認它是四個字，而且符合這一題指定的位置。`,
+        },
+      });
       setAddCandidate(canAdd ? { position, word: raw } : null);
       return;
     }
@@ -589,7 +597,7 @@ export default function IdiomAssociationGame() {
                     {addCandidate?.position === position && (
                       <div className="bg-amber-50 rounded-xl p-4 text-left space-y-2">
                         <p className="text-sm text-gray-700">
-                          要把「<span className="font-bold text-amber-700">{addCandidate.word}</span>」加進你的題庫嗎？
+                          要不要把「<span className="font-bold text-amber-700">{addCandidate.word}</span>」補充進你的題庫？
                         </p>
                         <input
                           type="text"

@@ -9,6 +9,7 @@ import {
   buildCharZhuyinMap,
   findCandidates,
   findByWord,
+  IDIOM_DATABASE_SCOPE_NOTE,
   matchesTarget,
   maskHint,
   rankHintCandidates,
@@ -191,7 +192,12 @@ export default function IdiomChainGame() {
     const entry = findByWord(pool, raw);
     if (!entry) {
       const canAdd = raw.length === 4 && raw[0] === targetChar;
-      setFeedback({ type: 'error', message: '這個成語我們的題庫裡還沒有喔，換一個試試看？' });
+      setFeedback({
+        type: 'info',
+        message: canAdd
+          ? `${IDIOM_DATABASE_SCOPE_NOTE}目前還沒有收錄「${raw}」。`
+          : `${IDIOM_DATABASE_SCOPE_NOTE}目前還沒有收錄「${raw}」；請先確認它是四個字，而且符合這一題的接法。`,
+      });
       setAddCandidate(canAdd ? raw : null);
       return;
     }
@@ -410,7 +416,7 @@ export default function IdiomChainGame() {
         {addCandidate && (
           <div className="bg-amber-50 rounded-xl p-4 text-left space-y-2">
             <p className="text-sm text-gray-700">
-              要把「<span className="font-bold text-amber-700">{addCandidate}</span>」加進你的題庫嗎？
+              要不要把「<span className="font-bold text-amber-700">{addCandidate}</span>」補充進你的題庫？
             </p>
             <input
               type="text"

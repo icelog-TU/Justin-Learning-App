@@ -68,6 +68,9 @@ export interface ChainEntry {
   frequency?: number;
 }
 
+export const IDIOM_DATABASE_SCOPE_NOTE =
+  '我們的成語資料庫主要收錄有典故出處的成語，無法包含所有常用四字詞。';
+
 export function toBaseZhuyin(zhuyin: string): string {
   return zhuyin.replace(/[ˊˇˋ˙]/g, '').trim();
 }
