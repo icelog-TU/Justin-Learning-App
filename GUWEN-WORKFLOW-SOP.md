@@ -110,10 +110,20 @@
 ```text
 https://github.com/icelog-TU/Justin-Learning-App/blob/claude/chinese-learning-app-justin-yjcfam/<active主檔路徑>#L<該題標題行號>
 
-https://icelog-tu.github.io/Justin-Learning-App/#/guwen-draft-preview?lesson=<lessonId>&questionNumber=<人類題號>&state=answering
+https://icelog-tu.github.io/Justin-Learning-App/#/guwen-draft-preview?lessonPath=<URL 編碼後的 active 主檔路徑>&questionNumber=<人類題號>&state=answering
 ```
 
+`lessonPath` 必須直接取自 `GUWEN-PROJECT-STATUS.md` 該篇列所指定的 active 主檔路徑，並作為查詢參數進行 URL 編碼；不得猜測或自行縮寫篇名，也不得再產生舊式 `lesson=<lessonId>` 新連結。例如第三篇使用：
+
+```text
+https://icelog-tu.github.io/Justin-Learning-App/#/guwen-draft-preview?lessonPath=03-guwen-kezhouqiujian-decoder-content.md&questionNumber=4&state=answering
+```
+
+舊 `lesson` 連結只保留既有相容性。若 `lessonPath` 不存在或拼錯，預覽器必須明確報錯，不得默默改開第一篇。
+
 預覽頁可切換作答前、第一次答錯與答對後。每輪固定提供 `state=answering`；只有本輪修改答錯提示或答對後內容時，才另附相同網址的 `state=wrong` 或 `state=correct`。
+
+交付連結前必須實際開啟一次，確認畫面顯示的篇名、題號及作答狀態都與本輪範圍相同；三者任一不符，不得把該網址交給使用者。
 
 純教材文字修改可更新主檔並 push，預覽器直接讀取固定分支；只有預覽器程式或正式 App 改動才需要完整建置與部署。
 

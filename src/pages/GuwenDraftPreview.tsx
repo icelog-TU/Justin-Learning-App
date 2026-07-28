@@ -7,6 +7,7 @@ import {
   githubEditUrl,
   githubRawUrl,
   parseDraftQuestions,
+  resolveDraftSource,
   type DraftField,
   type DraftQuestion,
 } from '../lib/guwenDraftPreview';
@@ -102,19 +103,12 @@ function readingOrder(question: DraftQuestion) {
 export default function GuwenDraftPreview() {
   const [, setSearchParams] = useSearchParams();
   const initialParams = new URLSearchParams(window.location.hash.split('?')[1] ?? '');
-  const initialLesson = initialParams.get('lesson');
-  const initialQuestionNumber = Number(initialParams.get('questionNumber'));
+  const initialLessonPath = initialParams.get('lessonPath');
+  const initialLegacyLessonId = initialParams.get('lesson');
   const initialLegacyQuestionIndex = Number(initialParams.get('question'));
   const initialPreviewState = initialParams.get('state');
-  const requestedQuestionNumber = useRef(
-    Number.isInteger(initialQuestionNumber) && initialQuestionNumber >= 1
-      ? initialQuestionNumber
-      : undefined,
-  );
-  const [sourceIndex, setSourceIndex] = useState(() => {
-    const found = DRAFT_SOURCES.findIndex((source) => source.lessonId === initialLesson);
-    return found >= 0 ? found : 0;
-  });
+  const initialSource = resolveDraftSource(initialLessonPath, initialLegacyLessonId);
+  const [sourceIndex, setSourceIndex] = useState<number | undefined>(initialSource.index);
   const [questions, setQuestions] = useState<DraftQuestion[]>([]);
   const [questionIndex, setQuestionIndex] = useState(
     Number.isInteger(initialLegacyQuestionIndex) && initialLegacyQuestionIndex >= 0
@@ -125,14 +119,32 @@ export default function GuwenDraftPreview() {
     initialPreviewState === 'wrong' || initialPreviewState === 'correct' ? initialPreviewState : 'answering',
   );
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [error, setError] = useState(initialSource.error ?? '');
   const [loadedAt, setLoadedAt] = useState<Date>();
   const [playback, setPlayback] = useState<Playback>();
+  const loadToken = useRef(0);
   const playbackToken = useRef(0);
-  const source = DRAFT_SOURCES[sourceIndex];
+  const source = sourceIndex === undefined ? undefined : DRAFT_SOURCES[sourceIndex];
   const question = questions[questionIndex];
 
   async function loadLatest() {
+    if (!source) {
+      setLoading(false);
+      return;
+    }
+    const token = ++loadToken.current;
+    const routeParams = new URLSearchParams(window.location.hash.split('?')[1] ?? '');
+    const routeLessonPath = routeParams.get('lessonPath');
+    const routeLegacyLessonId = routeParams.get('lesson');
+    const routeQuestionNumber = Number(routeParams.get('questionNumber'));
+    const routeTargetsSource = routeLessonPath !== null
+      ? routeLessonPath === source.path
+      : routeLegacyLessonId === source.lessonId;
+    const requested = routeTargetsSource
+      && Number.isInteger(routeQuestionNumber)
+      && routeQuestionNumber >= 1
+      ? routeQuestionNumber
+      : undefined;
     setLoading(true);
     setError('');
     stopPlayback();
@@ -141,38 +153,40 @@ export default function GuwenDraftPreview() {
       if (!response.ok) throw new Error(`GitHub 回傳 ${response.status}`);
       const parsed = parseDraftQuestions(await response.text());
       if (!parsed.length) throw new Error('MD 裡找不到題目標題');
+      if (loadToken.current !== token) return;
+      const nextQuestionIndex = requested !== undefined
+        ? draftQuestionIndexByNumber(parsed, requested)
+        : Math.min(questionIndex, parsed.length - 1);
+      setQuestionIndex(nextQuestionIndex);
       setQuestions(parsed);
-      setQuestionIndex((current) => {
-        const requested = requestedQuestionNumber.current;
-        requestedQuestionNumber.current = undefined;
-        if (requested !== undefined) {
-          return draftQuestionIndexByNumber(parsed, requested);
-        }
-        return Math.min(current, parsed.length - 1);
-      });
       setLoadedAt(new Date());
     } catch (reason) {
+      if (loadToken.current !== token) return;
       setQuestions([]);
       setError(reason instanceof Error ? reason.message : '無法載入 GitHub MD');
     } finally {
-      setLoading(false);
+      if (loadToken.current === token) setLoading(false);
     }
   }
 
   useEffect(() => {
+    if (!source) {
+      setLoading(false);
+      return;
+    }
     void loadLatest();
     // source uniquely identifies the selected MD.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sourceIndex]);
 
   useEffect(() => {
-    if (!question) return;
+    if (!question || !source) return;
     const next = new URLSearchParams();
-    next.set('lesson', source.lessonId);
+    next.set('lessonPath', source.path);
     next.set('questionNumber', String(question.number));
     next.set('state', previewState);
     setSearchParams(next, { replace: true });
-  }, [previewState, question, setSearchParams, source.lessonId]);
+  }, [previewState, question, setSearchParams, source]);
 
   useEffect(() => () => {
     playbackToken.current += 1;
@@ -191,6 +205,7 @@ export default function GuwenDraftPreview() {
 
   function chooseSource(next: number) {
     stopPlayback();
+    setError('');
     setSourceIndex(next);
     setQuestionIndex(0);
     setPreviewState('answering');
@@ -244,10 +259,11 @@ export default function GuwenDraftPreview() {
           <label className="text-xs font-bold text-slate-500">
             教材
             <select
-              value={sourceIndex}
+              value={sourceIndex ?? ''}
               onChange={(event) => chooseSource(Number(event.target.value))}
               className="mt-1 block rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800"
             >
+              {sourceIndex === undefined && <option value="" disabled>找不到指定教材</option>}
               {DRAFT_SOURCES.map((item, index) => <option key={item.lessonId} value={index}>{item.title}</option>)}
             </select>
           </label>
@@ -266,7 +282,7 @@ export default function GuwenDraftPreview() {
               ))}
             </select>
           </label>
-          <button type="button" onClick={() => void loadLatest()} className="rounded-lg bg-slate-800 px-4 py-2 text-sm font-bold text-white">
+          <button type="button" onClick={() => void loadLatest()} disabled={!source} className="rounded-lg bg-slate-800 px-4 py-2 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-40">
             ↻ 重新讀取 GitHub
           </button>
         </div>
@@ -275,7 +291,7 @@ export default function GuwenDraftPreview() {
       {loading && <p className="mx-auto max-w-7xl p-8 text-center text-slate-500">正在讀取 GitHub 分支上的 MD……</p>}
       {error && <p className="mx-auto mt-8 max-w-xl rounded-xl border border-red-200 bg-red-50 p-4 text-center text-red-700">讀取失敗：{error}</p>}
 
-      {!loading && question && (
+      {!loading && question && source && (
         <div className="mx-auto grid max-w-7xl gap-5 p-4 lg:grid-cols-[minmax(0,1fr)_360px]">
           <section>
             <div className="mb-3 flex flex-wrap items-center gap-2 text-xs">

@@ -47,6 +47,30 @@ export const DRAFT_SOURCES: DraftSource[] = [
   { lessonId: 'yang-shi-zhi-zi', title: '第九篇｜楊氏之子', path: '09-guwen-yangshizi-decoder-content.md' },
 ];
 
+export type DraftSourceResolution = {
+  index?: number;
+  error?: string;
+};
+
+export function resolveDraftSource(
+  lessonPath: string | null,
+  legacyLessonId: string | null,
+): DraftSourceResolution {
+  if (lessonPath !== null) {
+    const index = DRAFT_SOURCES.findIndex((source) => source.path === lessonPath);
+    return index >= 0
+      ? { index }
+      : { error: `找不到指定教材主檔：${lessonPath}` };
+  }
+  if (legacyLessonId !== null) {
+    const index = DRAFT_SOURCES.findIndex((source) => source.lessonId === legacyLessonId);
+    return index >= 0
+      ? { index }
+      : { error: `找不到指定教材代碼：${legacyLessonId}` };
+  }
+  return { index: 0 };
+}
+
 export function draftQuestionIndexByNumber(
   questions: DraftQuestion[],
   questionNumber: number,

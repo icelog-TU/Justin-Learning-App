@@ -4,9 +4,40 @@ import {
   DRAFT_SOURCES,
   draftQuestionIndexByNumber,
   parseDraftQuestions,
+  resolveDraftSource,
 } from '../src/lib/guwenDraftPreview';
 
 let failed = false;
+
+const thirdLessonPathIndex = DRAFT_SOURCES.findIndex((source) => source.path === '03-guwen-kezhouqiujian-decoder-content.md');
+if (resolveDraftSource('03-guwen-kezhouqiujian-decoder-content.md', null).index !== thirdLessonPathIndex) {
+  failed = true;
+  console.error('  ERROR: active MD 路徑沒有正確定位到第三篇');
+}
+if (resolveDraftSource(null, 'ke-zhou-qiu-jian').index !== thirdLessonPathIndex) {
+  failed = true;
+  console.error('  ERROR: 舊 lessonId 連結不再相容第三篇');
+}
+if (resolveDraftSource('not-a-real-active-master.md', null).index !== undefined) {
+  failed = true;
+  console.error('  ERROR: 無效 active MD 路徑仍默默退回第一篇');
+}
+if (!resolveDraftSource('not-a-real-active-master.md', null).error) {
+  failed = true;
+  console.error('  ERROR: 無效 active MD 路徑沒有回報錯誤');
+}
+if (resolveDraftSource('03-guwen-kezhouqiujian-decoder-content.md', 'wrong-legacy-id').index !== thirdLessonPathIndex) {
+  failed = true;
+  console.error('  ERROR: 同時提供參數時沒有優先採用 active MD 路徑');
+}
+if (resolveDraftSource('not-a-real-active-master.md', 'ke-zhou-qiu-jian').index !== undefined) {
+  failed = true;
+  console.error('  ERROR: 無效 active MD 路徑被舊 lessonId 掩蓋');
+}
+if (resolveDraftSource(null, null).index !== 0) {
+  failed = true;
+  console.error('  ERROR: 未指定教材時無法開啟預覽首頁');
+}
 
 for (const source of DRAFT_SOURCES) {
   const markdown = fs.readFileSync(path.resolve(source.path), 'utf8');
