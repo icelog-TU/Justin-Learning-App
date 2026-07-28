@@ -355,8 +355,17 @@ function decodingKeyFields(section?: Section): DraftDecodingKey[] {
     if (cells.length < 2) return;
     const [code, decodedEvidence] = cells;
     if (!code || !decodedEvidence) return;
-    if (/^(?:密碼|原文密碼|原文|字詞)$/.test(code) && /^(?:已取得的)?(?:線索|意思|解法)$/.test(decodedEvidence)) return;
     if (/^:?-{3,}:?$/.test(code) && /^:?-{3,}:?$/.test(decodedEvidence)) return;
+    const nextContentLine = section.lines.slice(index + 1).find((candidate) => candidate.trim());
+    if (nextContentLine) {
+      const nextCells = nextContentLine
+        .trim()
+        .replace(/^\|/, '')
+        .replace(/\|$/, '')
+        .split('|')
+        .map((cell) => cell.trim());
+      if (nextCells.length >= 2 && nextCells.every((cell) => /^:?-{3,}:?$/.test(cell))) return;
+    }
     const lineNumber = section.line + index + 1;
     keys.push({
       code: { text: code, heading: section.heading, line: lineNumber },

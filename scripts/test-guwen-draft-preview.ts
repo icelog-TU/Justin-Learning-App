@@ -135,6 +135,41 @@ if (thirdLessonQuestionEight?.preAnswerKeys.some((key) => key.code.text === '原
   failed = true;
   console.error('  ERROR: 第三篇第 8 題把密碼表標題誤當成一把鑰匙');
 }
+
+const fifthLessonMarkdown = fs.readFileSync(path.resolve('05-guwen-yamiaozhuzhang-decoder-content.md'), 'utf8');
+const fifthLessonQuestionNine = parseDraftQuestions(fifthLessonMarkdown).find((item) => item.number === 9);
+const expectedQuestionNineKeys = [
+  ['芒芒然歸', '疲累地回家'],
+  ['謂其人曰', '對家人說'],
+  ['今日病矣', '今天真是累壞了'],
+  ['予', '說話者自己，相當於「我」'],
+];
+if (
+  fifthLessonQuestionNine?.preAnswerKeys.length !== expectedQuestionNineKeys.length
+  || expectedQuestionNineKeys.some(([code, decodedEvidence], index) => {
+    const actual = fifthLessonQuestionNine?.preAnswerKeys[index];
+    return actual?.code.text !== code || actual.decodedEvidence.text !== decodedEvidence;
+  })
+) {
+  failed = true;
+  console.error('  ERROR: 第五篇第 9 題沒有排除「原文／密碼鑰匙」表頭，或未正確抓到四把鑰匙');
+}
+
+const arbitraryKeyHeaderExample = parseDraftQuestions(`
+# 第 1 題｜測試任意密碼表頭
+## 作答前可見的密碼鑰匙
+| 任意表頭 | 另一個任意表頭 |
+|---|---|
+| 其 | 他 |
+`);
+if (
+  arbitraryKeyHeaderExample[0]?.preAnswerKeys.length !== 1
+  || arbitraryKeyHeaderExample[0].preAnswerKeys[0]?.code.text !== '其'
+) {
+  failed = true;
+  console.error('  ERROR: 成人預覽解析器只能排除已知欄名，未依 Markdown 表格結構排除表頭');
+}
+
 if (
   thirdLessonQuestionSixteen?.title !== '破解「不亦……乎」'
   || thirdLessonQuestionSixteen.clues.length !== 2
