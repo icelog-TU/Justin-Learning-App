@@ -20,7 +20,7 @@
 | 2 | 司馬光破甕救友 | `02-guwen-simaguang-decoder-content.md` | 全文核准，精簡版 App 已上線 | 依 App 預覽與使用回饋調整 |
 | 3 | 刻舟求劍 | `03-guwen-kezhouqiujian-decoder-content.md` | 新版全文 20 題、白話驗證卷軸與徽章收尾均已核准 | 交付正式 App 實作 |
 | 4 | 守株待兔 | `04-guwen-shouzhudaitu-decoder-content.md` | 18 題重寫版、收尾與 App 驗收完成 | 依實際使用回饋調整 |
-| 5 | 揠苗助長 | `05-guwen-yamiaozhuzhang-decoder-content.md` | 開場及第 1–9 題核准；第 10–12 題草稿待審 | 依序審核第 10–12 題 |
+| 5 | 揠苗助長 | `05-guwen-yamiaozhuzhang-decoder-content.md` | 開場及第 1–11 題核准；第 12–14 題草稿待審 | 依序審核第 12–14 題 |
 | 6 | 掩耳盜鐘 | `06-guwen-yanerdaozhong-decoder-content.md` | 以舊版為底逐題重審；第 1–2 題已核准，開場仍待審；第 3–5 題精簡修正版待審；第 6–21 題及收尾保留舊版待重審 | 審核第 3–5 題，再從第 6 題起依新規則壓到 20 題內 |
 | 7 | 鄭人買履 | `07-guwen-zhengrenmailv-decoder-content.md` | 以舊版為底進行實測後重寫；第 1–2 題精簡草稿待審，第 3–20 題與收尾仍沿用原核准版本 | 審核第 1–2 題，再依孩子回饋繼續減量 |
 | 8 | 長竿入城 | `08-guwen-changganrucheng-decoder-content.md` | 任務開場及第 1–9 題核准；第 10 題待審 | 審核第 10 題 |
