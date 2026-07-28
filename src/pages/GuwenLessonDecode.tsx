@@ -79,8 +79,6 @@ const PRAISE_LINES = [
 const CELEBRATION_TICKS = 10;
 const CELEBRATION_TICK_MS = 140;
 const PRAISE_FALLBACK_MS = 4500;
-const CORE_FEEDBACK_MIN_FALLBACK_MS = 12000;
-const CORE_FEEDBACK_MS_PER_CHARACTER = 450;
 
 interface CelebrationState {
   stepId: string;
@@ -325,9 +323,7 @@ export default function GuwenLessonDecode() {
   const badgeClaimSubmittedRef = useRef(false);
   const celebrationTimeoutRef = useRef<number | null>(null);
   const celebrationPraiseFallbackRef = useRef<number | null>(null);
-  const coreFeedbackFallbackRef = useRef<number | null>(null);
   const rewardStartedForStepRef = useRef<string | null>(null);
-  const [coreFeedbackFallbackReady, setCoreFeedbackFallbackReady] = useState(false);
   // Which step is on screen right now — deliberately its own state (not derived fresh from solvedIds on
   // every render, the way `wordIndex` in GuwenDecode.tsx is separate state too). If this were computed as
   // `findCurrentStep(lesson, solvedIds)` directly, the *instant* the last step's answer is recorded,
@@ -594,11 +590,6 @@ export default function GuwenLessonDecode() {
         window.clearTimeout(celebrationPraiseFallbackRef.current);
         celebrationPraiseFallbackRef.current = null;
       }
-      if (coreFeedbackFallbackRef.current !== null) {
-        window.clearTimeout(coreFeedbackFallbackRef.current);
-        coreFeedbackFallbackRef.current = null;
-      }
-      setCoreFeedbackFallbackReady(false);
       setCelebration(null);
       setCelebrationPaused(false);
       setCorrectFlowStage(null);
@@ -642,7 +633,8 @@ export default function GuwenLessonDecode() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, currentStep, allStepsSolved, closingStage]);
 
-  // Give the immediate success reward first. Once it settles, hand off to the required core answer.
+  // Give the immediate success reward first. Once it settles, show and play the core answer,
+  // while also allowing an adult or returning learner to continue without waiting for TTS.
   useEffect(() => {
     if (!celebration) return;
     if (celebration.stage === 'rolling' && celebration.tick >= CELEBRATION_TICKS && celebration.praiseDone) {
@@ -831,17 +823,6 @@ export default function GuwenLessonDecode() {
   function playCoreFeedback(step: LessonStep) {
     const coreFeedback = coreFeedbackText(step, lesson!.completeCorrectFeedbackAsCore);
     const id = `core-feedback-${step.id}`;
-    if (coreFeedbackFallbackRef.current !== null) {
-      window.clearTimeout(coreFeedbackFallbackRef.current);
-    }
-    setCoreFeedbackFallbackReady(false);
-    coreFeedbackFallbackRef.current = window.setTimeout(
-      () => {
-        coreFeedbackFallbackRef.current = null;
-        setCoreFeedbackFallbackReady(true);
-      },
-      Math.max(CORE_FEEDBACK_MIN_FALLBACK_MS, coreFeedback.length * CORE_FEEDBACK_MS_PER_CHARACTER),
-    );
     setPlaybackId(id);
     setPlaybackPaused(false);
     if (isSpeechSynthesisAvailable()) {
@@ -850,11 +831,6 @@ export default function GuwenLessonDecode() {
   }
 
   function completeCoreFeedback(step: LessonStep) {
-    if (coreFeedbackFallbackRef.current !== null) {
-      window.clearTimeout(coreFeedbackFallbackRef.current);
-      coreFeedbackFallbackRef.current = null;
-    }
-    setCoreFeedbackFallbackReady(false);
     setPlaybackId((cur) => (cur === `core-feedback-${step.id}` ? null : cur));
     setPlaybackPaused(false);
     setCorrectFlowStage('choices');
@@ -868,17 +844,6 @@ export default function GuwenLessonDecode() {
   }
 
   function playClosingCoreFeedback(id: string, text: string) {
-    if (coreFeedbackFallbackRef.current !== null) {
-      window.clearTimeout(coreFeedbackFallbackRef.current);
-    }
-    setCoreFeedbackFallbackReady(false);
-    coreFeedbackFallbackRef.current = window.setTimeout(
-      () => {
-        coreFeedbackFallbackRef.current = null;
-        setCoreFeedbackFallbackReady(true);
-      },
-      Math.max(CORE_FEEDBACK_MIN_FALLBACK_MS, text.length * CORE_FEEDBACK_MS_PER_CHARACTER),
-    );
     setPlaybackId(`closing-core-${id}`);
     setPlaybackPaused(false);
     if (isSpeechSynthesisAvailable()) {
@@ -887,11 +852,6 @@ export default function GuwenLessonDecode() {
   }
 
   function completeClosingCoreFeedback(id: string) {
-    if (coreFeedbackFallbackRef.current !== null) {
-      window.clearTimeout(coreFeedbackFallbackRef.current);
-      coreFeedbackFallbackRef.current = null;
-    }
-    setCoreFeedbackFallbackReady(false);
     setPlaybackId((cur) => (cur === `closing-core-${id}` ? null : cur));
     setPlaybackPaused(false);
     setClosingCorrectFlow({ id, stage: 'done' });
@@ -906,10 +866,6 @@ export default function GuwenLessonDecode() {
     if (playbackId === playback && !playbackPaused) {
       pauseSpeech();
       setPlaybackPaused(true);
-      if (coreFeedbackFallbackRef.current !== null) {
-        window.clearTimeout(coreFeedbackFallbackRef.current);
-        coreFeedbackFallbackRef.current = null;
-      }
       return;
     }
     playClosingCoreFeedback(id, text);
@@ -940,10 +896,6 @@ export default function GuwenLessonDecode() {
     if (playbackId === id && !playbackPaused) {
       pauseSpeech();
       setPlaybackPaused(true);
-      if (coreFeedbackFallbackRef.current !== null) {
-        window.clearTimeout(coreFeedbackFallbackRef.current);
-        coreFeedbackFallbackRef.current = null;
-      }
       return;
     }
     playCoreFeedback(step);
@@ -983,11 +935,6 @@ export default function GuwenLessonDecode() {
       window.clearTimeout(celebrationPraiseFallbackRef.current);
       celebrationPraiseFallbackRef.current = null;
     }
-    if (coreFeedbackFallbackRef.current !== null) {
-      window.clearTimeout(coreFeedbackFallbackRef.current);
-      coreFeedbackFallbackRef.current = null;
-    }
-    setCoreFeedbackFallbackReady(false);
     cancelSpeech();
     setPlaybackId(null);
     setPlaybackPaused(false);
@@ -1362,26 +1309,14 @@ export default function GuwenLessonDecode() {
       >
         <p className="whitespace-pre-line">{text}</p>
         <p className="mt-3 text-xs font-semibold text-emerald-600">
-          聽完這段核心解說後，就可以繼續。
+          可以聽完、暫停或重播，也可以直接繼續。
         </p>
-        {coreFeedbackFallbackReady && (
-          <button
-            type="button"
-            onClick={() => {
-              cancelSpeech();
-              completeClosingCoreFeedback(id);
-            }}
-            className="mt-2 rounded-lg border border-emerald-300 bg-white px-3 py-2 text-xs font-bold text-emerald-700"
-          >
-            語音沒有正常播放，我已讀完核心解答
-          </button>
-        )}
       </GuwenCoreFeedbackBlock>
     );
   }
 
   function closingCoreIsComplete(id: string): boolean {
-    return closingCorrectFlow?.id !== id || closingCorrectFlow.stage === 'done';
+    return closingCorrectFlow?.id !== id || closingCorrectFlow.stage !== 'reward';
   }
 
   function renderSequenceOrdering() {
@@ -1468,17 +1403,19 @@ export default function GuwenLessonDecode() {
         {orderingSolved && renderClosingCore(closing.id, closing.correctFeedback)}
         {orderingSolved && closingCoreIsComplete(closing.id) && (
           <div className="bg-emerald-50 rounded-xl p-4 space-y-3">
-            <div className="flex items-start gap-2">
-              <p className="font-bold text-emerald-700 flex-1">{closing.correctFeedback}</p>
-              <button
-                type="button"
-                onClick={() => speakSequence(feedbackSpeechUnits(closing.correctFeedback))}
-                aria-label="聽這段回饋"
-                className="text-emerald-600 shrink-0"
-              >
-                🔊
-              </button>
-            </div>
+            {closingCorrectFlow?.stage === 'done' && (
+              <div className="flex items-start gap-2">
+                <p className="font-bold text-emerald-700 flex-1">{closing.correctFeedback}</p>
+                <button
+                  type="button"
+                  onClick={() => speakSequence(feedbackSpeechUnits(closing.correctFeedback))}
+                  aria-label="聽這段回饋"
+                  className="text-emerald-600 shrink-0"
+                >
+                  🔊
+                </button>
+              </div>
+            )}
             {closing.explanation && (
               <div className="flex items-start gap-2">
                 <p className="text-xs text-emerald-700 whitespace-pre-line flex-1">{closing.explanation}</p>
@@ -1535,17 +1472,19 @@ export default function GuwenLessonDecode() {
         {causalSolved && renderClosingCore(closing.id, closing.correctFeedback)}
         {causalSolved && closingCoreIsComplete(closing.id) && (
           <div className="space-y-4">
-            <div className="flex items-start gap-2">
-              <p className="font-bold text-emerald-700 flex-1">{closing.correctFeedback}</p>
-              <button
-                type="button"
-                onClick={() => speakSequence(feedbackSpeechUnits(closing.correctFeedback))}
-                aria-label="聽這段回饋"
-                className="text-emerald-600 shrink-0"
-              >
-                🔊
-              </button>
-            </div>
+            {closingCorrectFlow?.stage === 'done' && (
+              <div className="flex items-start gap-2">
+                <p className="font-bold text-emerald-700 flex-1">{closing.correctFeedback}</p>
+                <button
+                  type="button"
+                  onClick={() => speakSequence(feedbackSpeechUnits(closing.correctFeedback))}
+                  aria-label="聽這段回饋"
+                  className="text-emerald-600 shrink-0"
+                >
+                  🔊
+                </button>
+              </div>
+            )}
             <GuwenCausalNodes nodes={closing.nodes} onPlay={(node) => speak(node)} />
             <div className="bg-amber-50 rounded-xl p-4">
               <div className="flex items-start gap-2">
@@ -1623,19 +1562,21 @@ export default function GuwenLessonDecode() {
         {multiSelectSolved && renderClosingCore(closing.id, closing.correctFeedback)}
         {multiSelectSolved && closingCoreIsComplete(closing.id) && (
           <div className="bg-emerald-50 rounded-xl p-4 space-y-3">
-            <div className="flex items-start gap-2">
-              <p className="font-bold text-emerald-700 whitespace-pre-line flex-1">{closing.correctFeedback}</p>
-              <button
-                type="button"
-                onClick={() =>
-                  togglePlayback(`closing-feedback-${closing.id}`, feedbackSpeechUnits(closing.correctFeedback))
-                }
-                aria-label="聽這段回饋"
-                className="text-emerald-600 shrink-0"
-              >
-                {playbackLabel(`closing-feedback-${closing.id}`, '🔊', '⏸', '▶️')}
-              </button>
-            </div>
+            {closingCorrectFlow?.stage === 'done' && (
+              <div className="flex items-start gap-2">
+                <p className="font-bold text-emerald-700 whitespace-pre-line flex-1">{closing.correctFeedback}</p>
+                <button
+                  type="button"
+                  onClick={() =>
+                    togglePlayback(`closing-feedback-${closing.id}`, feedbackSpeechUnits(closing.correctFeedback))
+                  }
+                  aria-label="聽這段回饋"
+                  className="text-emerald-600 shrink-0"
+                >
+                  {playbackLabel(`closing-feedback-${closing.id}`, '🔊', '⏸', '▶️')}
+                </button>
+              </div>
+            )}
             <div className="space-y-1">
               {closing.options.map((opt, i) => (
                 <div key={i} className="flex items-start gap-2">
@@ -2056,23 +1997,9 @@ export default function GuwenLessonDecode() {
                   {coreFeedbackText(currentStep, lesson.completeCorrectFeedbackAsCore)}
                 </p>
                 {correctFlowStage === 'core-feedback' && (
-                  <div className="mt-3 space-y-2">
-                    <p className="text-xs font-semibold text-emerald-600">
-                      聽完這段核心解說後，就可以查看詳解或進入下一題。
-                    </p>
-                    {coreFeedbackFallbackReady && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          cancelSpeech();
-                          completeCoreFeedback(currentStep);
-                        }}
-                        className="rounded-lg border border-emerald-300 bg-white px-3 py-2 text-xs font-bold text-emerald-700"
-                      >
-                        語音沒有正常播放，我已讀完核心解答
-                      </button>
-                    )}
-                  </div>
+                  <p className="mt-3 text-xs font-semibold text-emerald-600">
+                    可以聽完、暫停或重播，也可以直接查看詳解或進入下一題。
+                  </p>
                 )}
               </GuwenCoreFeedbackBlock>
             )}
@@ -2100,7 +2027,9 @@ export default function GuwenLessonDecode() {
               </div>
             )}
             {feedback === 'correct'
-              && (correctFlowStage === 'choices' || correctFlowStage === 'details')
+              && (correctFlowStage === 'core-feedback'
+                || correctFlowStage === 'choices'
+                || correctFlowStage === 'details')
               && !celebration && (
               <>
                 <div className="rounded-xl border-2 border-amber-300 bg-amber-50 p-3 text-center text-sm font-bold text-amber-700">
@@ -2111,7 +2040,7 @@ export default function GuwenLessonDecode() {
                     🔑 你破解了一把新密碼：{currentStep.keyAwarded.code} ＝ {currentStep.keyAwarded.decodedEvidence}
                   </p>
                 )}
-                {correctFlowStage === 'choices' && (
+                {(correctFlowStage === 'core-feedback' || correctFlowStage === 'choices') && (
                   <button
                     type="button"
                     onClick={() => setCorrectFlowStage('details')}
@@ -2149,7 +2078,9 @@ export default function GuwenLessonDecode() {
               </>
             )}
             {feedback === 'correct'
-              && (correctFlowStage === 'choices' || correctFlowStage === 'details') && (
+              && (correctFlowStage === 'core-feedback'
+                || correctFlowStage === 'choices'
+                || correctFlowStage === 'details') && (
               <button
                 type="button"
                 onClick={handleNextStep}

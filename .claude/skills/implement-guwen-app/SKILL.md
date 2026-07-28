@@ -52,18 +52,11 @@ Do not restore the deleted word-puzzle format. Reuse shared types and components
 
 ## Correct-answer sequence
 
-For a regular graded step:
+Follow the authoritative sequence in [app-implementation-contract.md](references/app-implementation-contract.md):
 
-1. Hide options and immediately grant the once-only reward, success sound, and coin/star animation.
-2. After the reward settles, show and auto-play the complete `correctFeedback` as an independent core-answer card.
-3. While the core plays, allow pause, resume, and restart but keep detail and next-step actions locked. Do not offer a normal skip.
-4. After core playback completes, keep the core card visible and offer separate detail and next-step actions.
-5. Reveal `詳解` only when requested, containing only `explanation`; never auto-play it or move extra `correctFeedback` paragraphs into it.
-6. Show an awarded key with the post-core actions so it is not hidden behind optional detail.
-7. If speech is unavailable or fails, expose the contract-defined read-completion fallback only after a reasonable reading interval.
-8. If the child chooses the next step while detail audio is playing, cancel that playback and advance immediately.
-
-Track and clear delayed playback or fallback timers. Guard reward writes against rapid input; core speech callbacks must never grant rewards.
+- Preserve immediate once-only reward feedback.
+- Show and auto-play the independent core answer after the reward, with optional detail and next-step actions available immediately.
+- Never let speech availability or completion gate navigation; cancel active speech when advancing.
 
 ## Speech boundary
 
