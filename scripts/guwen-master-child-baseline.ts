@@ -4,10 +4,12 @@ import type { ChildSnapshot } from './guwen-master-child-snapshot';
 // 遷移時另以非標題文字逐行比對證明內容未改；之後真正教材修訂須另案更新並接受審核。
 // 2026-07-28：成人預覽解析器修正混合一般段落／引用段落的詳解漏抓問題；教材 MD 未改，
 // 重新建立第 1–8 篇解析指紋，讓完整詳解納入後續孩子端文字保護。
+// 2026-07-28：《刻舟求劍》第 4–8 題簡化修訂稿與第 13 題新線索版經使用者核准，
+// 同步更新第三篇孩子端保護指紋。
 export const GUWEN_CHILD_BASELINE: Record<string, ChildSnapshot> = {
   'lessons/01-guwen-wangrong-rewrite.md': { questionCount: 20, hash: 'dd46c4423110b7b6b4dd21dfe04f37fdbd76f517c5c21af1c2ecf676cb2cdca4' },
   '02-guwen-simaguang-decoder-content.md': { questionCount: 18, hash: '27d5c4b77cb2a13889aa12105043c4ca776f36488bf34d49426131bda64718ba' },
-  '03-guwen-kezhouqiujian-decoder-content.md': { questionCount: 37, hash: 'fdb2373040bc0b4d774ff3c4597db0f10bef82e2a54a661406d7ac7787b24797' },
+  '03-guwen-kezhouqiujian-decoder-content.md': { questionCount: 20, hash: '1e6a860130efb45ae2c22652a2db789a5d6eb09b7c44af52b4daca2a40d87213' },
   '04-guwen-shouzhudaitu-decoder-content.md': { questionCount: 18, hash: 'a8bb260c9673f078fa0a1ba81960c03446e86bc3d4e8fd1ab22fd628f462cbb9' },
   '05-guwen-yamiaozhuzhang-decoder-content.md': { questionCount: 9, hash: 'c1325136cdb1946cede737053f5f91e5faf50a714319cfa0aa084f9db5710752' },
   '06-guwen-yanerdaozhong-decoder-content.md': { questionCount: 21, hash: 'c9f5d5324d80a7ad3cb32ba94d4bed9cc1d7979274602acf3a088e2a3172be11' },
