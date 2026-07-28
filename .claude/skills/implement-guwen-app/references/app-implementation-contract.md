@@ -98,6 +98,8 @@ locked → available → attempted_wrong → solved
 
 依實際互動判斷型別，不以章節名稱猜測。Closing 是獨立 optional 欄位，不能為模仿前篇而強迫每篇全部使用。
 
+成人預覽與孩子端的題型結構以 `src/components/guwen/GuwenQuestionBlocks.tsx` 為單一實作來源。線索卡、作答前鑰匙、一般選項、排序卡、多選、因果鏈、核心解答與詳解不得在兩個 page 各寫一份。兩端只保留必要差異：成人預覽從 active MD 解析並模擬作答狀態，不寫入進度或獎勵；孩子端使用正式資料並執行真實作答、解鎖、獎勵與持久化。新增或修改題型時，必須先擴充共用元件與解析／資料映射，再同時驗證兩端。
+
 全文白話驗證的 prerequisites 必須包含所有必要 step 與存在的 closing。完成流程、徽章與慶祝順序沿用 shared component；只有教材明確核准特殊流程時才新增可重用設定。
 
 ## 獎勵與進度

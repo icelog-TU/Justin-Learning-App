@@ -33,10 +33,11 @@ The only active lesson format is the evidence lesson model:
 - `src/data/guwenLesson.ts` and lesson modules: data and types.
 - `src/pages/GuwenLessonDecode.tsx`: shared lesson UI and state flow.
 - `src/pages/GuwenDraftPreview.tsx`: adult GitHub-MD preview.
+- `src/components/guwen/GuwenQuestionBlocks.tsx`: question-type presentation shared by the child App and adult preview.
 - `src/lib/speech.ts`: shared `speak()` / `speakSequence()` / `ttsSafe()` path.
 - `src/lib/rewards.ts` and storage hooks: rewards and persistence.
 
-Do not restore the deleted word-puzzle format. Reuse shared types and components before adding lesson-specific branches.
+Do not restore the deleted word-puzzle format. Reuse shared types and components before adding lesson-specific branches. A new or changed question type must update the shared question blocks; do not recreate its layout independently in either page.
 
 ## Implementation rules
 

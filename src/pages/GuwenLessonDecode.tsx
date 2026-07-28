@@ -41,6 +41,16 @@ import {
   guwenRedoMultiplier,
 } from '../lib/rewards';
 import { numberToChineseWords } from '../lib/chineseNumber';
+import {
+  GuwenCausalNodes,
+  GuwenChoiceList,
+  GuwenClueList,
+  GuwenCoreFeedbackBlock,
+  GuwenExplanationBlock,
+  GuwenKeyList,
+  GuwenMultiSelectList,
+  GuwenSequenceCardRow,
+} from '../components/guwen/GuwenQuestionBlocks';
 
 type Phase = 'intro' | 'listening' | 'steps' | 'complete';
 type CorrectFlowStage = 'core-feedback' | 'reward' | 'details';
@@ -202,8 +212,7 @@ function stepAutoPlayLines(step: LessonStep): string[] {
 
 /** Highlights every 「...」-quoted span in `text` (quotes included) — used for a clue's vernacular gloss,
  * where the quoted span is the classical word/phrase the child just decoded, kept visible inside the
- * modern-Chinese sentence so it's easy to spot at a glance, matching how the classical text itself
- * highlights the same word via `highlightPhrase`. */
+ * modern-Chinese sentence so it's easy to spot at a glance. */
 function highlightQuoted(text: string): ReactNode[] {
   const parts = text.split(/(「[^」]*」)/);
   return parts.map((part, i) =>
@@ -215,24 +224,6 @@ function highlightQuoted(text: string): ReactNode[] {
       <span key={i}>{part}</span>
     ),
   );
-}
-
-/** Splits `sentence` on every occurrence of `phrase`, highlighting each match. */
-function highlightPhrase(sentence: string, phrase: string): ReactNode[] {
-  if (!phrase || !sentence.includes(phrase)) return [<span key="t">{sentence}</span>];
-  const parts = sentence.split(phrase);
-  const nodes: ReactNode[] = [];
-  parts.forEach((part, i) => {
-    if (i > 0) {
-      nodes.push(
-        <span key={`h-${i}`} className="text-indigo-600 font-bold">
-          {phrase}
-        </span>,
-      );
-    }
-    nodes.push(<span key={`t-${i}`}>{part}</span>);
-  });
-  return nodes;
 }
 
 /** A sentence chunk of the full passage counts as solved once every step targeting it (or a phrase inside
@@ -1183,21 +1174,12 @@ export default function GuwenLessonDecode() {
 
   function renderClue(clue: ClassicalClue, i: number) {
     return (
-      <div key={i} className="rounded-xl border-2 border-gray-200 bg-gray-50 px-4 py-3 space-y-1.5">
-        <div className="flex items-start gap-2">
-          <button
-            type="button"
-            onClick={() =>
-              speakSequence([clue.text, ...(clue.pronunciationCue ? [clue.pronunciationCue.speechText] : [])])
-            }
-            aria-label="聽這句古文線索"
-            className="text-sky-500 shrink-0"
-          >
-            🔊
-          </button>
-          <p className="text-gray-800 font-medium">{highlightPhrase(clue.text, clue.highlight)}</p>
-        </div>
-        {clue.pronunciationCue && (
+      <GuwenClueList
+        key={i}
+        clues={[{
+          text: clue.text,
+          highlight: clue.highlight,
+          pronunciationCue: clue.pronunciationCue ? (
           <div className="flex items-start gap-2 rounded-lg bg-amber-50 px-2.5 py-2 text-amber-800">
             <button
               type="button"
@@ -1209,10 +1191,8 @@ export default function GuwenLessonDecode() {
             </button>
             <p className="text-xs font-medium">{clue.pronunciationCue.displayText}</p>
           </div>
-        )}
-        {/* Some clues deliberately omit unlockedMeaning — the child is meant to compare bare clues and
-            induce the pattern themselves, so translating one here would hand over the answer. */}
-        {clue.unlockedMeaning && (
+          ) : undefined,
+          meaning: clue.unlockedMeaning ? (
           <div className="space-y-1.5">
             <div className="flex items-start gap-2 pl-1">
               <button
@@ -1238,79 +1218,33 @@ export default function GuwenLessonDecode() {
                 : undefined,
             )}
           </div>
-        )}
-        <p className="text-[11px] text-gray-300 pl-1">出處：{clue.source}</p>
-      </div>
+          ) : undefined,
+          source: clue.source,
+        }]}
+        onPlayClue={() =>
+          speakSequence([clue.text, ...(clue.pronunciationCue ? [clue.pronunciationCue.speechText] : [])])
+        }
+      />
     );
   }
 
   function renderOptions(step: GradedStep, readOnly: boolean) {
     return (
-      <div className="space-y-2">
-        {step.options.map((opt, i) => {
-          const isWrong = !readOnly && wrongIndex === i;
-          const isCorrectPick = (readOnly || feedback === 'correct') && i === step.correctIndex;
-          return (
-            <div
-              key={i}
-              role={readOnly ? undefined : 'button'}
-              tabIndex={readOnly ? undefined : 0}
-              onClick={readOnly ? undefined : () => handleSelect(i)}
-              onKeyDown={
-                readOnly
-                  ? undefined
-                  : (e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        handleSelect(i);
-                      }
-                    }
-              }
-              className={`w-full text-left rounded-xl border-2 px-4 py-3 transition-colors flex items-start gap-2 ${
-                readOnly || feedback === 'correct' ? 'cursor-default' : 'cursor-pointer'
-              } ${
-                isCorrectPick
-                  ? 'bg-emerald-50 border-emerald-400'
-                  : isWrong
-                    ? 'bg-red-50 border-red-300'
-                    : 'bg-gray-50 border-gray-200 hover:border-indigo-300'
-              }`}
-            >
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  speak(opt);
-                }}
-                aria-label="聽這個選項"
-                className="text-sky-500 shrink-0"
-              >
-                🔊
-              </button>
-              <p className="text-gray-800">{opt}</p>
-              {isCorrectPick && <span className="ml-auto text-emerald-600 text-xs font-bold shrink-0">✓ 正解</span>}
-            </div>
-          );
-        })}
-      </div>
+      <GuwenChoiceList
+        options={step.options}
+        correctIndex={step.correctIndex}
+        wrongIndex={readOnly ? null : wrongIndex}
+        revealCorrect={readOnly || feedback === 'correct'}
+        readOnly={readOnly || feedback === 'correct'}
+        onChoose={readOnly ? undefined : handleSelect}
+        onPlay={(option) => speak(option)}
+      />
     );
   }
 
   function renderKeyTable(keys: { code: string; decodedEvidence: string }[]) {
     return (
-      <div className="space-y-2">
-        <p className="text-xs font-semibold text-gray-500">🔑 已取得的密碼鑰匙</p>
-        {keys.map((k, i) => (
-          <div key={i} className="flex items-center gap-2 rounded-xl border-2 border-amber-200 bg-amber-50 px-4 py-2">
-            <button type="button" onClick={() => speak(k.code)} aria-label="聽這個密碼" className="text-sky-500 shrink-0">
-              🔊
-            </button>
-            <span className="font-bold text-amber-700 shrink-0">{k.code}</span>
-            <span className="text-gray-400 shrink-0">＝</span>
-            <span className="text-gray-700 text-sm">{k.decodedEvidence}</span>
-          </div>
-        ))}
-      </div>
+      <GuwenKeyList keys={keys} onPlay={(key) => speakSequence([key.code, key.decodedEvidence])} />
     );
   }
 
@@ -1342,29 +1276,22 @@ export default function GuwenLessonDecode() {
           {cardsInOrder.map((card, i) => {
             const isDragging = orderingDrag?.cardId === card.id;
             return (
-            <div
+            <GuwenSequenceCardRow
               key={card.id}
-              ref={(element) => {
+              outerRef={(element) => {
                 if (element) orderingCardRefs.current.set(card.id, element);
                 else orderingCardRefs.current.delete(card.id);
               }}
-              className={`flex items-center gap-2 rounded-xl border-2 px-3 py-2 select-none ${
-                isDragging
-                  ? 'relative z-20 border-indigo-400 bg-indigo-50 shadow-xl'
-                  : 'border-gray-200 bg-gray-50 transition-[transform,box-shadow,border-color]'
-              }`}
+              position={i + 1}
+              text={card.text}
+              active={isDragging}
+              onPlay={() => speak(card.text)}
               style={
                 isDragging
                   ? { transform: `translateY(${orderingDrag.currentY - orderingDrag.startY}px)` }
                   : undefined
               }
-            >
-              <span className="font-bold text-gray-400 w-5 text-center shrink-0">{i + 1}</span>
-              <button type="button" onClick={() => speak(card.text)} aria-label="聽這張畫面" className="text-sky-500 shrink-0">
-                🔊
-              </button>
-              <p className="flex-1 text-sm text-gray-800">{card.text}</p>
-              {!orderingSolved && (
+              handle={!orderingSolved ? (
                 <button
                   type="button"
                   aria-label={`拖曳第 ${i + 1} 張卡片重新排序`}
@@ -1382,8 +1309,8 @@ export default function GuwenLessonDecode() {
                 >
                   ⠿
                 </button>
-              )}
-            </div>
+              ) : undefined}
+            />
           )})}
         </div>
         {!orderingSolved && orderingDrag && (
@@ -1458,31 +1385,12 @@ export default function GuwenLessonDecode() {
         <p className="text-sm text-gray-600 whitespace-pre-line">{closing.intro}</p>
         <p className="font-medium text-gray-800">{closing.question}</p>
         {!causalSolved && (
-          <div className="space-y-2">
-            {closing.options.map((opt, i) => {
-              const isWrong = causalWrong && causalChoice === i;
-              return (
-                <div
-                  key={i}
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => handleSelectCausal(i)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      handleSelectCausal(i);
-                    }
-                  }}
-                  className={`w-full text-left rounded-xl border-2 px-4 py-3 cursor-pointer transition-colors flex items-start gap-2 ${
-                    isWrong ? 'bg-red-50 border-red-300' : 'bg-gray-50 border-gray-200 hover:border-indigo-300'
-                  }`}
-                >
-                  <span className="font-bold text-gray-400 shrink-0">{String.fromCharCode(65 + i)}</span>
-                  <p className="flex-1 text-gray-800">{opt}</p>
-                </div>
-              );
-            })}
-          </div>
+          <GuwenChoiceList
+            options={closing.options}
+            wrongIndex={causalWrong ? causalChoice : null}
+            labels="letter"
+            onChoose={handleSelectCausal}
+          />
         )}
         {!causalSolved && causalWrong && <p className="text-sm text-red-500 text-center">{closing.retryHint}</p>}
         {causalSolved && (
@@ -1498,19 +1406,7 @@ export default function GuwenLessonDecode() {
                 🔊
               </button>
             </div>
-            <div className="space-y-1">
-              {closing.nodes.map((node, i) => (
-                <div key={i}>
-                  <div className="flex items-center gap-2 bg-gray-50 rounded-lg px-3 py-2">
-                    <button type="button" onClick={() => speak(node)} aria-label="聽這個階段" className="text-sky-500 shrink-0">
-                      🔊
-                    </button>
-                    <p className="flex-1 text-sm text-gray-800">{node}</p>
-                  </div>
-                  {i < closing.nodes.length - 1 && <p className="text-center text-gray-300">↓</p>}
-                </div>
-              ))}
-            </div>
+            <GuwenCausalNodes nodes={closing.nodes} onPlay={(node) => speak(node)} />
             <div className="bg-amber-50 rounded-xl p-4">
               <div className="flex items-start gap-2">
                 <p className="text-sm font-bold text-amber-700 whitespace-pre-line flex-1">{closing.coreSummary}</p>
@@ -1566,37 +1462,13 @@ export default function GuwenLessonDecode() {
           </button>
         </div>
         <p className="text-sm text-gray-600 whitespace-pre-line">{closing.intro}</p>
-        <div className="space-y-2">
-          {closing.options.map((opt, i) => (
-            <label
-              key={i}
-              className={`flex items-start gap-2 rounded-xl border-2 px-3 py-2 ${
-                multiSelectSolved ? 'cursor-default' : 'cursor-pointer'
-              } ${multiSelectChoice.has(i) ? 'bg-indigo-50 border-indigo-300' : 'bg-gray-50 border-gray-200'}`}
-            >
-              <input
-                type="checkbox"
-                checked={multiSelectChoice.has(i)}
-                disabled={multiSelectSolved}
-                onChange={() => toggleMultiSelectOption(i)}
-                className="mt-1"
-              />
-              <span className="text-sm text-gray-800 flex-1">{opt.text}</span>
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  speak(opt.text);
-                }}
-                aria-label="聽這個選項"
-                className="text-sky-500 shrink-0"
-              >
-                🔊
-              </button>
-            </label>
-          ))}
-        </div>
+        <GuwenMultiSelectList
+          options={closing.options}
+          selected={multiSelectChoice}
+          solved={multiSelectSolved}
+          onToggle={toggleMultiSelectOption}
+          onPlay={(option) => speak(option)}
+        />
         {!multiSelectSolved && multiSelectWrong && <p className="text-sm text-red-500 text-center">{closing.retryHint}</p>}
         {!multiSelectSolved && (
           <button
@@ -2012,22 +1884,22 @@ export default function GuwenLessonDecode() {
             )}
 
             {feedback === 'correct' && (
-              <div className="bg-emerald-50 border-2 border-emerald-300 rounded-xl p-4">
-                <p className="mb-2 text-xs font-extrabold tracking-wide text-emerald-600">核心解答</p>
-                <div className="flex items-start justify-between gap-2">
-                  <p className="font-bold text-emerald-700">{coreFeedbackText(currentStep)}</p>
+              <GuwenCoreFeedbackBlock
+                action={(
                   <button
                     type="button"
                     onClick={() => toggleCoreFeedback(currentStep)}
                     disabled={correctFlowStage === 'reward'}
                     aria-label="暫停或重新播放核心解說"
-                    className="text-emerald-600 shrink-0 disabled:cursor-not-allowed disabled:opacity-40"
+                    className="shrink-0 text-emerald-600 disabled:cursor-not-allowed disabled:opacity-40"
                   >
                     {correctFlowStage === 'reward'
                       ? '✓'
                       : playbackLabel(`core-feedback-${currentStep.id}`, '🔊', '⏸', '▶️')}
                   </button>
-                </div>
+                )}
+              >
+                <p>{coreFeedbackText(currentStep)}</p>
                 {correctFlowStage === 'core-feedback' && (
                   <div className="mt-3 space-y-2">
                     <p className="text-xs font-semibold text-emerald-600">
@@ -2042,7 +1914,7 @@ export default function GuwenLessonDecode() {
                     </button>
                   </div>
                 )}
-              </div>
+              </GuwenCoreFeedbackBlock>
             )}
             {feedback === 'correct' && correctFlowStage === 'reward' && celebration && (
               <div className="bg-gradient-to-br from-amber-50 to-orange-50 border-2 border-amber-300 rounded-xl p-5 space-y-3 text-center">
@@ -2072,9 +1944,8 @@ export default function GuwenLessonDecode() {
                 <div className="rounded-xl border-2 border-amber-300 bg-amber-50 p-3 text-center text-sm font-bold text-amber-700">
                   🪙 已獲得 {guwenCoinAmount} 金幣　⭐ 已獲得 {guwenStarAmount} 星星
                 </div>
-                <div className="bg-sky-50 border-2 border-sky-200 rounded-xl p-4 space-y-2">
-                  <div className="flex items-start justify-between gap-2">
-                    <p className="text-xs font-extrabold tracking-wide text-sky-700">詳解</p>
+                <GuwenExplanationBlock
+                  action={(
                     <button
                       type="button"
                       onClick={() =>
@@ -2085,7 +1956,8 @@ export default function GuwenLessonDecode() {
                     >
                       {playbackLabel(`explain-${currentStep.id}`, '🔊', '⏸', '▶️')}
                     </button>
-                  </div>
+                  )}
+                >
                   {speechParagraphs(currentStep.correctFeedback).slice(1).map((paragraph) => (
                     <p key={paragraph} className="font-bold text-sky-800">{paragraph}</p>
                   ))}
@@ -2096,7 +1968,7 @@ export default function GuwenLessonDecode() {
                       🔑 你破解了一把新密碼：{currentStep.keyAwarded.code} ＝ {currentStep.keyAwarded.decodedEvidence}
                     </p>
                   )}
-                </div>
+                </GuwenExplanationBlock>
               </>
             )}
             {feedback === 'correct' && correctFlowStage === 'details' && (

@@ -21,17 +21,39 @@ export type DraftDecodingKey = {
   decodedEvidence: DraftField;
 };
 
+export type DraftQuestionKind =
+  | 'evidence'
+  | 'reconstruction'
+  | 'choice'
+  | 'reveal'
+  | 'sequence'
+  | 'causal'
+  | 'multiselect';
+
+export type DraftSequenceCard = DraftField & {
+  id: string;
+};
+
+export type DraftMultiSelectOption = DraftField & {
+  correct: boolean;
+};
+
 export type DraftQuestion = {
   number: number;
   title: string;
   status: string;
   line: number;
+  kind: DraftQuestionKind;
   target?: DraftField;
   intro?: DraftField;
   preAnswerKeys: DraftDecodingKey[];
   clues: DraftClue[];
   question?: DraftField;
   options: DraftField[];
+  sequenceCards: DraftSequenceCard[];
+  sequenceCorrectOrder: string[];
+  multiSelectOptions: DraftMultiSelectOption[];
+  causalNodes: DraftField[];
   correctIndex?: number;
   correctAnswer?: DraftField;
   correctFeedback?: DraftField;
@@ -259,6 +281,67 @@ function optionFields(sections: Section[]): DraftField[] {
   return options.slice(0, 6);
 }
 
+function sequenceCardFields(sections: Section[]): DraftSequenceCard[] {
+  const section = firstSection(sections, [/^事件卡$/, /事件.*卡片/]);
+  if (!section) return [];
+  const cards: DraftSequenceCard[] = [];
+  section.lines.forEach((line, index) => {
+    const match = line.trim().match(/^[-*]\s*卡片\s*([A-Za-zＡ-Ｚａ-ｚ])\s*[：:]\s*(.+)$/);
+    if (!match) return;
+    cards.push({
+      id: match[1].normalize('NFKC').toUpperCase(),
+      text: cleanInline(match[2]),
+      heading: section.heading,
+      line: section.line + index + 1,
+    });
+  });
+  return cards;
+}
+
+function multiSelectOptionFields(sections: Section[]): DraftMultiSelectOption[] {
+  const section = firstSection(sections, [/^勾選項目$/, /待判斷.*敘述/]);
+  if (!section) return [];
+  const supported = field(firstSection(sections, [/^應勾選$/]))?.text ?? '';
+  const supportedNumbers = new Set(
+    [...supported.matchAll(/(?:^|\n)\s*[-*]?\s*([1-9]\d*)[.、]/g)].map((match) => Number(match[1])),
+  );
+  const options: DraftMultiSelectOption[] = [];
+  section.lines.forEach((line, index) => {
+    const match = line.trim().match(/^([1-9]\d*)[.、]\s*(.+)$/);
+    if (!match) return;
+    const number = Number(match[1]);
+    options.push({
+      text: cleanInline(match[2]),
+      heading: section.heading,
+      line: section.line + index + 1,
+      correct: supportedNumbers.has(number),
+    });
+  });
+  return options;
+}
+
+function sequenceOrder(correctAnswer?: DraftField): string[] {
+  if (!correctAnswer) return [];
+  return [...correctAnswer.text.matchAll(/[A-Za-zＡ-Ｚａ-ｚ]/g)]
+    .map((match) => match[0].normalize('NFKC').toUpperCase());
+}
+
+function causalNodeFields(sections: Section[]): DraftField[] {
+  const section = firstSection(sections, [/^因果鏈$/, /因果.*階段/, /^推理鏈$/]);
+  if (!section) return [];
+  const nodes: DraftField[] = [];
+  section.lines.forEach((line, index) => {
+    const match = line.trim().match(/^(?:[-*]\s*|[1-9]\d*[.、]\s*)(.+)$/);
+    if (!match) return;
+    nodes.push({
+      text: cleanInline(match[1]),
+      heading: section.heading,
+      line: section.line + index + 1,
+    });
+  });
+  return nodes;
+}
+
 function decodingKeyFields(section?: Section): DraftDecodingKey[] {
   if (!section) return [];
   const keys: DraftDecodingKey[] = [];
@@ -272,7 +355,7 @@ function decodingKeyFields(section?: Section): DraftDecodingKey[] {
     if (cells.length < 2) return;
     const [code, decodedEvidence] = cells;
     if (!code || !decodedEvidence) return;
-    if (/^(?:密碼|原文|字詞)$/.test(code) && /^(?:已取得的)?(?:線索|意思|解法)$/.test(decodedEvidence)) return;
+    if (/^(?:密碼|原文密碼|原文|字詞)$/.test(code) && /^(?:已取得的)?(?:線索|意思|解法)$/.test(decodedEvidence)) return;
     if (/^:?-{3,}:?$/.test(code) && /^:?-{3,}:?$/.test(decodedEvidence)) return;
     const lineNumber = section.line + index + 1;
     keys.push({
@@ -379,12 +462,42 @@ function parseOneQuestion(header: RegExpMatchArray, lines: string[], start: numb
     });
   });
   const options = optionFields(sections);
+  const sequenceCards = sequenceCardFields(sections);
+  const sequenceCorrectOrder = sequenceOrder(correctAnswer);
+  const multiSelectOptions = multiSelectOptionFields(sections);
+  const causalNodes = causalNodeFields(sections);
+  const title = cleanInline(header[4] ?? `第 ${parseQuestionNumber(header[2])} 題`);
+  const kind: DraftQuestionKind = sequenceCards.length
+    ? 'sequence'
+    : multiSelectOptions.length
+      ? 'multiselect'
+      : causalNodes.length
+        ? 'causal'
+        : clues.length
+          ? 'evidence'
+          : preAnswerKeys.length
+            ? 'reconstruction'
+            : options.length < 2
+              ? 'reveal'
+              : 'choice';
   const diagnostics: string[] = [];
-  if (!target) diagnostics.push('找不到「本輪處理的句子」');
+  if (!target && kind !== 'sequence' && kind !== 'multiselect') diagnostics.push('找不到「本輪處理的句子」');
   if (!intro) diagnostics.push('找不到「孩子端｜麻煩古文破譯家幫忙」');
-  if (!question) diagnostics.push('找不到「請古文破譯家提交解法」');
-  if (options.length < 2) diagnostics.push(`只抓到 ${options.length} 個選項`);
-  if (!correctAnswer) diagnostics.push('找不到「正確答案」');
+  if (!question && !['sequence', 'multiselect'].includes(kind)) diagnostics.push('找不到「請古文破譯家提交解法」');
+  if (!['sequence', 'multiselect', 'reveal'].includes(kind) && options.length < 2) {
+    diagnostics.push(`只抓到 ${options.length} 個選項`);
+  }
+  if (kind === 'sequence' && sequenceCards.length < 2) diagnostics.push(`只抓到 ${sequenceCards.length} 張事件卡`);
+  if (kind === 'sequence' && sequenceCorrectOrder.length !== sequenceCards.length) {
+    diagnostics.push('事件卡正確順序不完整');
+  }
+  if (kind === 'multiselect' && multiSelectOptions.length < 2) {
+    diagnostics.push(`只抓到 ${multiSelectOptions.length} 個勾選項目`);
+  }
+  if (kind === 'multiselect' && !multiSelectOptions.some((option) => option.correct)) {
+    diagnostics.push('找不到應勾選項目');
+  }
+  if (!correctAnswer && kind !== 'multiselect') diagnostics.push('找不到「正確答案」');
   const correctFeedbackSection = firstSection(sections, [/^答對回饋/]);
   const explanationSection = firstSection(sections, [/^詳解/]);
   const canonicalChildKeySection = firstSection(sections, [/^本題取得的密碼鑰匙（作答後才顯示）$/]);
@@ -408,14 +521,19 @@ function parseOneQuestion(header: RegExpMatchArray, lines: string[], start: numb
   return {
     number: parseQuestionNumber(header[2]),
     status: cleanInline(header[3] ?? ''),
-    title: cleanInline(header[4] ?? `第 ${parseQuestionNumber(header[2])} 題`),
+    title,
     line: start + 1,
+    kind,
     target,
     intro,
     preAnswerKeys,
     clues,
     question,
     options,
+    sequenceCards,
+    sequenceCorrectOrder,
+    multiSelectOptions,
+    causalNodes,
     correctIndex,
     correctAnswer,
     correctFeedback: field(correctFeedbackSection),
@@ -428,15 +546,32 @@ function parseOneQuestion(header: RegExpMatchArray, lines: string[], start: numb
 
 export function parseDraftQuestions(markdown: string): DraftQuestion[] {
   const lines = markdown.replace(/\r\n/g, '\n').split('\n');
+  const declaredTotalMatch = markdown.match(/新版預計總數[：:]\s*([一二三四五六七八九十百兩〇零\d]+)\s*題/);
+  const declaredTotal = declaredTotalMatch ? parseQuestionNumber(declaredTotalMatch[1]) : undefined;
   const headers: Array<{ index: number; match: RegExpMatchArray }> = [];
   lines.forEach((line, index) => {
     const match = line.match(/^(#{1,2})\s+第\s*([一二三四五六七八九十百兩〇零\d]+)\s*題(?:（([^）]+)）)?(?:\s*[｜|]\s*(.+))?\s*$/);
     if (match) headers.push({ index, match });
   });
-  return headers.map(({ index, match }, headerIndex) => {
+  const parsed = headers.map(({ index, match }, headerIndex) => {
     const end = headers[headerIndex + 1]?.index ?? lines.length;
     return parseOneQuestion(match, lines.slice(index + 1, end), index);
   });
+  // Rewrites can coexist temporarily in one active master. Keep the explicit simplified revision when
+  // present; otherwise the later occurrence is current. Returning both made questionNumber links open an
+  // arbitrary archived copy and made the adult preview's question count misleading.
+  const latestByNumber = new Map<number, DraftQuestion>();
+  parsed.forEach((question) => {
+    if (declaredTotal === undefined || question.number <= declaredTotal) {
+      const current = latestByNumber.get(question.number);
+      const isActiveSimplifiedRevision = /簡化修訂稿待審/.test(question.status);
+      const currentIsActiveSimplifiedRevision = /簡化修訂稿待審/.test(current?.status ?? '');
+      if (!currentIsActiveSimplifiedRevision || isActiveSimplifiedRevision) {
+        latestByNumber.set(question.number, question);
+      }
+    }
+  });
+  return [...latestByNumber.values()].sort((a, b) => a.number - b.number);
 }
 
 export function githubRawUrl(source: DraftSource, cacheBuster = Date.now()): string {

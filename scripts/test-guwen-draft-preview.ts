@@ -90,8 +90,16 @@ for (const example of representativeSources) {
 }
 
 const thirdLessonMarkdown = fs.readFileSync(path.resolve('03-guwen-kezhouqiujian-decoder-content.md'), 'utf8');
-const thirdLessonQuestionFour = parseDraftQuestions(thirdLessonMarkdown).find((item) => item.number === 4);
-const thirdLessonQuestionFive = parseDraftQuestions(thirdLessonMarkdown).find((item) => item.number === 5);
+const thirdLessonQuestions = parseDraftQuestions(thirdLessonMarkdown);
+const thirdLessonQuestionFour = thirdLessonQuestions.find((item) => item.number === 4);
+const thirdLessonQuestionFive = thirdLessonQuestions.find((item) => item.number === 5);
+const thirdLessonQuestionEight = thirdLessonQuestions.find((item) => item.number === 8);
+const thirdLessonQuestionNineteen = thirdLessonQuestions.find((item) => item.number === 19);
+const thirdLessonQuestionTwenty = thirdLessonQuestions.find((item) => item.number === 20);
+if (thirdLessonQuestions.length !== 20 || thirdLessonQuestions.at(-1)?.number !== 20) {
+  failed = true;
+  console.error('  ERROR: 第三篇沒有依新版題數控制保留第 1～20 題');
+}
 const expectedExplanationParts = [
   '第一條線索中，碗原本在手中',
   '第二條線索中，算袋原本也在手中',
@@ -122,6 +130,28 @@ expectedQuestionFiveKeys.forEach(([code, decodedEvidence], index) => {
     console.error(`  ERROR: 第三篇第 5 題沒有正確抓到第 ${index + 1} 把作答前密碼鑰匙`);
   }
 });
+if (thirdLessonQuestionEight?.preAnswerKeys.some((key) => key.code.text === '原文密碼')) {
+  failed = true;
+  console.error('  ERROR: 第三篇第 8 題把密碼表標題誤當成一把鑰匙');
+}
+if (
+  thirdLessonQuestionNineteen?.kind !== 'sequence'
+  || thirdLessonQuestionNineteen.sequenceCards.length !== 5
+  || thirdLessonQuestionNineteen.sequenceCorrectOrder.join('') !== 'CEDAB'
+) {
+  failed = true;
+  console.error('  ERROR: 第三篇第 19 題沒有解析成五張事件卡與 CEDAB 正確順序');
+}
+if (
+  thirdLessonQuestionTwenty?.kind !== 'multiselect'
+  || thirdLessonQuestionTwenty.multiSelectOptions.length !== 6
+  || thirdLessonQuestionTwenty.multiSelectOptions
+    .flatMap((option, index) => option.correct ? [index + 1] : [])
+    .join(',') !== '1,4,6'
+) {
+  failed = true;
+  console.error('  ERROR: 第三篇第 20 題沒有解析成六項多選題與 1、4、6 正解');
+}
 for (const source of DRAFT_SOURCES) {
   const markdown = fs.readFileSync(path.resolve(source.path), 'utf8');
   for (const question of parseDraftQuestions(markdown)) {

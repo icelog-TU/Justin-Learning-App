@@ -12,6 +12,16 @@ import {
   type DraftQuestion,
 } from '../lib/guwenDraftPreview';
 import { cancelSpeech, pauseSpeech, resumeSpeech, speakSequence } from '../lib/speech';
+import {
+  GuwenCausalNodes,
+  GuwenChoiceList,
+  GuwenClueList,
+  GuwenCoreFeedbackBlock,
+  GuwenExplanationBlock,
+  GuwenKeyList,
+  GuwenMultiSelectList,
+  GuwenSequenceCardRow,
+} from '../components/guwen/GuwenQuestionBlocks';
 
 type PreviewState = 'answering' | 'wrong' | 'correct';
 
@@ -101,6 +111,9 @@ function readingOrder(question: DraftQuestion) {
   });
   if (question.question) lines.push({ label: '提問', text: question.question.text });
   question.options.forEach((option, index) => lines.push({ label: `選項 ${index + 1}`, text: option.text }));
+  question.sequenceCards.forEach((card, index) => lines.push({ label: `事件卡 ${index + 1}`, text: card.text }));
+  question.multiSelectOptions.forEach((option, index) => lines.push({ label: `勾選項目 ${index + 1}`, text: option.text }));
+  question.causalNodes.forEach((node, index) => lines.push({ label: `因果階段 ${index + 1}`, text: node.text }));
   return lines;
 }
 
@@ -333,82 +346,125 @@ export default function GuwenDraftPreview() {
                 {question.intro && <AudioLine field={question.intro} id="intro" label="引導語" activePlayback={playback} onToggle={togglePlayback} className="mb-4 justify-center text-center text-sm text-slate-600" />}
 
                 {!!question.preAnswerKeys.length && (
-                  <div className="mb-4 space-y-2">
-                    <p className="text-xs font-semibold text-slate-500">🔑 作答前可見的密碼鑰匙</p>
-                    {question.preAnswerKeys.map((key, index) => (
-                      <div key={`${key.code.line}-${index}`} className="flex items-start gap-2 rounded-xl border-2 border-amber-200 bg-amber-50 px-4 py-3">
-                        <button
-                          type="button"
-                          onClick={() => togglePlayback(
-                            `pre-answer-key-${index}`,
-                            `密碼鑰匙 ${index + 1}`,
-                            [key.code.text, key.decodedEvidence.text],
-                          )}
-                          aria-label={playback?.id === `pre-answer-key-${index}`
-                            ? `${playback.paused ? '繼續' : '暫停'}密碼鑰匙 ${index + 1}`
-                            : `播放密碼鑰匙 ${index + 1}`}
-                          className="shrink-0 text-sky-500"
-                        >
-                          {playback?.id === `pre-answer-key-${index}` ? (playback.paused ? '▶️' : '⏸') : '🔊'}
-                        </button>
-                        <span className="shrink-0 font-bold text-amber-700"><Highlighted text={key.code.text} /></span>
-                        <span className="shrink-0 text-slate-400">＝</span>
-                        <span className="text-sm text-slate-700"><Highlighted text={key.decodedEvidence.text} /></span>
-                      </div>
-                    ))}
+                  <div className="mb-4">
+                    <GuwenKeyList
+                      keys={question.preAnswerKeys.map((key) => ({
+                        code: key.code.text,
+                        decodedEvidence: key.decodedEvidence.text,
+                      }))}
+                      heading="🔑 作答前可見的密碼鑰匙"
+                      onPlay={(key, index) => togglePlayback(
+                        `pre-answer-key-${index}`,
+                        `密碼鑰匙 ${index + 1}`,
+                        [key.code, key.decodedEvidence],
+                      )}
+                    />
                   </div>
                 )}
 
                 {!!question.clues.length && (
-                  <div className="mb-4 space-y-2">
-                    {question.clues.map((clue, index) => (
-                      <div key={`${clue.line}-${index}`} className="space-y-2 rounded-xl border-2 border-slate-200 bg-slate-50 px-4 py-3">
-                        <p className="text-xs font-black text-slate-400">線索 {index + 1}</p>
-                        <AudioLine field={clue} id={`clue-${index}`} label={`線索 ${index + 1}`} activePlayback={playback} onToggle={togglePlayback} className="font-medium" />
-                        {clue.meaning && (
-                          <AudioLine field={clue.meaning} id={`clue-${index}-meaning`} label={`線索 ${index + 1} 已破解為`} activePlayback={playback} onToggle={togglePlayback} className="pl-1 text-xs text-slate-500" />
-                        )}
-                        {clue.source ? (
-                          <p className="whitespace-pre-line border-t border-slate-200 pt-2 text-[11px] leading-relaxed text-slate-400">
-                            出處：{clue.source.text}
-                          </p>
-                        ) : (
-                          <p className="border-t border-red-100 pt-2 text-[11px] font-bold text-red-400">
-                            ⚠ MD 未抓到這條線索的出處
-                          </p>
-                        )}
-                      </div>
-                    ))}
+                  <div className="mb-4">
+                    <GuwenClueList
+                      clues={question.clues.map((clue, index) => ({
+                        text: clue.text,
+                        pronunciationCue: clue.pronunciationCues?.length ? (
+                          <div className="space-y-1.5">
+                            {clue.pronunciationCues.map((cue, cueIndex) => (
+                              <AudioLine
+                                key={`${cue}-${cueIndex}`}
+                                field={{ text: cue, heading: '讀音提示', line: clue.line }}
+                                id={`clue-${index}-cue-${cueIndex}`}
+                                label={`線索 ${index + 1} 讀音提示`}
+                                activePlayback={playback}
+                                onToggle={togglePlayback}
+                                className="rounded-lg bg-amber-50 px-2.5 py-2 text-xs font-medium text-amber-800"
+                              />
+                            ))}
+                          </div>
+                        ) : undefined,
+                        meaning: clue.meaning ? (
+                          <AudioLine
+                            field={clue.meaning}
+                            id={`clue-${index}-meaning`}
+                            label={`線索 ${index + 1} 已破解為`}
+                            activePlayback={playback}
+                            onToggle={togglePlayback}
+                            className="pl-1 text-xs text-slate-500"
+                          />
+                        ) : undefined,
+                        source: clue.source?.text,
+                      }))}
+                      onPlayClue={(text, index) => togglePlayback(
+                        `clue-${index}`,
+                        `線索 ${index + 1}`,
+                        [text, ...(question.clues[index].pronunciationCues ?? [])],
+                      )}
+                    />
                   </div>
                 )}
 
                 {question.question && <AudioLine field={question.question} id="question" label="提問" activePlayback={playback} onToggle={togglePlayback} className="mb-3 justify-center text-center text-sm font-semibold" />}
 
-                <div className="space-y-2">
-                  {question.options.map((option, index) => {
-                    const correct = previewState === 'correct' && index === question.correctIndex;
-                    const wrong = previewState === 'wrong' && index === (question.correctIndex === 0 ? 1 : 0);
-                    return (
-                      <div
-                        key={`${option.line}-${index}`}
-                        className={`flex items-start gap-2 rounded-xl border-2 px-4 py-3 ${
-                          correct ? 'border-emerald-400 bg-emerald-50' : wrong ? 'border-red-300 bg-red-50' : 'border-slate-200 bg-slate-50'
-                        }`}
-                      >
-                        <button
-                          type="button"
-                          onClick={() => togglePlayback(`option-${index}`, `選項 ${index + 1}`, [option.text])}
-                          className="text-sky-500"
-                          aria-label={playback?.id === `option-${index}` ? `${playback.paused ? '繼續' : '暫停'}選項 ${index + 1}` : `播放選項 ${index + 1}`}
-                        >
-                          {playback?.id === `option-${index}` ? (playback.paused ? '▶️' : '⏸') : '🔊'}
-                        </button>
-                        <span className="font-bold text-slate-400">{index + 1}.</span>
-                        <p>{option.text}</p>
-                      </div>
-                    );
-                  })}
-                </div>
+                {question.kind === 'sequence' && (
+                  <div className="space-y-2" data-preview-question-kind="sequence">
+                    <p className="rounded-lg bg-indigo-50 px-3 py-2 text-xs font-medium text-indigo-700">
+                      正式孩子端可按住右側的 ⠿ 上下拖曳；成人預覽以作答狀態模擬排列結果。
+                    </p>
+                    {(previewState === 'correct'
+                      ? question.sequenceCorrectOrder
+                          .map((id) => question.sequenceCards.find((card) => card.id === id))
+                          .filter((card): card is DraftQuestion['sequenceCards'][number] => Boolean(card))
+                      : question.sequenceCards
+                    ).map((card, index) => (
+                      <GuwenSequenceCardRow
+                        key={card.id}
+                        position={index + 1}
+                        text={card.text}
+                        onPlay={() => togglePlayback(`sequence-${card.id}`, `事件卡 ${index + 1}`, [card.text])}
+                        handle={<span className="flex h-11 w-11 items-center justify-center rounded-xl border-2 border-indigo-200 bg-white text-2xl text-indigo-600">⠿</span>}
+                      />
+                    ))}
+                  </div>
+                )}
+
+                {question.kind === 'multiselect' && (
+                  <div data-preview-question-kind="multiselect">
+                    <GuwenMultiSelectList
+                      options={question.multiSelectOptions}
+                      selected={new Set(
+                        previewState === 'correct'
+                          ? question.multiSelectOptions.flatMap((option, index) => option.correct ? [index] : [])
+                          : previewState === 'wrong' ? [0, 1] : [],
+                      )}
+                      solved={previewState === 'correct'}
+                      onPlay={(option, index) => togglePlayback(`multi-${index}`, `勾選項目 ${index + 1}`, [option])}
+                    />
+                    {previewState !== 'correct' && (
+                      <button type="button" className="mt-3 w-full rounded-xl bg-emerald-600 py-2.5 font-bold text-white">
+                        提交判斷
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {question.kind === 'causal' && previewState === 'correct' && question.causalNodes.length > 0 && (
+                  <GuwenCausalNodes
+                    nodes={question.causalNodes.map((node) => node.text)}
+                    onPlay={(node, index) => togglePlayback(`causal-${index}`, `因果階段 ${index + 1}`, [node])}
+                  />
+                )}
+
+                {!['sequence', 'multiselect'].includes(question.kind) && (
+                  <GuwenChoiceList
+                    options={question.options.map((option) => option.text)}
+                    correctIndex={question.correctIndex}
+                    wrongIndex={previewState === 'wrong' ? (question.correctIndex === 0 ? 1 : 0) : null}
+                    revealCorrect={previewState === 'correct'}
+                    readOnly
+                    labels={question.kind === 'causal' ? 'letter' : 'number'}
+                    onPlay={(option, index) => togglePlayback(`option-${index}`, `選項 ${index + 1}`, [option])}
+                  />
+                )}
 
                 {previewState === 'wrong' && question.retryHint && (
                   <AudioLine field={question.retryHint} id="retry-hint" label="答錯提示" activePlayback={playback} onToggle={togglePlayback} className="mt-3 justify-center text-center text-sm text-red-500" />
@@ -416,11 +472,7 @@ export default function GuwenDraftPreview() {
 
                 {previewState === 'correct' && (
                   <div className="mt-4 space-y-4">
-                    <section className="rounded-xl border-2 border-emerald-300 bg-emerald-50 p-4">
-                      <h3 className="mb-3 text-sm font-black text-emerald-700">
-                        核心解答
-                        <span className="ml-2 text-xs font-bold text-emerald-500">MD：答對回饋</span>
-                      </h3>
+                    <GuwenCoreFeedbackBlock sourceLabel="MD：答對回饋">
                       {question.correctFeedback ? (
                         <AudioLine
                           field={question.correctFeedback}
@@ -433,10 +485,9 @@ export default function GuwenDraftPreview() {
                       ) : (
                         <p className="text-sm font-bold text-red-600">⚠ MD 沒有可顯示的「答對回饋」</p>
                       )}
-                    </section>
+                    </GuwenCoreFeedbackBlock>
 
-                    <section className="rounded-xl border-2 border-sky-200 bg-sky-50 p-4">
-                      <h3 className="mb-3 text-sm font-black text-sky-800">詳解</h3>
+                    <GuwenExplanationBlock>
                       {question.explanation ? (
                         <AudioLine
                           field={question.explanation}
@@ -449,7 +500,7 @@ export default function GuwenDraftPreview() {
                       ) : (
                         <p className="text-sm text-slate-500">本題 MD 沒有另外提供詳解。</p>
                       )}
-                    </section>
+                    </GuwenExplanationBlock>
 
                     {question.key && (
                       <section className="rounded-xl border-2 border-amber-200 bg-amber-50 p-4">
