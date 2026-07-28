@@ -11,6 +11,8 @@ Choose one primary task path:
 
 Do not load both skills for a single-path task. Use both only when the user explicitly requests content changes and App implementation together; handle those as separate approval and implementation passes.
 
+Use GitHub as the coordination layer for concurrent chats. Before every modifying pass and again before commit or push, fetch the fixed branch and compare its HEAD with the last-seen SHA; reread only changed files relevant to the task, integrate remote work first, and never force-push. One primary chat owns each active lesson master. Ordinary lesson chats must not create or independently edit shared SOP, skill, handoff, or design-standard copies; route cross-lesson rule changes through the workflow-maintenance process in `GUWEN-WORKFLOW-SOP.md`.
+
 Pronunciation is reviewed with layout in `/#/guwen-draft-preview` and again in the formal App after implementation. Do not start a separate polyphonic scan, build or update an audit catalog, ask for old listening-page decisions, pull central audit results, or make legacy audit state a gate for approval, implementation, commit, push, or deployment. Legacy audit files and cloud records are historical unless the user explicitly asks to maintain that system.
 
 The user's active instruction has highest priority. Current code and the active lesson master outrank historical documents. Run task-appropriate validation before delivery.

@@ -41,6 +41,10 @@ Do not edit production App data or UI. When the approved lesson is ready for imp
 5. Never change the classical source text, authentic clues, attribution, wording, or order without explicit textual-review approval.
 6. Treat a rewrite as a new approval timeline. Do not inherit old approval or key counts automatically.
 
+## Escalate cross-lesson rules
+
+When one lesson exposes a rule that should govern other lessons, fix only the user-approved current scope and prepare a proposal with the problem, candidate rule, canonical file, future-only or retroactive scope, and likely affected lessons. Route the proposal through the workflow-maintenance process in `../../../GUWEN-WORKFLOW-SOP.md`; do not create or independently edit shared SOP, skill, handoff, or design-standard copies from an ordinary lesson task.
+
 ## Core lesson sequence
 
 For each useful target:
