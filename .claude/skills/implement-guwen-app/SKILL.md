@@ -54,7 +54,7 @@ Do not restore the deleted word-puzzle format. Reuse shared types and components
 For a regular graded step:
 
 1. Hide options and show the complete `correctFeedback` field as an independent core-answer card.
-2. Auto-play the complete core answer.
+2. Auto-play the complete core answer. While it plays, provide the contract-defined skip action; a deliberate skip counts as completing the core playback.
 3. Keep the core card visible; only then show rewards underneath and run the reward animation.
 4. After rewards settle, add a separate `詳解` card containing only `explanation`; never move extra `correctFeedback` paragraphs into it.
 5. Start detail playback at `explanation`; never replay the core answer.

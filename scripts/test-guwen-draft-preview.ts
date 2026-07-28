@@ -91,6 +91,7 @@ for (const example of representativeSources) {
 
 const thirdLessonMarkdown = fs.readFileSync(path.resolve('03-guwen-kezhouqiujian-decoder-content.md'), 'utf8');
 const thirdLessonQuestionFour = parseDraftQuestions(thirdLessonMarkdown).find((item) => item.number === 4);
+const thirdLessonQuestionFive = parseDraftQuestions(thirdLessonMarkdown).find((item) => item.number === 5);
 const expectedExplanationParts = [
   '第一條線索中，碗原本在手中',
   '第二條線索中，算袋原本也在手中',
@@ -108,6 +109,19 @@ if (thirdLessonQuestionFour?.key) {
   failed = true;
   console.error('  ERROR: 第三篇第 4 題的成人編輯欄位被誤顯示為孩子端密碼鑰匙');
 }
+const expectedQuestionFiveKeys = [
+  ['其劍', '前面那位楚國人的劍'],
+  ['自舟中', '從船裡'],
+  ['墜', '從原來的位置往下掉'],
+  ['於水', '到水裡'],
+];
+expectedQuestionFiveKeys.forEach(([code, decodedEvidence], index) => {
+  const actual = thirdLessonQuestionFive?.preAnswerKeys[index];
+  if (actual?.code.text !== code || actual.decodedEvidence.text !== decodedEvidence) {
+    failed = true;
+    console.error(`  ERROR: 第三篇第 5 題沒有正確抓到第 ${index + 1} 把作答前密碼鑰匙`);
+  }
+});
 for (const source of DRAFT_SOURCES) {
   const markdown = fs.readFileSync(path.resolve(source.path), 'utf8');
   for (const question of parseDraftQuestions(markdown)) {

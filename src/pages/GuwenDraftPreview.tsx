@@ -87,6 +87,10 @@ function readingOrder(question: DraftQuestion) {
     lines.push({ label: '引導語', text: question.intro.text });
     question.intro.pronunciationCues?.forEach((text) => lines.push({ label: '引導語讀音提示', text }));
   }
+  question.preAnswerKeys.forEach((key, index) => {
+    lines.push({ label: `密碼鑰匙 ${index + 1}`, text: key.code.text });
+    lines.push({ label: `密碼鑰匙 ${index + 1} 已取得的線索`, text: key.decodedEvidence.text });
+  });
   question.clues.forEach((clue, index) => {
     lines.push({ label: `線索 ${index + 1}`, text: clue.text });
     clue.pronunciationCues?.forEach((text) => lines.push({ label: `線索 ${index + 1} 讀音提示`, text }));
@@ -327,6 +331,33 @@ export default function GuwenDraftPreview() {
                 )}
 
                 {question.intro && <AudioLine field={question.intro} id="intro" label="引導語" activePlayback={playback} onToggle={togglePlayback} className="mb-4 justify-center text-center text-sm text-slate-600" />}
+
+                {!!question.preAnswerKeys.length && (
+                  <div className="mb-4 space-y-2">
+                    <p className="text-xs font-semibold text-slate-500">🔑 作答前可見的密碼鑰匙</p>
+                    {question.preAnswerKeys.map((key, index) => (
+                      <div key={`${key.code.line}-${index}`} className="flex items-start gap-2 rounded-xl border-2 border-amber-200 bg-amber-50 px-4 py-3">
+                        <button
+                          type="button"
+                          onClick={() => togglePlayback(
+                            `pre-answer-key-${index}`,
+                            `密碼鑰匙 ${index + 1}`,
+                            [key.code.text, key.decodedEvidence.text],
+                          )}
+                          aria-label={playback?.id === `pre-answer-key-${index}`
+                            ? `${playback.paused ? '繼續' : '暫停'}密碼鑰匙 ${index + 1}`
+                            : `播放密碼鑰匙 ${index + 1}`}
+                          className="shrink-0 text-sky-500"
+                        >
+                          {playback?.id === `pre-answer-key-${index}` ? (playback.paused ? '▶️' : '⏸') : '🔊'}
+                        </button>
+                        <span className="shrink-0 font-bold text-amber-700"><Highlighted text={key.code.text} /></span>
+                        <span className="shrink-0 text-slate-400">＝</span>
+                        <span className="text-sm text-slate-700"><Highlighted text={key.decodedEvidence.text} /></span>
+                      </div>
+                    ))}
+                  </div>
+                )}
 
                 {!!question.clues.length && (
                   <div className="mb-4 space-y-2">

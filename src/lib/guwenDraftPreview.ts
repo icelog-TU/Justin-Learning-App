@@ -16,6 +16,11 @@ export type DraftClue = DraftField & {
   source?: DraftField;
 };
 
+export type DraftDecodingKey = {
+  code: DraftField;
+  decodedEvidence: DraftField;
+};
+
 export type DraftQuestion = {
   number: number;
   title: string;
@@ -23,6 +28,7 @@ export type DraftQuestion = {
   line: number;
   target?: DraftField;
   intro?: DraftField;
+  preAnswerKeys: DraftDecodingKey[];
   clues: DraftClue[];
   question?: DraftField;
   options: DraftField[];
@@ -253,6 +259,30 @@ function optionFields(sections: Section[]): DraftField[] {
   return options.slice(0, 6);
 }
 
+function decodingKeyFields(section?: Section): DraftDecodingKey[] {
+  if (!section) return [];
+  const keys: DraftDecodingKey[] = [];
+  section.lines.forEach((line, index) => {
+    const cells = line
+      .trim()
+      .replace(/^\|/, '')
+      .replace(/\|$/, '')
+      .split('|')
+      .map((cell) => cleanInline(cell.trim()));
+    if (cells.length < 2) return;
+    const [code, decodedEvidence] = cells;
+    if (!code || !decodedEvidence) return;
+    if (/^(?:密碼|原文|字詞)$/.test(code) && /^(?:已取得的)?(?:線索|意思|解法)$/.test(decodedEvidence)) return;
+    if (/^:?-{3,}:?$/.test(code) && /^:?-{3,}:?$/.test(decodedEvidence)) return;
+    const lineNumber = section.line + index + 1;
+    keys.push({
+      code: { text: code, heading: section.heading, line: lineNumber },
+      decodedEvidence: { text: decodedEvidence, heading: section.heading, line: lineNumber },
+    });
+  });
+  return keys;
+}
+
 function parseSections(lines: string[], offset: number): Section[] {
   const sections: Section[] = [];
   let current: Section = { heading: '題目開頭', level: 7, line: offset + 1, lines: [] };
@@ -292,6 +322,10 @@ function parseOneQuestion(header: RegExpMatchArray, lines: string[], start: numb
     /古文破譯家.*任務/,
   ]);
   const intro = field(introSection);
+  const preAnswerKeys = decodingKeyFields(firstSection(sections, [
+    /^作答前可見的(?:密碼|舊)?鑰匙$/,
+    /^已取得的密碼鑰匙$/,
+  ]));
   let question = field(firstSection(sections, [
     /^請古文破譯家提交解法$/,
     /^題目$/,
@@ -378,6 +412,7 @@ function parseOneQuestion(header: RegExpMatchArray, lines: string[], start: numb
     line: start + 1,
     target,
     intro,
+    preAnswerKeys,
     clues,
     question,
     options,

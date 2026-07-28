@@ -800,7 +800,7 @@ export default function GuwenLessonDecode() {
     }, 250);
   }
 
-  function beginStepReward(step: LessonStep) {
+  function beginStepReward(step: LessonStep, options: { skipCelebration?: boolean } = {}) {
     if (rewardStartedForStepRef.current === step.id) return;
     rewardStartedForStepRef.current = step.id;
     if (coreFeedbackFallbackRef.current !== null) {
@@ -809,10 +809,16 @@ export default function GuwenLessonDecode() {
     }
     setPlaybackId((cur) => (cur === `core-feedback-${step.id}` ? null : cur));
     setPlaybackPaused(false);
-    setCorrectFlowStage('reward');
     recordGuwenWord(lesson!.id, step.id, lesson!.contentRevision);
     reward(guwenCoinAmount, guwenStarAmount);
     playSuccessChime();
+    if (options.skipCelebration) {
+      setCelebration(null);
+      setCelebrationPaused(false);
+      setCorrectFlowStage('details');
+      return;
+    }
+    setCorrectFlowStage('reward');
     const praiseLine = PRAISE_LINES[Math.floor(Math.random() * PRAISE_LINES.length)];
     setCelebrationPaused(false);
     setCelebration({ stepId: step.id, tick: 0, praiseDone: false, stage: 'rolling' });
@@ -843,6 +849,12 @@ export default function GuwenLessonDecode() {
     setCorrectFlowStage('core-feedback');
     rewardStartedForStepRef.current = null;
     playCoreFeedback(step);
+  }
+
+  function skipCoreFeedback(step: LessonStep) {
+    if (correctFlowStage !== 'core-feedback') return;
+    cancelSpeech();
+    beginStepReward(step, { skipCelebration: true });
   }
 
   function toggleCoreFeedback(step: LessonStep) {
@@ -2017,9 +2029,18 @@ export default function GuwenLessonDecode() {
                   </button>
                 </div>
                 {correctFlowStage === 'core-feedback' && (
-                  <p className="mt-2 text-xs font-semibold text-emerald-600">
-                    聽完這段核心解說後，就會領取本題獎勵。
-                  </p>
+                  <div className="mt-3 space-y-2">
+                    <p className="text-xs font-semibold text-emerald-600">
+                      聽完這段核心解說後，就會領取本題獎勵。
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => skipCoreFeedback(currentStep)}
+                      className="rounded-lg border border-emerald-300 bg-white px-3 py-2 text-xs font-bold text-emerald-700"
+                    >
+                      ⏭ 跳過朗讀，立即領取獎勵
+                    </button>
+                  </div>
                 )}
               </div>
             )}
@@ -2047,31 +2068,36 @@ export default function GuwenLessonDecode() {
               </div>
             )}
             {feedback === 'correct' && correctFlowStage === 'details' && !celebration && (
-              <div className="bg-sky-50 border-2 border-sky-200 rounded-xl p-4 space-y-2">
-                <div className="flex items-start justify-between gap-2">
-                  <p className="text-xs font-extrabold tracking-wide text-sky-700">詳解</p>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      togglePlayback(`explain-${currentStep.id}`, detailSpeechLines(currentStep))
-                    }
-                    aria-label="聽這段說明"
-                    className="text-sky-600 shrink-0"
-                  >
-                    {playbackLabel(`explain-${currentStep.id}`, '🔊', '⏸', '▶️')}
-                  </button>
+              <>
+                <div className="rounded-xl border-2 border-amber-300 bg-amber-50 p-3 text-center text-sm font-bold text-amber-700">
+                  🪙 已獲得 {guwenCoinAmount} 金幣　⭐ 已獲得 {guwenStarAmount} 星星
                 </div>
-                {speechParagraphs(currentStep.correctFeedback).slice(1).map((paragraph) => (
-                  <p key={paragraph} className="font-bold text-sky-800">{paragraph}</p>
-                ))}
-                {renderPronunciationCues(currentStep.pronunciationCues?.correctFeedback)}
-                <p className="text-sm text-sky-800 whitespace-pre-line">{currentStep.explanation}</p>
-                {currentStep.keyAwarded && (
-                  <p className="text-xs text-amber-600 bg-white/70 rounded-lg p-2">
-                    🔑 你破解了一把新密碼：{currentStep.keyAwarded.code} ＝ {currentStep.keyAwarded.decodedEvidence}
-                  </p>
-                )}
-              </div>
+                <div className="bg-sky-50 border-2 border-sky-200 rounded-xl p-4 space-y-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="text-xs font-extrabold tracking-wide text-sky-700">詳解</p>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        togglePlayback(`explain-${currentStep.id}`, detailSpeechLines(currentStep))
+                      }
+                      aria-label="聽這段說明"
+                      className="text-sky-600 shrink-0"
+                    >
+                      {playbackLabel(`explain-${currentStep.id}`, '🔊', '⏸', '▶️')}
+                    </button>
+                  </div>
+                  {speechParagraphs(currentStep.correctFeedback).slice(1).map((paragraph) => (
+                    <p key={paragraph} className="font-bold text-sky-800">{paragraph}</p>
+                  ))}
+                  {renderPronunciationCues(currentStep.pronunciationCues?.correctFeedback)}
+                  <p className="text-sm text-sky-800 whitespace-pre-line">{currentStep.explanation}</p>
+                  {currentStep.keyAwarded && (
+                    <p className="text-xs text-amber-600 bg-white/70 rounded-lg p-2">
+                      🔑 你破解了一把新密碼：{currentStep.keyAwarded.code} ＝ {currentStep.keyAwarded.decodedEvidence}
+                    </p>
+                  )}
+                </div>
+              </>
             )}
             {feedback === 'correct' && correctFlowStage === 'details' && (
               <button
