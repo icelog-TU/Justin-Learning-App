@@ -448,7 +448,11 @@ export function recordGuwenWordDecoded(
   const stored = data.guwenProgress[textId];
   const prev =
     contentRevision && stored?.contentRevision !== contentRevision
-      ? { decodedWordIds: [], contentRevision }
+      ? {
+          decodedWordIds: [],
+          contentRevision,
+          timesCompleted: stored?.timesCompleted ?? (stored?.completedAt ? 1 : 0),
+        }
       : stored ?? { decodedWordIds: [], contentRevision };
   if (prev.decodedWordIds.includes(wordId)) return data;
   data.guwenProgress = {
@@ -463,7 +467,11 @@ export function recordGuwenTextCompleted(data: AppData, textId: string, contentR
   const stored = data.guwenProgress[textId];
   const prev =
     contentRevision && stored?.contentRevision !== contentRevision
-      ? { decodedWordIds: [], contentRevision }
+      ? {
+          decodedWordIds: [],
+          contentRevision,
+          timesCompleted: stored?.timesCompleted ?? (stored?.completedAt ? 1 : 0),
+        }
       : stored ?? { decodedWordIds: [], contentRevision };
   if (prev.completedAt) return data;
   data.guwenProgress = {
@@ -478,7 +486,7 @@ export function recordGuwenTextCompleted(data: AppData, textId: string, contentR
  * the first clear, so it must survive the reset it's tracking around. */
 export function resetGuwenProgress(data: AppData, textId: string, contentRevision?: string): AppData {
   const stored = data.guwenProgress[textId];
-  const prev = contentRevision && stored?.contentRevision !== contentRevision ? undefined : stored;
+  const prev = stored;
   data.guwenProgress = {
     ...data.guwenProgress,
     [textId]: { decodedWordIds: [], contentRevision, timesCompleted: prev?.timesCompleted ?? 0 },

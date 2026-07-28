@@ -76,21 +76,23 @@ export function GuwenKeyList({
 export function GuwenClueList({
   clues,
   onPlayClue,
+  startIndex = 0,
 }: {
   clues: GuwenDisplayClue[];
   onPlayClue?: PlayHandler;
+  startIndex?: number;
 }) {
   return (
     <div className="space-y-2" data-guwen-block="clues">
       {clues.map((clue, index) => (
         <div key={`${clue.text}-${index}`} className="space-y-1.5 rounded-xl border-2 border-gray-200 bg-gray-50 px-4 py-3">
-          <p className="text-xs font-black text-gray-400">線索 {index + 1}</p>
+          <p className="text-xs font-black text-gray-400">線索 {startIndex + index + 1}</p>
           <div className="flex items-start gap-2">
             {onPlayClue && (
               <button
                 type="button"
                 onClick={() => onPlayClue(clue.text, index)}
-                aria-label={`播放線索 ${index + 1}`}
+                aria-label={`播放線索 ${startIndex + index + 1}`}
                 className="shrink-0 text-sky-500"
               >
                 🔊

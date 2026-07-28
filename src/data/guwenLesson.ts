@@ -2,6 +2,7 @@ import { zhengRenMaiLuLesson } from './zhengRenMaiLuLesson';
 import { wangRongLesson } from './wangRongLesson';
 import { simaGuangLesson } from './simaGuangLesson';
 import { shouZhuDaiTuLesson } from './shouZhuDaiTuLesson';
+import { approvedKeZhouQiuJianLesson } from './keZhouQiuJianLesson';
 
 /**
  * 古文破譯家 — "Lesson" format: a stricter evidence-based methodology than the original GuwenWord model in
@@ -247,6 +248,8 @@ export interface GuwenLesson {
   introSpokenLine: string;
   /** Optional approved line shown after the full text on the listening screen. */
   introClosingLine?: string;
+  /** Approved exception: show/play the original before mission acceptance and skip the generic listening screen. */
+  listenBeforeAccept?: boolean;
   /** Preserves blank-line-separated opening paragraphs as distinct audited TTS utterances. */
   splitIntroSpeechParagraphs?: boolean;
   introPronunciationCues?: PronunciationCue[];
@@ -276,6 +279,8 @@ export interface GuwenLesson {
   preserveAuthoredOptionOrder?: boolean;
   /** Plays each blank-line-separated feedback paragraph as the exact independently audited utterance. */
   splitFeedbackParagraphs?: boolean;
+  /** Treats every approved correctFeedback paragraph as the core answer instead of legacy detail overflow. */
+  completeCorrectFeedbackAsCore?: boolean;
 }
 
 export const legacySimaGuangLesson: GuwenLesson = {
@@ -827,7 +832,7 @@ export const legacySimaGuangLesson: GuwenLesson = {
   },
 };
 
-export const keZhouQiuJianLesson: GuwenLesson = {
+export const legacyKeZhouQiuJianLesson: GuwenLesson = {
   id: 'ke-zhou-qiu-jian',
   title: '刻舟求劍',
   source: '《呂氏春秋．察今》',
@@ -1563,6 +1568,8 @@ export const keZhouQiuJianLesson: GuwenLesson = {
 };
 
 export { wangRongLesson };
+
+export const keZhouQiuJianLesson = approvedKeZhouQiuJianLesson;
 
 export const legacyShouZhuDaiTuLesson: GuwenLesson = {
   id: 'shou-zhu-dai-tu',

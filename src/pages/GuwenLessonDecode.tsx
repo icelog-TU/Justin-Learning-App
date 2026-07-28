@@ -161,13 +161,15 @@ function speechParagraphs(text: string): string[] {
   return text.split(/\n{2,}/).map((line) => line.trim()).filter(Boolean);
 }
 
-function coreFeedbackText(step: LessonStep): string {
-  return speechParagraphs(step.correctFeedback)[0] ?? step.correctFeedback;
+function coreFeedbackText(step: LessonStep, complete = false): string {
+  return complete
+    ? step.correctFeedback
+    : speechParagraphs(step.correctFeedback)[0] ?? step.correctFeedback;
 }
 
-function detailSpeechLines(step: LessonStep): string[] {
+function detailSpeechLines(step: LessonStep, completeFeedbackAsCore = false): string[] {
   return [
-    ...speechParagraphs(step.correctFeedback).slice(1),
+    ...(completeFeedbackAsCore ? [] : speechParagraphs(step.correctFeedback).slice(1)),
     ...(step.pronunciationCues?.correctFeedback?.map((cue) => cue.speechText) ?? []),
     step.explanation.replace(/\n+/g, ' '),
   ].filter(Boolean);
@@ -377,13 +379,18 @@ export default function GuwenLessonDecode() {
     setIsPlaying(true);
     setIsPaused(false);
     speakSequence(
-      [
+      lesson?.listenBeforeAccept
+        ? [
+            ...(lesson.fullTextPronunciationCues?.map((cue) => cue.speechText) ?? []),
+            fullText,
+          ]
+        : [
         LISTEN_LEAD_IN,
         ...(lesson?.fullTextPronunciationCues?.map((cue) => cue.speechText) ?? []),
         fullText,
         LISTEN_PROMPT,
         ...(lesson?.introClosingLine ? [lesson.introClosingLine] : []),
-      ],
+          ],
       () => setIsPlaying(false),
     );
   }
@@ -440,6 +447,9 @@ export default function GuwenLessonDecode() {
         : [lesson.introSpokenLine]),
       ...(lesson.introPronunciationCues?.map((cue) => cue.speechText) ?? []),
       `標題是《${lesson.title}》。`,
+      ...(lesson.listenBeforeAccept
+        ? [...(lesson.fullTextPronunciationCues?.map((cue) => cue.speechText) ?? []), lesson.fullText]
+        : []),
     ]);
     return () => cancelSpeech();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -787,7 +797,9 @@ export default function GuwenLessonDecode() {
       explainTimeoutRef.current = null;
       setPlaybackId(id);
       setPlaybackPaused(false);
-      speakSequence(detailSpeechLines(step), () => setPlaybackId((cur) => (cur === id ? null : cur)));
+      speakSequence(detailSpeechLines(step, lesson!.completeCorrectFeedbackAsCore), () =>
+        setPlaybackId((cur) => (cur === id ? null : cur)),
+      );
     }, 250);
   }
 
@@ -821,7 +833,7 @@ export default function GuwenLessonDecode() {
   }
 
   function playCoreFeedback(step: LessonStep) {
-    const coreFeedback = coreFeedbackText(step);
+    const coreFeedback = coreFeedbackText(step, lesson!.completeCorrectFeedbackAsCore);
     const id = `core-feedback-${step.id}`;
     if (coreFeedbackFallbackRef.current !== null) {
       window.clearTimeout(coreFeedbackFallbackRef.current);
@@ -832,7 +844,7 @@ export default function GuwenLessonDecode() {
     );
     setPlaybackId(id);
     setPlaybackPaused(false);
-    speakSequence([coreFeedback], () => beginStepReward(step));
+    speakSequence(speechParagraphs(coreFeedback), () => beginStepReward(step));
   }
 
   function markStepSolved(step: LessonStep) {
@@ -851,7 +863,7 @@ export default function GuwenLessonDecode() {
   function toggleCoreFeedback(step: LessonStep) {
     const id = `core-feedback-${step.id}`;
     if (correctFlowStage !== 'core-feedback') {
-      togglePlayback(id, coreFeedbackText(step));
+      togglePlayback(id, coreFeedbackText(step, lesson!.completeCorrectFeedbackAsCore));
       return;
     }
     if (playbackId === id && !playbackPaused) {
@@ -1176,6 +1188,7 @@ export default function GuwenLessonDecode() {
     return (
       <GuwenClueList
         key={i}
+        startIndex={i}
         clues={[{
           text: clue.text,
           highlight: clue.highlight,
@@ -1730,12 +1743,26 @@ export default function GuwenLessonDecode() {
             <p className="text-xs text-gray-400">{lesson.source}</p>
             <p className="text-gray-600 whitespace-pre-line">{lesson.introSpokenLine}</p>
             {renderPronunciationCues(lesson.introPronunciationCues)}
+            {lesson.listenBeforeAccept && (
+              <div className="space-y-2 border-t border-gray-100 pt-3">
+                <p className="text-lg leading-relaxed text-gray-800">{lesson.fullText}</p>
+                {renderPronunciationCues(lesson.fullTextPronunciationCues)}
+                <button type="button" onClick={toggleFullPlayback} className="text-sm text-sky-600 font-medium">
+                  {!isPlaying ? '🔊 播放全文' : isPaused ? '▶️ 繼續播放' : '⏸ 暫停播放'}
+                </button>
+              </div>
+            )}
           </div>
           <button
             type="button"
             onClick={() => {
-              speak(INTRO_LINE);
-              setPhase('listening');
+              if (lesson.listenBeforeAccept) {
+                cancelSpeech();
+                setPhase('steps');
+              } else {
+                speak(INTRO_LINE);
+                setPhase('listening');
+              }
             }}
             className="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-xl py-3"
           >
@@ -1899,7 +1926,9 @@ export default function GuwenLessonDecode() {
                   </button>
                 )}
               >
-                <p>{coreFeedbackText(currentStep)}</p>
+                <p className="whitespace-pre-line">
+                  {coreFeedbackText(currentStep, lesson.completeCorrectFeedbackAsCore)}
+                </p>
                 {correctFlowStage === 'core-feedback' && (
                   <div className="mt-3 space-y-2">
                     <p className="text-xs font-semibold text-emerald-600">
@@ -1949,7 +1978,10 @@ export default function GuwenLessonDecode() {
                     <button
                       type="button"
                       onClick={() =>
-                        togglePlayback(`explain-${currentStep.id}`, detailSpeechLines(currentStep))
+                        togglePlayback(
+                          `explain-${currentStep.id}`,
+                          detailSpeechLines(currentStep, lesson.completeCorrectFeedbackAsCore),
+                        )
                       }
                       aria-label="聽這段說明"
                       className="text-sky-600 shrink-0"
@@ -1958,9 +1990,10 @@ export default function GuwenLessonDecode() {
                     </button>
                   )}
                 >
-                  {speechParagraphs(currentStep.correctFeedback).slice(1).map((paragraph) => (
-                    <p key={paragraph} className="font-bold text-sky-800">{paragraph}</p>
-                  ))}
+                  {!lesson.completeCorrectFeedbackAsCore
+                    && speechParagraphs(currentStep.correctFeedback).slice(1).map((paragraph) => (
+                      <p key={paragraph} className="font-bold text-sky-800">{paragraph}</p>
+                    ))}
                   {renderPronunciationCues(currentStep.pronunciationCues?.correctFeedback)}
                   <p className="text-sm text-sky-800 whitespace-pre-line">{currentStep.explanation}</p>
                   {currentStep.keyAwarded && (
