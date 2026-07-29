@@ -79,7 +79,9 @@ For each useful target:
 
 ## Pronunciation boundary
 
-Mark which child-facing fields are playable and review their actual speech together with layout in `/#/guwen-draft-preview`. Do not perform a separate polyphonic scan, create audit candidates or catalogs, use the old listening page, pull central results, or wait for legacy audit completion. Record a pronunciation cue only when normal preview review demonstrates a real need; never alter displayed classical text to fix speech.
+Mark which child-facing fields are playable and review their actual speech together with layout in `/#/guwen-draft-preview`. Do not perform a separate polyphonic scan, create audit candidates or catalogs, use the old listening page, pull central results, or wait for legacy audit completion. Never alter displayed classical text to fix speech.
+
+As of 2026-07-29, pronunciation explanations are authored only inside the core answer (`答對回饋` / `蝑???`). Do not add Zhuyin, homophone cues, or "念作／唸作／發音同" notes to the target sentence, original text, clues, clue glosses, intro, question, options, or retry hint. If a pronunciation explanation is pedagogically needed, write it once as part of the core answer sentence, where it can be read in context after the child answers.
 
 ## Finish a review batch
 

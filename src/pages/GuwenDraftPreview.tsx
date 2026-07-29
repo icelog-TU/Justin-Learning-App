@@ -62,7 +62,7 @@ function AudioLine({ field, id, label, activePlayback, className = '', onToggle 
       <div className="flex items-start gap-2">
         <button
           type="button"
-          onClick={() => onToggle(id, label, [field.text, ...(field.pronunciationCues ?? [])])}
+          onClick={() => onToggle(id, label, [field.text])}
           aria-label={isActive ? `${activePlayback.paused ? '繼續' : '暫停'}${label}` : `播放${label}`}
           className="shrink-0 text-sky-500"
         >
@@ -70,23 +70,6 @@ function AudioLine({ field, id, label, activePlayback, className = '', onToggle 
         </button>
         <p className="whitespace-pre-line"><Highlighted text={field.text} /></p>
       </div>
-      {field.pronunciationCues?.map((cue, index) => {
-        const cueId = `${id}-cue-${index}`;
-        const cueIsActive = activePlayback?.id === cueId;
-        return (
-        <div key={`${cue}-${index}`} className="mt-1.5 flex items-start gap-2 rounded-lg bg-amber-50 px-2.5 py-2 text-left text-xs font-medium text-amber-800">
-          <button
-            type="button"
-            onClick={() => onToggle(cueId, `${label}讀音提示`, [cue])}
-            aria-label={cueIsActive ? `${activePlayback.paused ? '繼續' : '暫停'}${label}讀音提示` : `播放${label}讀音提示`}
-            className="shrink-0 text-sky-500"
-          >
-            {cueIsActive ? (activePlayback.paused ? '▶️' : '⏸') : '🔊'}
-          </button>
-          <p>{cue}</p>
-        </div>
-        );
-      })}
     </div>
   );
 }
@@ -94,10 +77,8 @@ function AudioLine({ field, id, label, activePlayback, className = '', onToggle 
 function readingOrder(question: DraftQuestion) {
   const lines: Array<{ label: string; text: string }> = [];
   if (question.target) lines.push({ label: '目標句', text: question.target.text });
-  question.target?.pronunciationCues?.forEach((text) => lines.push({ label: '目標句讀音提示', text }));
   if (question.intro) {
     lines.push({ label: '引導語', text: question.intro.text });
-    question.intro.pronunciationCues?.forEach((text) => lines.push({ label: '引導語讀音提示', text }));
   }
   question.preAnswerKeys.forEach((key, index) => {
     lines.push({ label: `密碼鑰匙 ${index + 1}`, text: key.code.text });
@@ -105,10 +86,8 @@ function readingOrder(question: DraftQuestion) {
   });
   question.clues.forEach((clue, index) => {
     lines.push({ label: `線索 ${index + 1}`, text: clue.text });
-    clue.pronunciationCues?.forEach((text) => lines.push({ label: `線索 ${index + 1} 讀音提示`, text }));
     if (clue.meaning) {
       lines.push({ label: `線索 ${index + 1} 已破解為`, text: clue.meaning.text });
-      clue.meaning.pronunciationCues?.forEach((text) => lines.push({ label: `線索 ${index + 1} 白話讀音提示`, text }));
     }
   });
   if (question.question) lines.push({ label: '提問', text: question.question.text });
@@ -485,21 +464,6 @@ export default function GuwenDraftPreview() {
                     <GuwenClueList
                       clues={question.clues.map((clue, index) => ({
                         text: clue.text,
-                        pronunciationCue: clue.pronunciationCues?.length ? (
-                          <div className="space-y-1.5">
-                            {clue.pronunciationCues.map((cue, cueIndex) => (
-                              <AudioLine
-                                key={`${cue}-${cueIndex}`}
-                                field={{ text: cue, heading: '讀音提示', line: clue.line }}
-                                id={`clue-${index}-cue-${cueIndex}`}
-                                label={`線索 ${index + 1} 讀音提示`}
-                                activePlayback={playback}
-                                onToggle={togglePlayback}
-                                className="rounded-lg bg-amber-50 px-2.5 py-2 text-xs font-medium text-amber-800"
-                              />
-                            ))}
-                          </div>
-                        ) : undefined,
                         meaning: clue.meaning ? (
                           <AudioLine
                             field={clue.meaning}
@@ -515,7 +479,7 @@ export default function GuwenDraftPreview() {
                       onPlayClue={(text, index) => togglePlayback(
                         `clue-${index}`,
                         `線索 ${index + 1}`,
-                        [text, ...(question.clues[index].pronunciationCues ?? [])],
+                        [text],
                       )}
                     />
                   </div>

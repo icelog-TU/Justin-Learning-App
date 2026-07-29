@@ -324,10 +324,10 @@ if (!seventhLessonSource) {
   const questionTwo = questions.find((item) => item.number === 2);
   if (
     questionTwo?.correctFeedback?.text !== '破解了！「度」是測出長短、大小的動作；「度其足」就是量自己的腳有多大。「度」在這裡念作墮（ㄉㄨㄛˋ），「度其足」念作「墮其足」。'
-    || !questionTwo.correctFeedback.pronunciationCues?.includes('「度」在這裡念作墮（ㄉㄨㄛˋ），「度其足」念作「墮其足」。')
+    || questionTwo.correctFeedback.pronunciationCues
   ) {
     failed = true;
-    console.error('  ERROR: 第七篇第二題的混合式答對回饋讀音提示沒有同時保留主文與標示注音');
+    console.error('  ERROR: 第七篇第二題的核心解答讀音說明應只保留在主文，不應拆成旁註讀音提示');
   }
 }
 

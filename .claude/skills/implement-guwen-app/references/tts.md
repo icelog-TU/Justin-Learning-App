@@ -29,12 +29,11 @@
 
 ## Pronunciation cue
 
-- `displayText` 可含注音；`speechText` 只含適合語音引擎的中文，不送 ㄅㄆㄇ。
-- 用原句中的完整詞語定位，不只說「這裡」。
-- 若仍是待破解目標，只提示讀音，不解釋意思。
-- 若不是待破解目標，可加入該句中的精確意思。
-- 同一頁同一詞語、讀音與用法只在第一次出現時提示；不同頁可依需要再次提示。
-- 只有預覽確認真有需要才新增；不預先建立全篇候選表。
+`PronunciationCue` and `StepPronunciationCues` are legacy side-note fields. Do not add them for new guwen lesson implementation.
+
+As of 2026-07-29, pronunciation explanations belong only in the core answer (`correctFeedback`) as normal approved text. Do not extract "念作／唸作／發音同" phrases or Zhuyin from Markdown into separate cue cards, per-sentence annotations, or extra playback lines. If the core answer contains a pronunciation explanation, display and play it once as part of the core answer.
+
+TTS-only fixes still belong in `ttsSafe()` or the shared speech path. Keep those fixes invisible, narrow in scope, and covered by nearby regression checks.
 
 ## 答對後語音
 

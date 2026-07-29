@@ -15,7 +15,7 @@ import { approvedKeZhouQiuJianLesson } from './keZhouQiuJianLesson';
  */
 
 export interface PronunciationCue {
-  /** Exact approved visible copy, including any Zhuyin. */
+  /** Legacy-only side note. New guwen lessons keep pronunciation explanations inside correctFeedback text. */
   displayText: string;
   /** Equivalent Chinese-only wording sent to TTS so punctuation/Zhuyin are not read aloud. */
   speechText: string;
@@ -53,9 +53,9 @@ export interface ClassicalClue {
   unlockedMeaning?: string;
   /** Traceable source (author/work), preserved verbatim from the approved lesson content. */
   source: string;
-  /** Child-facing pronunciation note approved by the central TTS audit for this exact clue unit. */
+  /** Legacy-only child-facing pronunciation note for this exact clue unit. */
   pronunciationCue?: PronunciationCue;
-  /** Separate approved note for the playable unlocked-meaning line. */
+  /** Legacy-only note for the playable unlocked-meaning line. */
   unlockedMeaningPronunciationCue?: PronunciationCue;
 }
 
@@ -86,7 +86,7 @@ interface LessonStepBase {
   retryHint: string;
   /** 破譯詳解 — the full reasoning explanation. */
   explanation: string;
-  /** Target-level central TTS corrections, placed immediately after the exact affected playable line. */
+  /** Legacy-only side-note TTS corrections. New lessons explain pronunciation inline in correctFeedback. */
   pronunciationCues?: StepPronunciationCues;
   /** This step's contribution to the final assembled draft ("我的破譯稿"), only set on the 7 steps whose
    * solved meaning becomes one line of the reconstructed story (see 全文密碼地圖 in the source lesson). */
@@ -250,13 +250,15 @@ export interface GuwenLesson {
   introClosingLine?: string;
   /** Preserves blank-line-separated opening paragraphs as distinct audited TTS utterances. */
   splitIntroSpeechParagraphs?: boolean;
+  /** Legacy-only side-note field. New lessons keep pronunciation explanations inside correctFeedback. */
   introPronunciationCues?: PronunciationCue[];
   acceptMissionLabel?: string;
   fullText: string;
+  /** Legacy-only side-note field. New lessons keep pronunciation explanations inside correctFeedback. */
   fullTextPronunciationCues?: PronunciationCue[];
   /** fullText split into individually-readable sentences (concatenating these reproduces fullText exactly). */
   sentences: string[];
-  /** Optional corrections for the corresponding individually playable entry in `sentences`. */
+  /** Legacy-only side-note corrections for the corresponding individually playable entry in `sentences`. */
   sentencePronunciationCues?: Partial<Record<number, PronunciationCue[]>>;
   steps: LessonStep[];
   /** Optional whole-lesson wrap-up screens shown (in this fixed order — whichever are present) after every

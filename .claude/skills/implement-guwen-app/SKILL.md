@@ -63,7 +63,9 @@ Follow the authoritative sequence in [app-implementation-contract.md](references
 
 Review pronunciation in the normal draft preview and formal App. Do not scan all polyphonic characters, build audit catalogs, open the old listening page, pull central audit results, or wait for a legacy audit stage.
 
-Fix demonstrated problems through the shared speech path, preserve displayed classical text, scope substitutions to the exact phrase or justified locale-wide case, and test nearby text that must remain unchanged.
+As of 2026-07-29, the App implementation must not mine Markdown fields for separate pronunciation side notes. Do not populate new `pronunciationCues`, amber cue cards, per-sentence Zhuyin annotations, or extra playback lines from the target sentence, intro, question, clues, options, retry hint, or correct feedback. If the approved master explains pronunciation inside the core answer, keep that explanation in `correctFeedback` as normal text and do not duplicate it elsewhere.
+
+Fix demonstrated TTS problems through the shared speech path, preserve displayed classical text, scope substitutions to the exact phrase or justified locale-wide case, and test nearby text that must remain unchanged.
 
 ## Validate
 
