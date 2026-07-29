@@ -8,6 +8,7 @@ import {
   resetGuwenProgress,
   type AppData,
 } from '../src/lib/storage';
+import { guwenSentenceMatchesTarget } from '../src/lib/guwenPassage';
 
 function check(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
@@ -51,6 +52,20 @@ check(
   '白話驗證卷軸沒有鎖到全部 20 個必要項目',
 );
 check(lesson.sentences.join('') === lesson.fullText, '分句接合後不等於鎖定原文');
+
+const sentenceForStep = (stepId: string) => {
+  const step = lesson.steps.find((candidate) => candidate.id === stepId);
+  check(step, `找不到題目 ${stepId}`);
+  return lesson.sentences.find((sentence) => guwenSentenceMatchesTarget(sentence, step.targetSentence));
+};
+check(
+  sentenceForStep('qi_qi_zhou') === '遽契其舟曰：「是吾劍之所從墜。」',
+  '第 7 題沒有亮起「遽契其舟曰……」所在原文句',
+);
+check(
+  sentenceForStep('shi') === '遽契其舟曰：「是吾劍之所從墜。」',
+  '第 9 題沒有亮起「是吾劍之所從墜」所在原文句',
+);
 
 const legacyProgress = {
   coins: 0,

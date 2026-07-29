@@ -59,6 +59,7 @@ import {
   GuwenMultiSelectList,
   GuwenSequenceCardRow,
 } from '../components/guwen/GuwenQuestionBlocks';
+import { guwenSentenceMatchesTarget } from '../lib/guwenPassage';
 
 type Phase = 'intro' | 'listening' | 'steps' | 'complete';
 type CorrectFlowStage = 'reward' | 'core-feedback' | 'choices' | 'details';
@@ -238,9 +239,7 @@ function highlightQuoted(text: string): ReactNode[] {
 /** A sentence chunk of the full passage counts as solved once every step targeting it (or a phrase inside
  * it) has been solved — a lesson step's target is usually a sub-phrase of one `sentences` entry. */
 function isSentenceSolved(sentence: string, lesson: GuwenLesson, solvedIds: Set<string>): boolean {
-  const relevant = lesson.steps.filter(
-    (s) => sentence.includes(s.targetSentence) || s.targetSentence.includes(sentence),
-  );
+  const relevant = lesson.steps.filter((s) => guwenSentenceMatchesTarget(sentence, s.targetSentence));
   if (relevant.length === 0) return false;
   return relevant.every((s) => solvedIds.has(s.id));
 }
@@ -753,7 +752,9 @@ export default function GuwenLessonDecode() {
       <p className="text-lg font-semibold text-gray-800 leading-relaxed text-center">
         {lesson!.sentences.map((sentence, i) => {
           const solved = isSentenceSolved(sentence, lesson!, solvedIds);
-          const isCurrentChunk = currentStep && sentence.includes(currentStep.targetSentence);
+          const isCurrentChunk = currentStep
+            ? guwenSentenceMatchesTarget(sentence, currentStep.targetSentence)
+            : false;
           return (
             <span
               key={i}
