@@ -22,6 +22,8 @@ import type { ChildSnapshot } from './guwen-master-child-snapshot';
 // 同步更新第六篇孩子端保護指紋。
 // 2026-07-28：《掩耳盜鐘》第 5、7 題經使用者核准，重寫第 8–9 題精簡草稿；
 // 同步更新第六篇孩子端保護指紋。
+// 2026-07-29：《掩耳盜鐘》第 9 題經使用者核准，第 8 題保留完整真實古文線索，
+// 並重寫第 10–12 題精簡草稿；同步更新第六篇孩子端保護指紋。
 // 2026-07-28：《鄭人買履》第 1–2 題依實測回饋精簡重寫，並依新版規則移除主檔讀音註解；
 // 同步更新第七篇孩子端保護指紋。
 // 2026-07-29：《揠苗助長》全篇依新版去重規則精簡引導語、提問與核心解答；
@@ -32,7 +34,7 @@ export const GUWEN_CHILD_BASELINE: Record<string, ChildSnapshot> = {
   '03-guwen-kezhouqiujian-decoder-content.md': { questionCount: 20, hash: 'b5f8e7b39b13a2b24a9b9a415831b567cf2777256f53ac3025ab65f0854ce666' },
   '04-guwen-shouzhudaitu-decoder-content.md': { questionCount: 18, hash: 'a8bb260c9673f078fa0a1ba81960c03446e86bc3d4e8fd1ab22fd628f462cbb9' },
   '05-guwen-yamiaozhuzhang-decoder-content.md': { questionCount: 17, hash: 'baf5311ba6642c79b2727c95d1b1b712ce71d58d9a9a7ab25514a23b46c7495d' },
-  '06-guwen-yanerdaozhong-decoder-content.md': { questionCount: 21, hash: 'fe3d8f93e562341fbe2769730322aa96f09417fe8726d29667c739cce398e379' },
+  '06-guwen-yanerdaozhong-decoder-content.md': { questionCount: 21, hash: 'ecde51dd424fb49ce3b74ebffe619fd86e386514168f4325fe5fec418d08b3ee' },
   '07-guwen-zhengrenmailv-decoder-content.md': { questionCount: 20, hash: 'c8a5f309b1cee93a5ad1cfebfcb3d913c133079c9d20e64f6df447c64371c274' },
   '08-guwen-changganrucheng-decoder-content.md': { questionCount: 10, hash: 'dee88ceb5412ef79b01d747cd07c4c94f463decdffce809abf9e2087732b734a' },
   '09-guwen-yangshizi-decoder-content.md': { questionCount: 9, hash: '132f7d0ac1343c60f2586012909e5576a103bde250e8e00ab16398793ca80733' },
