@@ -82,7 +82,7 @@ const representativeSources = [
   {
     path: '04-guwen-shouzhudaitu-decoder-content.md',
     question: 1,
-    expected: ['說文解字', '錢澄之'],
+    expected: ['嵇含', '錢澄之'],
   },
   {
     path: '09-guwen-yangshizi-decoder-content.md',
@@ -323,7 +323,7 @@ if (!seventhLessonSource) {
   }
   const questionTwo = questions.find((item) => item.number === 2);
   if (
-    questionTwo?.correctFeedback?.text !== '破解了！「度」是測出長短、大小的動作；「度其足」就是量自己的腳有多大。「度」在這裡念作墮（ㄉㄨㄛˋ），「度其足」念作「墮其足」。'
+    questionTwo?.correctFeedback?.text !== '破解了！「度」是測出長短、大小的動作；「度」當作測量時，念作墮（ㄉㄨㄛˋ），所以「度其足」就是量自己的腳有多大。'
     || questionTwo.correctFeedback.pronunciationCues
   ) {
     failed = true;

@@ -16,6 +16,7 @@
     "test:guwen:simaguang": "tsx scripts/test-sima-guang-lesson.ts",
     "test:guwen:shouzhudaitu": "tsx scripts/test-shou-zhu-dai-tu-lesson.ts",
     "test:guwen:kezhouqiujian": "tsx scripts/test-ke-zhou-qiu-jian-lesson.ts",
+    "test:guwen:zhengrenmailu": "tsx scripts/test-zheng-ren-mai-lu-lesson.ts",
     "test:guwen:draft-preview": "tsx scripts/test-guwen-draft-preview.ts",
     "test:guwen:praise": "tsx scripts/test-guwen-praise.ts",
     "test:guwen:unlock": "tsx scripts/test-guwen-unlock.ts",

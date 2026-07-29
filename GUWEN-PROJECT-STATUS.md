@@ -2,7 +2,7 @@
 
 > 只保存目前狀態、active 主檔與下一步。歷史變更由 Git history 查詢。
 > 「草稿完成」不等於「使用者已核准」。
-> 最近整理：2026-07-28
+> 最近整理：2026-07-30
 
 ## 使用方式
 
@@ -22,7 +22,7 @@
 | 4 | 守株待兔 | `04-guwen-shouzhudaitu-decoder-content.md` | 外部 AI 全文審稿已完成；第 15 題跨題揭露已修正，Markdown v1 遷移完成；任務開場按鈕及第 1–5、7–8、11–13、15、17–18 題待審；正式 App 維持既有版本 | 請使用者人工審核第 15 題修訂與全文 |
 | 5 | 揠苗助長 | `05-guwen-yamiaozhuzhang-decoder-content.md` | 依 2026-07-30 最新 Design Standard 完成任務開場、第 1–17 題、白話驗證卷軸與完成徽章的全文重寫草稿；舊版核准時間線已重啟，全文待審 | 交由 Claude Code 全文審稿，再依審稿意見修訂後交使用者人工審核 |
 | 6 | 掩耳盜鐘 | `06-guwen-yanerdaozhong-decoder-content.md` | 以舊版為底逐題重審；第 1–5 題及第 7–12 題已核准，開場仍待審；第 6 題教材內容待審且成人預覽另有顯示問題；第 13–21 題及收尾保留舊版待重審 | 繼續審核第 13 題；第 6 題預覽問題另交 Codex 處理 |
-| 7 | 鄭人買履 | `07-guwen-zhengrenmailv-decoder-content.md` | 新版任務開場、第 1–20 題、白話驗證卷軸與徽章收尾均已完成雙重 AI 審核及使用者人工審核，全文核准；正式 App 目前仍為舊版 | 將新版已核准教材建置上傳至正式 App |
+| 7 | 鄭人買履 | `07-guwen-zhengrenmailv-decoder-content.md` | 新版任務開場、第 1–20 題、白話驗證卷軸與徽章收尾均已完成雙重 AI 審核及使用者人工審核，全文核准並同步正式 App | 依實際使用回饋調整 |
 | 8 | 長竿入城 | `08-guwen-changganrucheng-decoder-content.md` | 新版任務開場、第 1–20 題、白話驗證卷軸與徽章收尾均已完成雙重 AI 審核及使用者人工審核，全文核准；正式 App 尚未建置本 active 新版 | 將已核准教材建置上傳至正式 App |
 | 9 | 楊氏之子 | `09-guwen-yangshizi-decoder-content.md` | 重寫時間線已重啟；新版開場與第 1–18 題全文草稿待審 | 交由 Claude 全文審稿，再依審稿意見修訂 |
 
