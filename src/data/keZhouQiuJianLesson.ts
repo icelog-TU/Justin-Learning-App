@@ -10,7 +10,6 @@ export const approvedKeZhouQiuJianLesson: GuwenLesson = {
     '我找到一篇寫楚國人故事的古文，可是裡面有些古老文字，我讀不懂。\n\n我目前知道一點點：一位楚國人遇到麻煩，後來他對船做了一件事。船繼續往前，這個做法能不能幫他，我拿不準。\n\n我找到幾條可以比對的古文線索。拜託你幫我把故事讀懂。',
   splitIntroSpeechParagraphs: true,
   acceptMissionLabel: '接受破譯任務',
-  listenBeforeAccept: true,
   fullText:
     '楚人有涉江者，其劍自舟中墜於水，遽契其舟曰：「是吾劍之所從墜。」舟止，從其所契者入水求之。舟已行矣，而劍不行，求劍若此，不亦惑乎？',
   sentences: [

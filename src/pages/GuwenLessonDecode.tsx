@@ -389,18 +389,13 @@ export default function GuwenLessonDecode() {
     setIsPlaying(true);
     setIsPaused(false);
     speakSequence(
-      lesson?.listenBeforeAccept
-        ? [
-            ...(lesson.fullTextPronunciationCues?.map((cue) => cue.speechText) ?? []),
-            fullText,
-          ]
-        : [
+      [
         LISTEN_LEAD_IN,
         ...(lesson?.fullTextPronunciationCues?.map((cue) => cue.speechText) ?? []),
         fullText,
         LISTEN_PROMPT,
         ...(lesson?.introClosingLine ? [lesson.introClosingLine] : []),
-          ],
+      ],
       () => setIsPlaying(false),
     );
   }
@@ -457,9 +452,6 @@ export default function GuwenLessonDecode() {
         : [lesson.introSpokenLine]),
       ...(lesson.introPronunciationCues?.map((cue) => cue.speechText) ?? []),
       `標題是《${lesson.title}》。`,
-      ...(lesson.listenBeforeAccept
-        ? [...(lesson.fullTextPronunciationCues?.map((cue) => cue.speechText) ?? []), lesson.fullText]
-        : []),
     ]);
     return () => cancelSpeech();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1853,26 +1845,12 @@ export default function GuwenLessonDecode() {
             <p className="text-xs text-gray-400">{lesson.source}</p>
             <p className="text-gray-600 whitespace-pre-line">{lesson.introSpokenLine}</p>
             {renderPronunciationCues(lesson.introPronunciationCues)}
-            {lesson.listenBeforeAccept && (
-              <div className="space-y-2 border-t border-gray-100 pt-3">
-                <p className="text-lg leading-relaxed text-gray-800">{lesson.fullText}</p>
-                {renderPronunciationCues(lesson.fullTextPronunciationCues)}
-                <button type="button" onClick={toggleFullPlayback} className="text-sm text-sky-600 font-medium">
-                  {!isPlaying ? '🔊 播放全文' : isPaused ? '▶️ 繼續播放' : '⏸ 暫停播放'}
-                </button>
-              </div>
-            )}
           </div>
           <button
             type="button"
             onClick={() => {
-              if (lesson.listenBeforeAccept) {
-                cancelSpeech();
-                setPhase('steps');
-              } else {
-                speak(INTRO_LINE);
-                setPhase('listening');
-              }
+              speak(INTRO_LINE);
+              setPhase('listening');
             }}
             className="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-xl py-3"
           >

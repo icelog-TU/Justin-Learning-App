@@ -14,7 +14,7 @@ function check(condition: unknown, message: string): asserts condition {
 }
 
 check(lesson.contentRevision === '2026-07-28-approved-20', '新版 contentRevision 不正確');
-check(lesson.listenBeforeAccept, '沒有依核准開場先播放全文再接受任務');
+check(!('listenBeforeAccept' in lesson), '第三篇仍保留會合併兩個開場畫面的舊例外');
 check(lesson.completeCorrectFeedbackAsCore, '沒有把完整答對回饋當成核心解答');
 check(lesson.steps.length === 18, `正文應為 18 題，實際為 ${lesson.steps.length}`);
 check(totalGuwenLessonItems(lesson) === 20, '正式課程總題數必須是 20');

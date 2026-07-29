@@ -248,8 +248,6 @@ export interface GuwenLesson {
   introSpokenLine: string;
   /** Optional approved line shown after the full text on the listening screen. */
   introClosingLine?: string;
-  /** Approved exception: show/play the original before mission acceptance and skip the generic listening screen. */
-  listenBeforeAccept?: boolean;
   /** Preserves blank-line-separated opening paragraphs as distinct audited TTS utterances. */
   splitIntroSpeechParagraphs?: boolean;
   introPronunciationCues?: PronunciationCue[];
