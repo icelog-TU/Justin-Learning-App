@@ -69,6 +69,7 @@ For each useful target:
 - Options are short, parallel, plausible, and test one thing.
 - The intro asks for help naturally, the question asks for one judgment, and neither repeats the same request or clue summary.
 - Necessary clue synthesis is brief and functional; repeated uncertainty or pleas do not substitute for evidence.
+- Remove repeated greetings, role pleas, and operating instructions, not purposeful learning reinforcement. A target meaning, relation, or reasoning principle may reappear in `答對回饋`, return-to-text reconstruction, and later review when the repetition supports memory.
 - The full lesson's correct-position sequence has no easy pattern.
 - `答對回饋` is one concise, independently understandable core-answer paragraph that immediately states the judgment or acquired key.
 - Evidence comparison, distractor analysis, and other optional elaboration belong only in `詳解`; follow the exact boundary in `../../../GUWEN-MARKDOWN-FORMAT.md`.
