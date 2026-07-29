@@ -24,6 +24,10 @@
  *   default to the far more common ㄘㄥˊ (céng, "already/once", as in 曾經) reading instead. Scoped to right
  *   before 子 specifically, since 曾經 appears constantly across this app's explanations/hints and a blanket
  *   swap would break all of it.
+ * - 少 in 少時/少年時 means "young" and should read ㄕㄠˋ (shào), not ㄕㄠˇ (shǎo, "few"). Scoped only to
+ *   those two time expressions and substituted with 紹 in the speech string.
+ * - 省 in 三省吾身 means "to examine oneself" and should read ㄒㄧㄥˇ (xǐng), not ㄕㄥˇ (shěng). Scoped only
+ *   to 省 immediately before 吾身 and substituted with 醒 in the speech string.
  * - 市 right after 徐 (as in 《史記．秦始皇本紀》「徐市入海求神藥」) is a scribal variant of 徐福 and should read
  *   ㄈㄨˊ (fú), not ㄕˋ (shì, "market") — confirmed via search that 徐市/徐巿/徐福 are the same historical
  *   figure. Scoped to right after 徐 specifically — 市 genuinely means "market" elsewhere in this app (e.g.
@@ -83,6 +87,8 @@ function ttsSafe(text: string): string {
     .replace(/(?<=[褰衣])裳/g, '傷')
     .replace(/好(?=上高|乘馬|辯)/g, '耗')
     .replace(/曾(?=子)/g, '增')
+    .replace(/少(?=時|年時)/g, '紹')
+    .replace(/省(?=吾身)/g, '醒')
     .replace(/(?<=徐)市/g, '福')
     .replace(/樂(?=樂)/g, '月')
     .replace(/(?<=亦)說(?=乎)/g, '悅')

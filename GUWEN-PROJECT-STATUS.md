@@ -16,7 +16,7 @@
 
 | 篇次 | 篇名 | Active 教材主檔 | 目前狀態 | 下一步 |
 |---:|---|---|---|---|
-| 1 | 王戎不取道旁李 | `lessons/01-guwen-wangrong-rewrite.md` | 20 題縮減重寫版已同步 App | 依實際使用回饋調整 |
+| 1 | 王戎不取道旁李 | `lessons/01-guwen-wangrong-rewrite.md` | 2026-07-29 最新核准版已同步正式 App | 依實際使用回饋調整 |
 | 2 | 司馬光破甕救友 | `02-guwen-simaguang-decoder-content.md` | 全文核准，最新重寫版 App 已上線 | 依 App 預覽與使用回饋調整 |
 | 3 | 刻舟求劍 | `03-guwen-kezhouqiujian-decoder-content.md` | 新版全文 20 題、白話驗證卷軸與徽章收尾均已核准 | 交付正式 App 實作 |
 | 4 | 守株待兔 | `04-guwen-shouzhudaitu-decoder-content.md` | 18 題重寫版、收尾與 App 驗收完成 | 依實際使用回饋調整 |

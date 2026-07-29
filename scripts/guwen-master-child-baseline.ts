@@ -34,8 +34,10 @@ import type { ChildSnapshot } from './guwen-master-child-snapshot';
 // 同步更新第五篇孩子端保護指紋。
 // 2026-07-29：《揠苗助長》第 4 題補全「宋人有……者」的整句重建；
 // 同步更新第五篇孩子端保護指紋。
+// 2026-07-29：《王戎不取道旁李》依最新版讀音規則調整第 1、12 題核心解答；
+// 同步更新第一篇孩子端保護指紋。
 export const GUWEN_CHILD_BASELINE: Record<string, ChildSnapshot> = {
-  'lessons/01-guwen-wangrong-rewrite.md': { questionCount: 20, hash: 'dd46c4423110b7b6b4dd21dfe04f37fdbd76f517c5c21af1c2ecf676cb2cdca4' },
+  'lessons/01-guwen-wangrong-rewrite.md': { questionCount: 20, hash: 'f66b7f8c6daf8f03e85be9990e7305f90466a808ec2b6608a798ac09e2d7d7e8' },
   '02-guwen-simaguang-decoder-content.md': { questionCount: 18, hash: 'e78c3eec7012fa42d81eb24ef4a000221784b5c2ced4d479cda0757dd4bb817e' },
   '03-guwen-kezhouqiujian-decoder-content.md': { questionCount: 20, hash: 'b5f8e7b39b13a2b24a9b9a415831b567cf2777256f53ac3025ab65f0854ce666' },
   '04-guwen-shouzhudaitu-decoder-content.md': { questionCount: 18, hash: 'a8bb260c9673f078fa0a1ba81960c03446e86bc3d4e8fd1ab22fd628f462cbb9' },
