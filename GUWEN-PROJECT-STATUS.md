@@ -18,7 +18,7 @@
 |---:|---|---|---|---|
 | 1 | 王戎不取道旁李 | `lessons/01-guwen-wangrong-rewrite.md` | 2026-07-29 最新核准版已同步正式 App | 依實際使用回饋調整 |
 | 2 | 司馬光破甕救友 | `02-guwen-simaguang-decoder-content.md` | 全文核准，最新重寫版 App 已上線 | 依 App 預覽與使用回饋調整 |
-| 3 | 刻舟求劍 | `03-guwen-kezhouqiujian-decoder-content.md` | 新版全文 20 題、白話驗證卷軸與徽章收尾均已核准 | 交付正式 App 實作 |
+| 3 | 刻舟求劍 | `03-guwen-kezhouqiujian-decoder-content.md` | 2026-07-29 依最新版格式全文重寫；任務開場、第 1–20 題、白話驗證卷軸與徽章收尾均為草稿待審 | 成人從任務開場與第 1 題開始審核；未核准前不得同步正式 App |
 | 4 | 守株待兔 | `04-guwen-shouzhudaitu-decoder-content.md` | 18 題重寫版、收尾與 App 驗收完成 | 依實際使用回饋調整 |
 | 5 | 揠苗助長 | `05-guwen-yamiaozhuzhang-decoder-content.md` | 開場及第 1–17 題全部核准；白話驗證卷軸與完成徽章尚待設計 | 設計並審核白話驗證卷軸與完成徽章 |
 | 6 | 掩耳盜鐘 | `06-guwen-yanerdaozhong-decoder-content.md` | 以舊版為底逐題重審；第 1–5 題、第 7–10 題及第 12 題已核准，開場仍待審；第 6 題教材內容待審且成人預覽另有顯示問題；第 11 題依「況／鍠」古籍異寫重寫後待審；第 13–21 題及收尾保留舊版待重審 | 審核依「況／鍠」古籍異寫重寫後的第 11 題；第 6 題預覽問題另交 Codex 處理 |
