@@ -1,7 +1,9 @@
+import fs from 'node:fs';
 import {
   keZhouQiuJianLesson as lesson,
   totalGuwenLessonItems,
 } from '../src/data/guwenLesson';
+import { parseDraftQuestions } from '../src/lib/guwenDraftPreview';
 import {
   recordGuwenTextCompleted,
   recordGuwenWordDecoded,
@@ -52,6 +54,40 @@ check(
   '白話驗證卷軸沒有鎖到全部 20 個必要項目',
 );
 check(lesson.sentences.join('') === lesson.fullText, '分句接合後不等於鎖定原文');
+
+const approvedQuestions = parseDraftQuestions(
+  fs.readFileSync('03-guwen-kezhouqiujian-decoder-content.md', 'utf8'),
+);
+check(approvedQuestions.length === 20, `active 主檔應解析出 20 題，實際為 ${approvedQuestions.length}`);
+lesson.steps.forEach((step, index) => {
+  const question = approvedQuestions[index];
+  check(question, `active 主檔缺少第 ${index + 1} 題`);
+  check(question.target?.text === step.targetSentence, `第 ${index + 1} 題目標句未同步 active 主檔`);
+  check(question.intro?.text === step.intro, `第 ${index + 1} 題引導語未同步 active 主檔`);
+  if (step.type !== 'reveal') {
+    check(question.question?.text === step.question, `第 ${index + 1} 題提問未同步 active 主檔`);
+  }
+  check(
+    question.correctFeedback?.text === step.correctFeedback,
+    `第 ${index + 1} 題核心解答未同步 active 主檔`,
+  );
+});
+check(
+  approvedQuestions[18].intro?.text === lesson.sequenceOrderingClosing?.intro,
+  '第 19 題引導語未同步 active 主檔',
+);
+check(
+  approvedQuestions[18].correctFeedback?.text === lesson.sequenceOrderingClosing?.correctFeedback,
+  '第 19 題核心解答未同步 active 主檔',
+);
+check(
+  approvedQuestions[19].intro?.text === lesson.evidenceMultiSelectClosing?.intro,
+  '第 20 題引導語未同步 active 主檔',
+);
+check(
+  approvedQuestions[19].correctFeedback?.text === lesson.evidenceMultiSelectClosing?.correctFeedback,
+  '第 20 題核心解答未同步 active 主檔',
+);
 
 const sentenceForStep = (stepId: string) => {
   const step = lesson.steps.find((candidate) => candidate.id === stepId);
