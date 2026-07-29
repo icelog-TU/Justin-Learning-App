@@ -116,11 +116,11 @@ if (thirdLessonQuestions.length !== 20 || thirdLessonQuestions.at(-1)?.number !=
   console.error('  ERROR: 第三篇沒有依新版題數控制保留第 1～20 題');
 }
 const expectedExplanationParts = [
-  '第一條線索中，碗原本在手中',
-  '第二條線索中，算袋原本也在手中',
-  '兩條線索共同出現的位置變化',
-  '【墜】＝從原來的位置往下掉',
-  '這把鑰匙說明的是移動方向',
+  '碗和算袋原本都在手中',
+  '分別到了下面的地面與水裡',
+  '兩條線索共同顯示從原處往下移動',
+  '「留在原處」沒有位置變化',
+  '「從下面往上」則把方向說反了',
 ];
 for (const expected of expectedExplanationParts) {
   if (!thirdLessonQuestionFour?.explanation?.text.includes(expected)) {
@@ -128,9 +128,9 @@ for (const expected of expectedExplanationParts) {
     console.error(`  ERROR: 第三篇第 4 題詳解沒有完整抓到「${expected}」`);
   }
 }
-if (thirdLessonQuestionFour?.key) {
+if (thirdLessonQuestionFour?.key?.text !== '【墜】表示從原來的位置往下掉。') {
   failed = true;
-  console.error('  ERROR: 第三篇第 4 題的成人編輯欄位被誤顯示為孩子端密碼鑰匙');
+  console.error('  ERROR: 第三篇第 4 題沒有抓到最新版孩子端密碼鑰匙');
 }
 const expectedQuestionFiveKeys = [
   ['其劍', '前面那位楚國人的劍'],

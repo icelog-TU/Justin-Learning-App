@@ -303,7 +303,7 @@ function optionFields(sections: Section[]): DraftField[] {
 }
 
 function sequenceCardFields(sections: Section[]): DraftSequenceCard[] {
-  const section = firstSection(sections, [/^事件卡$/, /事件.*卡片/]);
+  const section = firstSection(sections, [/^事件卡$/, /事件.*卡片/, /^全文故事排序$/]);
   if (!section) return [];
   const cards: DraftSequenceCard[] = [];
   section.lines.forEach((line, index) => {
@@ -320,7 +320,7 @@ function sequenceCardFields(sections: Section[]): DraftSequenceCard[] {
 }
 
 function multiSelectOptionFields(sections: Section[]): DraftMultiSelectOption[] {
-  const section = firstSection(sections, [/^勾選項目$/, /待判斷.*敘述/]);
+  const section = firstSection(sections, [/^勾選項目$/, /待判斷.*敘述/, /^全文證據檢查$/]);
   if (!section) return [];
   const supported = field(firstSection(sections, [/^應勾選$/]))?.text ?? '';
   const supportedNumbers = new Set(

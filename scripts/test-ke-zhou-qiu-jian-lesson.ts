@@ -1,22 +1,14 @@
 import fs from 'node:fs';
-import {
-  keZhouQiuJianLesson as lesson,
-  totalGuwenLessonItems,
-} from '../src/data/guwenLesson';
+import { keZhouQiuJianLesson as lesson, totalGuwenLessonItems } from '../src/data/guwenLesson';
 import { parseDraftQuestions } from '../src/lib/guwenDraftPreview';
-import {
-  recordGuwenTextCompleted,
-  recordGuwenWordDecoded,
-  resetGuwenProgress,
-  type AppData,
-} from '../src/lib/storage';
+import { recordGuwenTextCompleted, recordGuwenWordDecoded, resetGuwenProgress, type AppData } from '../src/lib/storage';
 import { guwenSentenceMatchesTarget } from '../src/lib/guwenPassage';
 
 function check(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
 }
 
-check(lesson.contentRevision === '2026-07-28-approved-20', '新版 contentRevision 不正確');
+check(lesson.contentRevision === '2026-07-29-approved-20', '新版 contentRevision 不正確');
 check(!('listenBeforeAccept' in lesson), '第三篇仍保留會合併兩個開場畫面的舊例外');
 check(lesson.completeCorrectFeedbackAsCore, '沒有把完整答對回饋當成核心解答');
 check(lesson.steps.length === 18, `正文應為 18 題，實際為 ${lesson.steps.length}`);
@@ -49,15 +41,13 @@ for (const step of lesson.steps) {
   }
 }
 check(
-  lesson.finalVerification.prerequisiteStepIds.length === 20
-    && lesson.finalVerification.prerequisiteStepIds.every((id) => ids.includes(id)),
+  lesson.finalVerification.prerequisiteStepIds.length === 20 &&
+    lesson.finalVerification.prerequisiteStepIds.every((id) => ids.includes(id)),
   '白話驗證卷軸沒有鎖到全部 20 個必要項目',
 );
 check(lesson.sentences.join('') === lesson.fullText, '分句接合後不等於鎖定原文');
 
-const approvedQuestions = parseDraftQuestions(
-  fs.readFileSync('03-guwen-kezhouqiujian-decoder-content.md', 'utf8'),
-);
+const approvedQuestions = parseDraftQuestions(fs.readFileSync('03-guwen-kezhouqiujian-decoder-content.md', 'utf8'));
 check(approvedQuestions.length === 20, `active 主檔應解析出 20 題，實際為 ${approvedQuestions.length}`);
 lesson.steps.forEach((step, index) => {
   const question = approvedQuestions[index];
@@ -66,16 +56,50 @@ lesson.steps.forEach((step, index) => {
   check(question.intro?.text === step.intro, `第 ${index + 1} 題引導語未同步 active 主檔`);
   if (step.type !== 'reveal') {
     check(question.question?.text === step.question, `第 ${index + 1} 題提問未同步 active 主檔`);
+    check(
+      question.options.map((option) => option.text).join('\u0000') === step.options.join('\u0000'),
+      `第 ${index + 1} 題選項未同步 active 主檔`,
+    );
+    check(question.correctIndex === step.correctIndex, `第 ${index + 1} 題正解位置未同步 active 主檔`);
+    check(question.retryHint?.text === step.retryHint, `第 ${index + 1} 題答錯提示未同步 active 主檔`);
+    check(question.explanation?.text === step.explanation, `第 ${index + 1} 題詳解未同步 active 主檔`);
   }
-  check(
-    question.correctFeedback?.text === step.correctFeedback,
-    `第 ${index + 1} 題核心解答未同步 active 主檔`,
-  );
+  if (step.type === 'evidence') {
+    step.clues.forEach((clue, clueIndex) => {
+      const approvedClue = question.clues[clueIndex];
+      check(
+        approvedClue?.text.replace(/[【】]/g, '') === clue.text,
+        `第 ${index + 1} 題線索 ${clueIndex + 1} 原文未同步 active 主檔`,
+      );
+      check(
+        approvedClue?.text.match(/【([^】]+)】/)?.[1] === clue.highlight,
+        `第 ${index + 1} 題線索 ${clueIndex + 1} 反白範圍未同步 active 主檔`,
+      );
+      check(
+        approvedClue?.meaning?.text === clue.unlockedMeaning,
+        `第 ${index + 1} 題線索 ${clueIndex + 1} 白話未同步 active 主檔`,
+      );
+      check(
+        approvedClue?.source?.text === clue.source,
+        `第 ${index + 1} 題線索 ${clueIndex + 1} 出處未同步 active 主檔`,
+      );
+    });
+  }
+  if (step.type === 'reconstruction') {
+    check(
+      question.preAnswerKeys.map((key) => `${key.code.text}\u0000${key.decodedEvidence.text}`).join('\u0001') ===
+        step.keys.map((key) => `${key.code}\u0000${key.decodedEvidence}`).join('\u0001'),
+      `第 ${index + 1} 題作答前密碼鑰匙未同步 active 主檔`,
+    );
+  }
+  check(question.correctFeedback?.text === step.correctFeedback, `第 ${index + 1} 題核心解答未同步 active 主檔`);
 });
 check(
-  approvedQuestions[18].intro?.text === lesson.sequenceOrderingClosing?.intro,
-  '第 19 題引導語未同步 active 主檔',
+  lesson.steps.flatMap((step, index) => (step.finalDraftLine ? [index + 1] : [])).join(',') ===
+    '2,5,8,12,13,14,18',
+  '七個原文句子的完整意思沒有只在核准交付題出現',
 );
+check(approvedQuestions[18].intro?.text === lesson.sequenceOrderingClosing?.intro, '第 19 題引導語未同步 active 主檔');
 check(
   approvedQuestions[18].correctFeedback?.text === lesson.sequenceOrderingClosing?.correctFeedback,
   '第 19 題核心解答未同步 active 主檔',
@@ -98,10 +122,7 @@ check(
   sentenceForStep('qi_qi_zhou') === '遽契其舟曰：「是吾劍之所從墜。」',
   '第 7 題沒有亮起「遽契其舟曰……」所在原文句',
 );
-check(
-  sentenceForStep('shi') === '遽契其舟曰：「是吾劍之所從墜。」',
-  '第 9 題沒有亮起「是吾劍之所從墜」所在原文句',
-);
+check(sentenceForStep('shi') === '遽契其舟曰：「是吾劍之所從墜。」', '第 9 題沒有亮起「是吾劍之所從墜」所在原文句');
 
 const legacyProgress = {
   coins: 0,
@@ -141,17 +162,9 @@ const migrated = recordGuwenWordDecoded(
 );
 check(migrated.guwenProgress[lesson.id].decodedWordIds.join() === lesson.steps[0].id, '新版沒有重置舊題解鎖狀態');
 check(migrated.guwenProgress[lesson.id].timesCompleted === 3, '改版遺失既有完成次數');
-const completed = recordGuwenTextCompleted(
-  structuredClone(legacyProgress),
-  lesson.id,
-  lesson.contentRevision,
-);
+const completed = recordGuwenTextCompleted(structuredClone(legacyProgress), lesson.id, lesson.contentRevision);
 check(completed.guwenProgress[lesson.id].timesCompleted === 4, '改版完成後沒有沿用重玩獎勵級距');
-const reset = resetGuwenProgress(
-  structuredClone(legacyProgress),
-  lesson.id,
-  lesson.contentRevision,
-);
+const reset = resetGuwenProgress(structuredClone(legacyProgress), lesson.id, lesson.contentRevision);
 check(reset.guwenProgress[lesson.id].timesCompleted === 3, '重設新版進度時遺失既有完成次數');
 
 console.log('《刻舟求劍》正式 App 資料與進度遷移檢查通過');
