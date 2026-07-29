@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type TouchEvent } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
   DRAFT_SOURCES,
+  draftPreviewSwipeDelta,
   draftQuestionIndexByNumber,
   findAdjacentRepetitions,
   githubEditUrl,
@@ -140,8 +141,12 @@ export default function GuwenDraftPreview() {
   const [error, setError] = useState(initialSource.error ?? '');
   const [loadedAt, setLoadedAt] = useState<Date>();
   const [playback, setPlayback] = useState<Playback>();
+  const [lessonQuery, setLessonQuery] = useState(initialSource.index === undefined ? '' : DRAFT_SOURCES[initialSource.index].title);
+  const [lessonSearchOpen, setLessonSearchOpen] = useState(false);
   const loadToken = useRef(0);
   const playbackToken = useRef(0);
+  const swipeStart = useRef<{ x: number; y: number } | undefined>(undefined);
+  const questionCard = useRef<HTMLDivElement>(null);
   const source = sourceIndex === undefined ? undefined : DRAFT_SOURCES[sourceIndex];
   const question = questions[questionIndex];
 
@@ -214,19 +219,55 @@ export default function GuwenDraftPreview() {
   const order = useMemo(() => question ? readingOrder(question) : [], [question]);
   const repetitions = useMemo(() => findAdjacentRepetitions(order), [order]);
   const approvedCount = questions.filter((item) => /已核准|核准/.test(item.status)).length;
+  const lessonMatches = useMemo(() => {
+    const query = lessonQuery.trim().toLocaleLowerCase('zh-TW');
+    if (!query) return DRAFT_SOURCES.slice(0, 8);
+    return DRAFT_SOURCES.filter((item) => (
+      item.title.toLocaleLowerCase('zh-TW').includes(query)
+      || item.path.toLocaleLowerCase('zh-TW').includes(query)
+      || item.lessonId.toLocaleLowerCase('zh-TW').includes(query)
+    )).slice(0, 8);
+  }, [lessonQuery]);
 
   function chooseQuestion(next: number) {
+    if (next < 0 || next >= questions.length) return;
     stopPlayback();
     setQuestionIndex(next);
     setPreviewState('answering');
+    window.requestAnimationFrame(() => {
+      questionCard.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
   }
 
   function chooseSource(next: number) {
+    const nextSource = DRAFT_SOURCES[next];
+    if (!nextSource) return;
     stopPlayback();
     setError('');
     setSourceIndex(next);
+    setLessonQuery(nextSource.title);
+    setLessonSearchOpen(false);
     setQuestionIndex(0);
     setPreviewState('answering');
+  }
+
+  function startSwipe(event: TouchEvent<HTMLElement>) {
+    const target = event.target;
+    if (target instanceof Element && target.closest('button, a, input, select, textarea, [role="button"]')) {
+      swipeStart.current = undefined;
+      return;
+    }
+    const touch = event.touches[0];
+    swipeStart.current = touch ? { x: touch.clientX, y: touch.clientY } : undefined;
+  }
+
+  function finishSwipe(event: TouchEvent<HTMLElement>) {
+    const start = swipeStart.current;
+    swipeStart.current = undefined;
+    const touch = event.changedTouches[0];
+    if (!start || !touch) return;
+    const delta = draftPreviewSwipeDelta(start, { x: touch.clientX, y: touch.clientY });
+    if (delta) chooseQuestion(questionIndex + delta);
   }
 
   function choosePreviewState(next: PreviewState) {
@@ -267,24 +308,95 @@ export default function GuwenDraftPreview() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-100 text-slate-800">
+    <main className="min-h-screen bg-slate-100 pb-24 text-slate-800">
       <header className="border-b border-slate-200 bg-white px-4 py-4 shadow-sm">
         <div className="mx-auto flex max-w-7xl flex-wrap items-end gap-3">
           <div className="mr-auto">
             <p className="text-xs font-bold tracking-widest text-teal-600">成人審稿工具｜不寫入孩子進度</p>
             <h1 className="text-xl font-black">古文 MD 實際題目預覽</h1>
           </div>
-          <label className="text-xs font-bold text-slate-500">
-            教材
-            <select
-              value={sourceIndex ?? ''}
-              onChange={(event) => chooseSource(Number(event.target.value))}
-              className="mt-1 block rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800"
-            >
-              {sourceIndex === undefined && <option value="" disabled>找不到指定教材</option>}
-              {DRAFT_SOURCES.map((item, index) => <option key={item.lessonId} value={index}>{item.title}</option>)}
-            </select>
-          </label>
+          <div className="relative w-full text-xs font-bold text-slate-500 sm:w-80">
+            <label htmlFor="guwen-lesson-search">搜尋教材</label>
+            <div className="mt-1 flex gap-1.5">
+              <button
+                type="button"
+                onClick={() => sourceIndex !== undefined && chooseSource(sourceIndex - 1)}
+                disabled={sourceIndex === undefined || sourceIndex <= 0}
+                className="rounded-lg border border-slate-300 bg-white px-2.5 py-2 text-sm text-slate-700 disabled:cursor-not-allowed disabled:opacity-35"
+                aria-label="上一篇教材"
+              >
+                ‹
+              </button>
+              <input
+                id="guwen-lesson-search"
+                type="search"
+                value={lessonQuery}
+                onChange={(event) => {
+                  setLessonQuery(event.target.value);
+                  setLessonSearchOpen(true);
+                }}
+                onFocus={() => setLessonSearchOpen(true)}
+                onBlur={() => {
+                  setLessonSearchOpen(false);
+                  if (source) setLessonQuery(source.title);
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' && lessonMatches.length === 1) {
+                    event.preventDefault();
+                    chooseSource(DRAFT_SOURCES.indexOf(lessonMatches[0]));
+                  }
+                  if (event.key === 'Escape') {
+                    setLessonSearchOpen(false);
+                    if (source) setLessonQuery(source.title);
+                    event.currentTarget.blur();
+                  }
+                }}
+                role="combobox"
+                aria-expanded={lessonSearchOpen}
+                aria-controls="guwen-lesson-results"
+                aria-autocomplete="list"
+                placeholder="輸入篇號或篇名"
+                className="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-800"
+              />
+              <button
+                type="button"
+                onClick={() => sourceIndex !== undefined && chooseSource(sourceIndex + 1)}
+                disabled={sourceIndex === undefined || sourceIndex >= DRAFT_SOURCES.length - 1}
+                className="rounded-lg border border-slate-300 bg-white px-2.5 py-2 text-sm text-slate-700 disabled:cursor-not-allowed disabled:opacity-35"
+                aria-label="下一篇教材"
+              >
+                ›
+              </button>
+            </div>
+            {lessonSearchOpen && (
+              <div
+                id="guwen-lesson-results"
+                role="listbox"
+                className="absolute inset-x-10 top-full z-30 mt-1 max-h-72 overflow-y-auto rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl"
+              >
+                {lessonMatches.length ? lessonMatches.map((item) => {
+                  const index = DRAFT_SOURCES.indexOf(item);
+                  return (
+                    <button
+                      key={item.lessonId}
+                      type="button"
+                      role="option"
+                      aria-selected={index === sourceIndex}
+                      onPointerDown={(event) => event.preventDefault()}
+                      onClick={() => chooseSource(index)}
+                      className={`block w-full rounded-lg px-3 py-2 text-left text-sm ${
+                        index === sourceIndex ? 'bg-teal-50 font-bold text-teal-700' : 'font-medium text-slate-700 hover:bg-slate-50'
+                      }`}
+                    >
+                      {item.title}
+                    </button>
+                  );
+                }) : (
+                  <p className="px-3 py-2 text-sm font-medium text-slate-500">找不到符合的教材</p>
+                )}
+              </div>
+            )}
+          </div>
           <label className="text-xs font-bold text-slate-500">
             題目
             <select
@@ -319,7 +431,12 @@ export default function GuwenDraftPreview() {
               <span className="text-slate-400">讀取時間：{loadedAt?.toLocaleTimeString('zh-TW')}</span>
             </div>
 
-            <div className="mx-auto max-w-2xl space-y-4">
+            <div
+              ref={questionCard}
+              onTouchStart={startSwipe}
+              onTouchEnd={finishSwipe}
+              className="mx-auto max-w-2xl scroll-mt-4 space-y-4"
+            >
               <div className="rounded-2xl bg-white p-5 shadow">
                 <div className="mb-4 flex items-start justify-between gap-3">
                   <div>
@@ -616,6 +733,36 @@ export default function GuwenDraftPreview() {
             ⏹ 停止
           </button>
         </div>
+      )}
+
+      {!loading && question && (
+        <nav
+          aria-label="題目快速切換"
+          className={`fixed inset-x-3 z-40 mx-auto flex max-w-md items-center gap-2 rounded-2xl border border-slate-200 bg-white/95 p-2 shadow-2xl backdrop-blur transition-[bottom] ${
+            playback ? 'bottom-24' : 'bottom-3'
+          }`}
+        >
+          <button
+            type="button"
+            onClick={() => chooseQuestion(questionIndex - 1)}
+            disabled={questionIndex <= 0}
+            className="min-h-11 flex-1 rounded-xl bg-slate-100 px-3 py-2 text-sm font-black text-slate-700 disabled:cursor-not-allowed disabled:opacity-35"
+          >
+            ← 上一題
+          </button>
+          <div className="shrink-0 px-1 text-center">
+            <p className="text-xs font-black text-slate-700">{questionIndex + 1} / {questions.length}</p>
+            <p className="text-[10px] text-slate-400">左右滑也可換題</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => chooseQuestion(questionIndex + 1)}
+            disabled={questionIndex >= questions.length - 1}
+            className="min-h-11 flex-1 rounded-xl bg-indigo-600 px-3 py-2 text-sm font-black text-white disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400"
+          >
+            下一題 →
+          </button>
+        </nav>
       )}
     </main>
   );

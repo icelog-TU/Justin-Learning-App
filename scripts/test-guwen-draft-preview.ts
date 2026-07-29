@@ -2,12 +2,26 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {
   DRAFT_SOURCES,
+  draftPreviewSwipeDelta,
   draftQuestionIndexByNumber,
   parseDraftQuestions,
   resolveDraftSource,
 } from '../src/lib/guwenDraftPreview';
 
 let failed = false;
+
+if (draftPreviewSwipeDelta({ x: 300, y: 200 }, { x: 120, y: 205 }) !== 1) {
+  failed = true;
+  console.error('  ERROR: 左滑沒有切換到下一題');
+}
+if (draftPreviewSwipeDelta({ x: 100, y: 200 }, { x: 260, y: 195 }) !== -1) {
+  failed = true;
+  console.error('  ERROR: 右滑沒有切換到上一題');
+}
+if (draftPreviewSwipeDelta({ x: 200, y: 100 }, { x: 205, y: 260 }) !== 0) {
+  failed = true;
+  console.error('  ERROR: 垂直捲動被誤判為換題手勢');
+}
 
 const thirdLessonPathIndex = DRAFT_SOURCES.findIndex((source) => source.path === '03-guwen-kezhouqiujian-decoder-content.md');
 if (resolveDraftSource('03-guwen-kezhouqiujian-decoder-content.md', null).index !== thirdLessonPathIndex) {
