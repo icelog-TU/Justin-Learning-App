@@ -22,7 +22,7 @@
 | 4 | 守株待兔 | `04-guwen-shouzhudaitu-decoder-content.md` | 18 題重寫版、收尾與 App 驗收完成 | 依實際使用回饋調整 |
 | 5 | 揠苗助長 | `05-guwen-yamiaozhuzhang-decoder-content.md` | 開場及第 1–17 題全部核准；白話驗證卷軸與完成徽章尚待設計 | 設計並審核白話驗證卷軸與完成徽章 |
 | 6 | 掩耳盜鐘 | `06-guwen-yanerdaozhong-decoder-content.md` | 以舊版為底逐題重審；第 1–5 題及第 7–12 題已核准，開場仍待審；第 6 題教材內容待審且成人預覽另有顯示問題；第 13–21 題及收尾保留舊版待重審 | 繼續審核第 13 題；第 6 題預覽問題另交 Codex 處理 |
-| 7 | 鄭人買履 | `07-guwen-zhengrenmailv-decoder-content.md` | 以舊版為底進行實測後重寫；第 1–4 題已依新版文字分工重審，草稿待審；第 5–20 題與收尾仍沿用原核准版本 | 審核第 1–4 題，再依孩子回饋繼續減量 |
+| 7 | 鄭人買履 | `07-guwen-zhengrenmailv-decoder-content.md` | 第 1–20 題已依新版 20 題藍圖完成整篇重寫草稿，全部待審；白話驗證卷軸與徽章收尾仍沿用原核准版本；正式 App 不變 | 交由另一個 AI 進行第 1–20 題整篇審稿，再依審稿意見修訂後交使用者人工審核 |
 | 8 | 長竿入城 | `08-guwen-changganrucheng-decoder-content.md` | 新版任務開場、第 1–20 題、白話驗證卷軸與徽章均已完成草稿，尚無新版核准內容 | 交由 Claude 進行整篇初審，再依審稿意見修訂 |
 | 9 | 楊氏之子 | `09-guwen-yangshizi-decoder-content.md` | 重寫時間線已重啟；新版開場與第 1–18 題全文草稿待審 | 交由 Claude 全文審稿，再依審稿意見修訂 |
 
