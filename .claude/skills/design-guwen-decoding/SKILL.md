@@ -52,7 +52,7 @@ For each useful target:
 
 1. Establish the unchanged original text and resolve segmentation internally.
 2. Select one observable meaning, function, reference, relation, or narrative feature.
-3. Search real classical usage first. Verify wording, continuation, attribution, and excerpt boundary.
+3. Search real classical usage first. Verify wording, continuation, attribution, excerpt boundary, and independence from the target lesson's source story. Do not use the target text, same story, same episode, retelling, quotation, alternate wording, or near-paraphrase as an independent clue.
 4. Give two short clues in the same relevant use when two independent clues are useful.
 5. Translate surrounding information while keeping the target visible and untranslated.
 6. Ask for a neutral hypothesis; do not preview the answer or option shapes.
@@ -67,6 +67,8 @@ For each useful target:
 - The intro, glosses, question, retry hint, imagery, and audio do not state the answer literally or indirectly.
 - The target remains quoted in the clue gloss instead of being translated, deleted, or replaced by a revealing synonym.
 - Clues are short, source-traceable, grammatically sufficient, and use the target compatibly.
+- Every AI-written or hybrid classical clue sentence has a real source backbone recorded in adult/source notes; do not write classical-sounding sentences from impression alone.
+- Clue sources are not the target text, same story, same episode, retelling, quotation, alternate wording, or near-paraphrase of the lesson's source.
 - Options are short, parallel, plausible, and test one thing.
 - The intro asks for help naturally, the question asks for one judgment, and neither repeats the same request or clue summary.
 - Necessary clue synthesis is brief and functional; repeated uncertainty or pleas do not substitute for evidence.
@@ -81,7 +83,7 @@ For each useful target:
 
 Mark which child-facing fields are playable and review their actual speech together with layout in `/#/guwen-draft-preview`. Do not perform a separate polyphonic scan, create audit candidates or catalogs, use the old listening page, pull central results, or wait for legacy audit completion. Never alter displayed classical text to fix speech.
 
-As of 2026-07-29, pronunciation explanations are authored only inside the core answer (`答對回饋` / `蝑???`). Do not add Zhuyin, homophone cues, or "念作／唸作／發音同" notes to the target sentence, original text, clues, clue glosses, intro, question, options, or retry hint. If a pronunciation explanation is pedagogically needed, write it once as part of the core answer sentence, where it can be read in context after the child answers.
+As of 2026-07-29, pronunciation explanations are authored only inside the core answer (`答對回饋` / `核心解答`). Do not add Zhuyin, homophone cues, or "念作／唸作／發音同" notes to the target sentence, original text, clues, clue glosses, intro, question, options, or retry hint. If a pronunciation explanation is pedagogically needed, write it once as part of the core answer sentence, where it can be read in context after the child answers.
 
 ## Finish a review batch
 
