@@ -38,6 +38,8 @@ import type { ChildSnapshot } from './guwen-master-child-snapshot';
 // 同步更新第五篇孩子端保護指紋。
 // 2026-07-29：《王戎不取道旁李》依最新版讀音規則調整第 1、12 題核心解答；
 // 同步更新第一篇孩子端保護指紋。
+// 2026-07-29：《楊氏之子》完成新版任務開場、第 1–18 題與全文收尾草稿；
+// 同步更新第九篇孩子端保護指紋。
 export const GUWEN_CHILD_BASELINE: Record<string, ChildSnapshot> = {
   'lessons/01-guwen-wangrong-rewrite.md': { questionCount: 20, hash: 'f66b7f8c6daf8f03e85be9990e7305f90466a808ec2b6608a798ac09e2d7d7e8' },
   '02-guwen-simaguang-decoder-content.md': { questionCount: 18, hash: 'e78c3eec7012fa42d81eb24ef4a000221784b5c2ced4d479cda0757dd4bb817e' },
@@ -47,5 +49,5 @@ export const GUWEN_CHILD_BASELINE: Record<string, ChildSnapshot> = {
   '06-guwen-yanerdaozhong-decoder-content.md': { questionCount: 21, hash: 'dee71081ecf56240a9ae98514da8c3c60f4123c41c76a06e49b04d3321b231fd' },
   '07-guwen-zhengrenmailv-decoder-content.md': { questionCount: 20, hash: '67c76642ea46a1478c0ac2181766a7ff76bada9daf5b6c3a896b032c6e5da4cb' },
   '08-guwen-changganrucheng-decoder-content.md': { questionCount: 10, hash: 'dee88ceb5412ef79b01d747cd07c4c94f463decdffce809abf9e2087732b734a' },
-  '09-guwen-yangshizi-decoder-content.md': { questionCount: 9, hash: '132f7d0ac1343c60f2586012909e5576a103bde250e8e00ab16398793ca80733' },
+  '09-guwen-yangshizi-decoder-content.md': { questionCount: 18, hash: '630fa967e03fa2280c0b3ab9a61574379e30511d501d574adaaa2c9b942978f6' },
 };
