@@ -19,7 +19,7 @@
 | 1 | 王戎不取道旁李 | `lessons/01-guwen-wangrong-rewrite.md` | 2026-07-29 最新核准版已同步正式 App | 依實際使用回饋調整 |
 | 2 | 司馬光破甕救友 | `02-guwen-simaguang-decoder-content.md` | 全文核准，最新重寫版 App 已上線 | 依 App 預覽與使用回饋調整 |
 | 3 | 刻舟求劍 | `03-guwen-kezhouqiujian-decoder-content.md` | 2026-07-29 全篇完整通過；任務開場、第 1–20 題、白話驗證卷軸與徽章收尾均已核准並同步正式 App | 依實際使用回饋調整 |
-| 4 | 守株待兔 | `04-guwen-shouzhudaitu-decoder-content.md` | 18 題最新版全文草稿已完成；任務開場按鈕及第 1–5、7–8、11–13、17–18 題待審；正式 App 維持既有版本 | 交由另一個 AI 進行全文審稿，再依審稿意見修訂後交使用者人工審核 |
+| 4 | 守株待兔 | `04-guwen-shouzhudaitu-decoder-content.md` | 外部 AI 全文審稿已完成；第 15 題跨題揭露已修正，Markdown v1 遷移完成；任務開場按鈕及第 1–5、7–8、11–13、15、17–18 題待審；正式 App 維持既有版本 | 請使用者人工審核第 15 題修訂與全文 |
 | 5 | 揠苗助長 | `05-guwen-yamiaozhuzhang-decoder-content.md` | 開場及第 1–17 題全部核准；白話驗證卷軸與完成徽章尚待設計 | 設計並審核白話驗證卷軸與完成徽章 |
 | 6 | 掩耳盜鐘 | `06-guwen-yanerdaozhong-decoder-content.md` | 以舊版為底逐題重審；第 1–5 題及第 7–12 題已核准，開場仍待審；第 6 題教材內容待審且成人預覽另有顯示問題；第 13–21 題及收尾保留舊版待重審 | 繼續審核第 13 題；第 6 題預覽問題另交 Codex 處理 |
 | 7 | 鄭人買履 | `07-guwen-zhengrenmailv-decoder-content.md` | 新版任務開場、第 1–20 題、白話驗證卷軸與徽章收尾均已完成雙重 AI 審核及使用者人工審核，全文核准；正式 App 目前仍為舊版 | 將新版已核准教材建置上傳至正式 App |
