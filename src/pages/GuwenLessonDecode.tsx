@@ -1914,7 +1914,7 @@ export default function GuwenLessonDecode() {
                     className={[
                       'rounded px-0.5 py-0.5 transition-colors duration-200',
                       isActive
-                        ? 'bg-amber-200 text-slate-950 ring-2 ring-amber-400 ring-offset-1'
+                        ? 'bg-yellow-300 text-slate-950 font-bold shadow-sm ring-2 ring-orange-500 ring-offset-1'
                         : '',
                     ].join(' ')}
                   >
@@ -1936,7 +1936,7 @@ export default function GuwenLessonDecode() {
                   className={[
                     'space-y-1.5 rounded-lg px-2 py-1 transition-colors duration-200',
                     listeningSentenceIndex === i
-                      ? 'bg-amber-100 ring-2 ring-amber-300'
+                      ? 'bg-yellow-200 shadow-sm ring-2 ring-orange-400'
                       : '',
                   ].join(' ')}
                 >

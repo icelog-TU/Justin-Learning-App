@@ -179,6 +179,10 @@ export function isSpeechSynthesisAvailable(): boolean {
 }
 
 let activeSpeechRun = 0;
+// Keep strong references for the whole run. Safari and some mobile WebKit builds may continue speaking
+// native queued utterances after their JavaScript wrappers are collected, but then stop delivering
+// `start` / `end` events. Those events drive sentence highlighting in the guwen listening screen.
+let activeUtterances: SpeechSynthesisUtterance[] = [];
 
 function queueSpeech(
   texts: string[],
@@ -206,9 +210,13 @@ function queueSpeech(
         // `reportItemStart` deduplicates this when the normal `start` event also arrives.
         reportItemStart(i + 1);
       } else {
-        if (runId === activeSpeechRun) onDone?.();
+        if (runId === activeSpeechRun) {
+          activeUtterances.length = 0;
+          onDone?.();
+        }
       }
     };
+    activeUtterances.push(utterance);
     window.speechSynthesis.speak(utterance);
   });
 }
@@ -220,6 +228,7 @@ export function speak(text: string, onEnd?: () => void) {
     return;
   }
   const runId = ++activeSpeechRun;
+  activeUtterances.length = 0;
   window.speechSynthesis.cancel();
   queueSpeech([text], onEnd, undefined, runId);
 }
@@ -240,6 +249,7 @@ export function speakSequence(
     return;
   }
   const runId = ++activeSpeechRun;
+  activeUtterances.length = 0;
   window.speechSynthesis.cancel();
   queueSpeech(texts, onDone, onItemStart, runId);
 }
@@ -254,5 +264,6 @@ export function resumeSpeech() {
 
 export function cancelSpeech() {
   activeSpeechRun += 1;
+  activeUtterances.length = 0;
   if (typeof window !== 'undefined' && window.speechSynthesis) window.speechSynthesis.cancel();
 }
