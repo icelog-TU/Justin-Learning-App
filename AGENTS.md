@@ -2,6 +2,8 @@
 
 Use the existing branch `claude/chinese-learning-app-justin-yjcfam`; do not create another branch. Before editing, fetch the remote branch, inspect `git status`, preserve existing work, and reread every target file from the remote latest version.
 
+If a repository reader truncates a selected file, continue from the next unread line or range until EOF. When the missing content is recovered, do not interrupt the user with intermediate truncation reports; report only an unresolved inability to read the complete required file.
+
 Choose one primary task path:
 
 - **古文教材設計、撰寫或審稿**：read `GUWEN-WORKFLOW-SOP.md`, then use `.claude/skills/design-guwen-decoding/SKILL.md`. Read only the target lesson master, its row in `GUWEN-PROJECT-STATUS.md`, relevant entries in `guwen-decoder-learned-keys.md`, and conditional references named by the skill.

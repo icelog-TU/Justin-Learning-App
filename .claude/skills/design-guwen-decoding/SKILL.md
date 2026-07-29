@@ -11,10 +11,11 @@ Work only on curriculum content and adult review. The child is the 古文破譯�
 
 1. Read the repository `AGENTS.md` and `GUWEN-WORKFLOW-SOP.md`.
 2. Read only the target lesson's `active` master from `GUWEN-PROJECT-STATUS.md`. If the path is unresolved, stop and ask which version is active.
-3. For a new lesson, new target, teaching-method change, or full review, read `../../../design-standard.md`.
-4. Search `../../../guwen-decoder-learned-keys.md` by target word, phrase, and lesson title. Do not read the whole registry unless maintaining it.
-5. Read `../../../GUWEN-MARKDOWN-FORMAT.md` only when creating a master, changing structure, or fixing format validation.
-6. Read [canonical-example.md](references/canonical-example.md) only when a concrete 「單字破解→組合→本篇推論」 model is needed.
+3. For a new lesson, new target, teaching-method change, or full pedagogical review, read all of `../../../design-standard.md`.
+4. For copy-only refinement of intros, questions, retry hints, or core answers, even across the whole lesson, read only the `孩子端文字：保留求助情境，刪除機械重複` section of `../../../design-standard.md` unless a concrete pedagogical conflict requires another section.
+5. Search `../../../guwen-decoder-learned-keys.md` by target word, phrase, and lesson title. Do not read the whole registry unless maintaining it.
+6. Read `../../../GUWEN-MARKDOWN-FORMAT.md` only when creating a master, changing structure, or fixing format validation.
+7. Read [canonical-example.md](references/canonical-example.md) only when a concrete 「單字破解→組合→本篇推論」 model is needed.
 
 In the same conversation, reuse unchanged files already read. Reread only when their remote blob changes, the task changes mode, or a conflict appears.
 
