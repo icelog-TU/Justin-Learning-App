@@ -42,6 +42,24 @@ Do not edit production App data or UI. When the approved lesson is ready for imp
 5. Never change the classical source text, authentic clues, attribution, wording, or order without explicit textual-review approval.
 6. Treat a rewrite as a new approval timeline. Do not inherit old approval or key counts automatically.
 
+## Choose the authoring rhythm
+
+Two rhythms are valid. Follow the user's current instruction; do not treat either rhythm as permanent.
+
+### A. Question-by-question or small-scope iteration
+
+Use this when the user asks for one question, a few questions, or a local revision. Keep the agreed scope small, update only that scope, and do not continue writing the whole lesson just because surrounding files are available.
+
+### B. Whole-lesson 20-question blueprint first
+
+Use this when the user asks to plan a new lesson, rewrite a whole lesson, or discuss the whole lesson before drafting. First produce or revise a roughly 20-question blueprint for review before writing full Markdown question text.
+
+The blueprint is not approved lesson content and must not be sent to implementation. It should list, at minimum: source segment, target, planned question type, clue/source-search direction, old-key use or reminder, reconstruction/sorting/causal/evidence-boundary role, expected new key, and risks.
+
+Blueprint review checks whole-lesson structure before detailed drafting: total count near 20 and never over 22, sequence, difficulty curve, repeated targets, valid reconstruction points, old-key reuse, source-independence risk, answer-position distribution, and whether every planned question contributes to reading the story.
+
+After blueprint review, revise the plan, then draft/update the active master as draft or pending review. The adult preview App remains the place for the user to review the actual child-facing text, states, and speech question by question. If the user decides the blueprint rhythm is not useful, switch back to rhythm A for the next scope without treating the blueprint as a binding approval.
+
 ## Escalate cross-lesson rules
 
 When one lesson exposes a rule that should govern other lessons, fix only the user-approved current scope and prepare a proposal with the problem, candidate rule, canonical file, future-only or retroactive scope, and likely affected lessons. Route the proposal through the workflow-maintenance process in `../../../GUWEN-WORKFLOW-SOP.md`; do not create or independently edit shared SOP, skill, handoff, or design-standard copies from an ordinary lesson task.
