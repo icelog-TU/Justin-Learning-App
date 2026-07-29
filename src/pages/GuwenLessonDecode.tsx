@@ -312,6 +312,7 @@ export default function GuwenLessonDecode() {
   const [wrongIndex, setWrongIndex] = useState<number | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
+  const [listeningSentenceIndex, setListeningSentenceIndex] = useState<number | null>(null);
   const [reviewStepId, setReviewStepId] = useState<string | null>(null);
   const [confirmReset, setConfirmReset] = useState(false);
   const [playbackId, setPlaybackId] = useState<string | null>(null);
@@ -390,18 +391,35 @@ export default function GuwenLessonDecode() {
     }
   }
 
-  function playFullSequence(fullText: string) {
+  function playFullSequence() {
+    if (!lesson) return;
+    const pronunciationUnits = lesson.fullTextPronunciationCues?.map((cue) => cue.speechText) ?? [];
+    const sentenceUnitStart = 1 + pronunciationUnits.length;
+    const speechUnits = [
+      LISTEN_LEAD_IN,
+      ...pronunciationUnits,
+      ...lesson.sentences,
+      LISTEN_PROMPT,
+      ...(lesson.introClosingLine ? [lesson.introClosingLine] : []),
+    ];
     setIsPlaying(true);
     setIsPaused(false);
+    setListeningSentenceIndex(null);
     speakSequence(
-      [
-        LISTEN_LEAD_IN,
-        ...(lesson?.fullTextPronunciationCues?.map((cue) => cue.speechText) ?? []),
-        fullText,
-        LISTEN_PROMPT,
-        ...(lesson?.introClosingLine ? [lesson.introClosingLine] : []),
-      ],
-      () => setIsPlaying(false),
+      speechUnits,
+      () => {
+        setIsPlaying(false);
+        setIsPaused(false);
+        setListeningSentenceIndex(null);
+      },
+      (unitIndex) => {
+        const sentenceIndex = unitIndex - sentenceUnitStart;
+        setListeningSentenceIndex(
+          sentenceIndex >= 0 && sentenceIndex < lesson.sentences.length
+            ? sentenceIndex
+            : null,
+        );
+      },
     );
   }
 
@@ -412,11 +430,29 @@ export default function GuwenLessonDecode() {
       // engine silently drops the utterance instead of continuing (a real bug the user hit: pause worked,
       // but pressing play again produced no sound). Restarting the whole sequence from the top is a small
       // UX compromise but guarantees sound actually resumes, covering both "starting fresh" and "resuming".
-      playFullSequence(lesson.fullText);
+      playFullSequence();
     } else {
       pauseSpeech();
       setIsPaused(true);
     }
+  }
+
+  function playListeningSentence(sentenceIndex: number) {
+    if (!lesson) return;
+    const sentence = lesson.sentences[sentenceIndex];
+    setIsPlaying(false);
+    setIsPaused(false);
+    setListeningSentenceIndex(sentenceIndex);
+    speakSequence(
+      [
+        sentence,
+        ...(lesson.sentencePronunciationCues?.[sentenceIndex]?.map((cue) => cue.speechText) ?? []),
+      ],
+      () => setListeningSentenceIndex((current) => (
+        current === sentenceIndex ? null : current
+      )),
+      () => setListeningSentenceIndex(sentenceIndex),
+    );
   }
 
   function togglePlayback(id: string, content: string | string[]) {
@@ -464,11 +500,12 @@ export default function GuwenLessonDecode() {
 
   useEffect(() => {
     if (phase !== 'listening' || !lesson) return;
-    playFullSequence(lesson.fullText);
+    playFullSequence();
     return () => {
       cancelSpeech();
       setIsPlaying(false);
       setIsPaused(false);
+      setListeningSentenceIndex(null);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, lesson]);
@@ -1868,7 +1905,25 @@ export default function GuwenLessonDecode() {
         <div className="space-y-4">
           <div className="bg-white rounded-2xl shadow p-5 space-y-3">
             <p className="font-bold text-teal-700">{LISTEN_LEAD_IN}</p>
-            <p className="text-lg leading-relaxed text-gray-800">{lesson.fullText}</p>
+            <p className="text-lg leading-relaxed text-gray-800">
+              {lesson.sentences.map((sentence, sentenceIndex) => {
+                const isActive = listeningSentenceIndex === sentenceIndex;
+                return (
+                  <span
+                    key={sentenceIndex}
+                    aria-current={isActive ? 'true' : undefined}
+                    className={[
+                      'rounded px-0.5 py-0.5 transition-colors duration-200',
+                      isActive
+                        ? 'bg-amber-200 text-slate-950 ring-2 ring-amber-400 ring-offset-1'
+                        : '',
+                    ].join(' ')}
+                  >
+                    {sentence}
+                  </span>
+                );
+              })}
+            </p>
             {renderPronunciationCues(lesson.fullTextPronunciationCues)}
             <button type="button" onClick={toggleFullPlayback} className="text-sm text-sky-600 font-medium">
               {!isPlaying ? '🔊 播放全文' : isPaused ? '▶️ 繼續播放' : '⏸ 暫停播放'}
@@ -1876,16 +1931,20 @@ export default function GuwenLessonDecode() {
             <div className="pt-2 border-t border-gray-100 space-y-1.5">
               <p className="text-xs text-gray-400">或者一句一句聽：</p>
               {lesson.sentences.map((s, i) => (
-                <div key={i} className="space-y-1.5">
+                <div
+                  key={i}
+                  aria-current={listeningSentenceIndex === i ? 'true' : undefined}
+                  className={[
+                    'space-y-1.5 rounded-lg px-2 py-1 transition-colors duration-200',
+                    listeningSentenceIndex === i
+                      ? 'bg-amber-100 ring-2 ring-amber-300'
+                      : '',
+                  ].join(' ')}
+                >
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
-                      onClick={() =>
-                        speakSequence([
-                          s,
-                          ...(lesson.sentencePronunciationCues?.[i]?.map((cue) => cue.speechText) ?? []),
-                        ])
-                      }
+                      onClick={() => playListeningSentence(i)}
                       aria-label="聽這句話"
                       className="text-sky-500 shrink-0"
                     >

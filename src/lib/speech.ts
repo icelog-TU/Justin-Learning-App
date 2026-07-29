@@ -178,14 +178,37 @@ export function isSpeechSynthesisAvailable(): boolean {
     && typeof SpeechSynthesisUtterance !== 'undefined';
 }
 
-function queueSpeech(texts: string[], onDone?: () => void) {
+let activeSpeechRun = 0;
+
+function queueSpeech(
+  texts: string[],
+  onDone?: () => void,
+  onItemStart?: (index: number) => void,
+  runId = activeSpeechRun,
+) {
   const selectedVoice = selectZhTwVoice();
+  let lastReportedItem = -1;
+  const reportItemStart = (index: number) => {
+    if (runId !== activeSpeechRun || !onItemStart || lastReportedItem === index) return;
+    lastReportedItem = index;
+    onItemStart(index);
+  };
   texts.map(ttsSafe).forEach((text, i) => {
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = 'zh-TW';
     utterance.rate = 0.95;
     if (selectedVoice) utterance.voice = selectedVoice;
-    if (i === texts.length - 1 && onDone) utterance.onend = onDone;
+    if (onItemStart) utterance.onstart = () => reportItemStart(i);
+    utterance.onend = () => {
+      if (i < texts.length - 1) {
+        // Some Web Speech implementations play queued utterances but omit the next utterance's `start`
+        // event. The preceding `end` event is still an exact boundary, so report the next item here too.
+        // `reportItemStart` deduplicates this when the normal `start` event also arrives.
+        reportItemStart(i + 1);
+      } else {
+        if (runId === activeSpeechRun) onDone?.();
+      }
+    };
     window.speechSynthesis.speak(utterance);
   });
 }
@@ -196,8 +219,9 @@ export function speak(text: string, onEnd?: () => void) {
     onEnd?.();
     return;
   }
+  const runId = ++activeSpeechRun;
   window.speechSynthesis.cancel();
-  queueSpeech([text], onEnd);
+  queueSpeech([text], onEnd, undefined, runId);
 }
 
 /**
@@ -206,13 +230,18 @@ export function speak(text: string, onEnd?: () => void) {
  * takes (a fixed-delay timer racing against real speech duration is what used to cut the passage off
  * partway through and jump straight to the next line).
  */
-export function speakSequence(texts: string[], onDone?: () => void) {
+export function speakSequence(
+  texts: string[],
+  onDone?: () => void,
+  onItemStart?: (index: number) => void,
+) {
   if (!isSpeechSynthesisAvailable()) {
     onDone?.();
     return;
   }
+  const runId = ++activeSpeechRun;
   window.speechSynthesis.cancel();
-  queueSpeech(texts, onDone);
+  queueSpeech(texts, onDone, onItemStart, runId);
 }
 
 export function pauseSpeech() {
@@ -224,5 +253,6 @@ export function resumeSpeech() {
 }
 
 export function cancelSpeech() {
+  activeSpeechRun += 1;
   if (typeof window !== 'undefined' && window.speechSynthesis) window.speechSynthesis.cancel();
 }
