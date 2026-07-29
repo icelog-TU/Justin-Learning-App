@@ -62,6 +62,7 @@ import {
 } from '../components/guwen/GuwenQuestionBlocks';
 import { guwenSentenceMatchesTarget } from '../lib/guwenPassage';
 import { drawGuwenPraise } from '../lib/guwenPraise';
+import { getGuwenLessonUnlockState } from '../lib/guwenUnlock';
 
 type Phase = 'intro' | 'listening' | 'steps' | 'complete';
 type CorrectFlowStage = 'reward' | 'core-feedback' | 'choices' | 'details';
@@ -256,6 +257,9 @@ export default function GuwenLessonDecode() {
   const { lessonId } = useParams<{ lessonId: string }>();
   const lesson = lessonId ? findGuwenLesson(lessonId) : undefined;
   const { data, reward, recordGuwenWord, completeGuwenText, resetGuwenText } = useAppDataContext();
+  const lessonUnlockState = lesson
+    ? getGuwenLessonUnlockState(data, guwenLessons, lesson.id)
+    : { unlocked: false };
 
   const storedProgress = lesson ? data.guwenProgress[lesson.id] : undefined;
   const progress =
@@ -483,7 +487,7 @@ export default function GuwenLessonDecode() {
   }
 
   useEffect(() => {
-    if (phase !== 'intro' || !lesson) return;
+    if (phase !== 'intro' || !lesson || !lessonUnlockState.unlocked) return;
     speakSequence([
       ...(lesson.splitIntroSpeechParagraphs
         ? speechParagraphs(lesson.introSpokenLine)
@@ -493,10 +497,10 @@ export default function GuwenLessonDecode() {
     ]);
     return () => cancelSpeech();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase, lesson]);
+  }, [phase, lesson, lessonUnlockState.unlocked]);
 
   useEffect(() => {
-    if (phase !== 'listening' || !lesson) return;
+    if (phase !== 'listening' || !lesson || !lessonUnlockState.unlocked) return;
     playFullSequence();
     return () => {
       cancelSpeech();
@@ -505,7 +509,7 @@ export default function GuwenLessonDecode() {
       setListeningSentenceIndex(null);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase, lesson]);
+  }, [phase, lesson, lessonUnlockState.unlocked]);
 
   function clearCeremonyTimers() {
     ceremonyTimersRef.current.forEach((id) => window.clearTimeout(id));
@@ -582,7 +586,12 @@ export default function GuwenLessonDecode() {
   const wasAlreadyCompleteOnMountRef = useRef(alreadyComplete);
   const lessonCelebrationFiredRef = useRef(false);
   useEffect(() => {
-    if (phase !== 'complete' || !lesson || lesson.badgeClaimMode === 'scroll-end') return;
+    if (
+      phase !== 'complete'
+      || !lesson
+      || !lessonUnlockState.unlocked
+      || lesson.badgeClaimMode === 'scroll-end'
+    ) return;
     if (wasAlreadyCompleteOnMountRef.current || lessonCelebrationFiredRef.current) return;
     lessonCelebrationFiredRef.current = true;
     launchLessonCeremony();
@@ -600,12 +609,12 @@ export default function GuwenLessonDecode() {
   // button, before ever seeing the congratulations. Runs on every arrival at 'complete', not just a fresh
   // completion, since the scroll-position problem exists either way.
   useEffect(() => {
-    if (phase === 'complete') window.scrollTo(0, 0);
-  }, [phase]);
+    if (phase === 'complete' && lessonUnlockState.unlocked) window.scrollTo(0, 0);
+  }, [phase, lessonUnlockState.unlocked]);
 
   // Auto-plays the target sentence + intro + evidence/keys + question every time a new step comes up.
   useEffect(() => {
-    if (phase !== 'steps' || !currentStep) return;
+    if (phase !== 'steps' || !currentStep || !lessonUnlockState.unlocked) return;
     const id = `step-${currentStep.id}`;
     setPlaybackId(id);
     setPlaybackPaused(false);
@@ -639,7 +648,13 @@ export default function GuwenLessonDecode() {
   // button — matching how a step's own corpus/pattern options are tap-to-listen-only, not part of the
   // auto-play (see "Puzzle types" history in this file).
   useEffect(() => {
-    if (phase !== 'steps' || currentStep || !allStepsSolved || closingStepsList.length === 0) return;
+    if (
+      phase !== 'steps'
+      || currentStep
+      || !allStepsSolved
+      || !lessonUnlockState.unlocked
+      || closingStepsList.length === 0
+    ) return;
     const lines =
       closingStage === 'ordering'
         ? lesson?.sequenceOrderingClosing
@@ -700,6 +715,23 @@ export default function GuwenLessonDecode() {
       <div className="space-y-4">
         <p className="text-gray-500">找不到這篇古文。</p>
         <Link to="/guwen" className="text-teal-600 font-medium">
+          ← 回古文破譯家
+        </Link>
+      </div>
+    );
+  }
+
+  if (!lessonUnlockState.unlocked) {
+    return (
+      <div className="space-y-4">
+        <div className="rounded-2xl border border-gray-200 bg-gray-50 p-6 text-center shadow-sm">
+          <p className="text-5xl" aria-hidden="true">🔒</p>
+          <h2 className="mt-3 text-xl font-bold text-gray-700">這篇古文還沒有解鎖</h2>
+          <p className="mt-2 text-sm text-gray-500">
+            先完成《{lessonUnlockState.blockingLesson?.title}》，取得需要的密碼鑰匙，再回來挑戰這一篇。
+          </p>
+        </div>
+        <Link to="/guwen" className="block text-center font-medium text-teal-600">
           ← 回古文破譯家
         </Link>
       </div>

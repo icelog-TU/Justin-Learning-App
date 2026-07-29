@@ -18,6 +18,7 @@
     "test:guwen:kezhouqiujian": "tsx scripts/test-ke-zhou-qiu-jian-lesson.ts",
     "test:guwen:draft-preview": "tsx scripts/test-guwen-draft-preview.ts",
     "test:guwen:praise": "tsx scripts/test-guwen-praise.ts",
+    "test:guwen:unlock": "tsx scripts/test-guwen-unlock.ts",
     "check:guwen:master-format": "tsx scripts/check-guwen-master-format.ts"
   },
   "dependencies": {

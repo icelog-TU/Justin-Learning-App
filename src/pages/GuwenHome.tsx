@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAppDataContext } from '../lib/AppDataContext';
 import { guwenLessons, totalGuwenLessonItems } from '../data/guwenLesson';
+import { getGuwenLessonUnlockState } from '../lib/guwenUnlock';
 
 export default function GuwenHome() {
   const { data, resetGuwenText } = useAppDataContext();
@@ -36,36 +37,73 @@ export default function GuwenHome() {
           const decodedCount = progress?.decodedWordIds.length ?? 0;
           const total = totalGuwenLessonItems(lesson);
           const completed = Boolean(progress?.completedAt);
-          return (
-            <div key={lesson.id} className="bg-white rounded-2xl shadow hover:shadow-lg transition-shadow p-5">
-              <Link to={`/guwen-lesson/${lesson.id}`} className="block">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-start gap-2.5">
-                    <span className="shrink-0 w-7 h-7 rounded-full bg-amber-100 text-amber-700 text-sm font-bold flex items-center justify-center mt-0.5">
-                      {index + 1}
-                    </span>
-                    <div>
-                      <h3 className="font-bold text-lg text-gray-800">{lesson.title}</h3>
-                      <p className="text-xs text-gray-400 mt-0.5">{lesson.source}</p>
+          const unlockState = getGuwenLessonUnlockState(data, guwenLessons, lesson.id);
+          const cardContent = (
+            <>
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-start gap-2.5">
+                  <span
+                    className={`shrink-0 w-7 h-7 rounded-full text-sm font-bold flex items-center justify-center mt-0.5 ${
+                      unlockState.unlocked
+                        ? 'bg-amber-100 text-amber-700'
+                        : 'bg-gray-200 text-gray-500'
+                    }`}
+                  >
+                    {index + 1}
+                  </span>
+                  <div>
+                    <h3 className={`font-bold text-lg ${unlockState.unlocked ? 'text-gray-800' : 'text-gray-500'}`}>
+                      {lesson.title}
+                    </h3>
+                    <p className="text-xs text-gray-400 mt-0.5">{lesson.source}</p>
+                  </div>
+                </div>
+                {completed ? (
+                  <span className="text-2xl shrink-0">🏆</span>
+                ) : !unlockState.unlocked ? (
+                  <span className="text-2xl shrink-0" aria-hidden="true">🔒</span>
+                ) : null}
+              </div>
+              {unlockState.unlocked ? (
+                <>
+                  <p className="text-sm text-gray-500 mt-2 truncate">{lesson.fullText}</p>
+                  <div className="mt-3">
+                    <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-amber-500"
+                        style={{ width: `${total ? (decodedCount / total) * 100 : 0}%` }}
+                      />
                     </div>
+                    <p className="text-xs text-gray-400 mt-1">
+                      已破譯 {decodedCount} / {total} 道密碼{completed ? '　全部破解完成！' : ''}
+                    </p>
                   </div>
-                  {completed && <span className="text-2xl shrink-0">🏆</span>}
-                </div>
-                <p className="text-sm text-gray-500 mt-2 truncate">{lesson.fullText}</p>
-                <div className="mt-3">
-                  <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-amber-500"
-                      style={{ width: `${total ? (decodedCount / total) * 100 : 0}%` }}
-                    />
-                  </div>
-                  <p className="text-xs text-gray-400 mt-1">
-                    已破譯 {decodedCount} / {total} 道密碼{completed ? '　全部破解完成！' : ''}
-                  </p>
-                </div>
-              </Link>
+                </>
+              ) : (
+                <p className="mt-3 rounded-xl bg-gray-100 px-3 py-2 text-sm font-medium text-gray-500">
+                  🔒 完成《{unlockState.blockingLesson?.title}》後解鎖
+                </p>
+              )}
+            </>
+          );
+          return (
+            <div
+              key={lesson.id}
+              className={`rounded-2xl p-5 transition-shadow ${
+                unlockState.unlocked
+                  ? 'bg-white shadow hover:shadow-lg'
+                  : 'bg-gray-50 border border-gray-200'
+              }`}
+            >
+              {unlockState.unlocked ? (
+                <Link to={`/guwen-lesson/${lesson.id}`} className="block">
+                  {cardContent}
+                </Link>
+              ) : (
+                <div aria-disabled="true">{cardContent}</div>
+              )}
 
-              {decodedCount > 0 &&
+              {unlockState.unlocked && decodedCount > 0 &&
                 (confirmResetId === lesson.id ? (
                   <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between gap-2 text-sm">
                     <span className="text-gray-500">清空重來？已賺的金幣星星不會收回。</span>
