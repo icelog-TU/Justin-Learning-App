@@ -61,6 +61,7 @@ import {
   GuwenSequenceCardRow,
 } from '../components/guwen/GuwenQuestionBlocks';
 import { guwenSentenceMatchesTarget } from '../lib/guwenPassage';
+import { drawGuwenPraise } from '../lib/guwenPraise';
 
 type Phase = 'intro' | 'listening' | 'steps' | 'complete';
 type CorrectFlowStage = 'reward' | 'core-feedback' | 'choices' | 'details';
@@ -72,12 +73,6 @@ const INTRO_LINE = '小學者，我們要一起破譯這些古文字！';
 const LISTEN_LEAD_IN = '首先，跟我們一起聽一遍全文。';
 const LISTEN_PROMPT =
   '你是不是完全聽不懂它在說什麼呢？沒關係，跟著我們一步一步比對古文線索，把每個密碼都破解完之後，你就會自然看懂這整篇文章了！';
-
-const PRAISE_LINES = [
-  '太棒了！你破解了一個古文密碼，這真的很不容易！',
-  '答對了！這條線索不好比對，你竟然想通了！',
-  '厲害！你又破解了一個古文的秘密！',
-];
 
 const CELEBRATION_TICKS = 10;
 const CELEBRATION_TICK_MS = 140;
@@ -331,6 +326,8 @@ export default function GuwenLessonDecode() {
   const celebrationTimeoutRef = useRef<number | null>(null);
   const celebrationPraiseFallbackRef = useRef<number | null>(null);
   const rewardStartedForStepRef = useRef<string | null>(null);
+  const praiseBagRef = useRef<string[]>([]);
+  const lastPraiseLineRef = useRef<string | null>(null);
   // Which step is on screen right now — deliberately its own state (not derived fresh from solvedIds on
   // every render, the way `wordIndex` in GuwenDecode.tsx is separate state too). If this were computed as
   // `findCurrentStep(lesson, solvedIds)` directly, the *instant* the last step's answer is recorded,
@@ -837,10 +834,12 @@ export default function GuwenLessonDecode() {
   }
 
   function startRewardCelebration(stepId: string) {
-    const praiseLine = PRAISE_LINES[Math.floor(Math.random() * PRAISE_LINES.length)];
+    const praiseDraw = drawGuwenPraise(praiseBagRef.current, lastPraiseLineRef.current);
+    praiseBagRef.current = praiseDraw.remaining;
+    lastPraiseLineRef.current = praiseDraw.line;
     setCelebrationPaused(false);
     setCelebration({ stepId, tick: 0, praiseDone: false, stage: 'rolling' });
-    speak(praiseLine, () => {
+    speak(praiseDraw.line, () => {
       setCelebration((cur) => (cur && cur.stepId === stepId ? { ...cur, praiseDone: true } : cur));
     });
     armPraiseFallback(stepId);

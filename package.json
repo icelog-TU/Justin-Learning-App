@@ -17,6 +17,7 @@
     "test:guwen:shouzhudaitu": "tsx scripts/test-shou-zhu-dai-tu-lesson.ts",
     "test:guwen:kezhouqiujian": "tsx scripts/test-ke-zhou-qiu-jian-lesson.ts",
     "test:guwen:draft-preview": "tsx scripts/test-guwen-draft-preview.ts",
+    "test:guwen:praise": "tsx scripts/test-guwen-praise.ts",
     "check:guwen:master-format": "tsx scripts/check-guwen-master-format.ts"
   },
   "dependencies": {
