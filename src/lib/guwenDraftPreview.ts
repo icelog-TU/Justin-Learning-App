@@ -152,6 +152,22 @@ function cleanInline(text: string): string {
     .trim();
 }
 
+const PRONUNCIATION_CUE_RE = /(?:念作|唸作|發音同).*?[（(][ㄅ-ㄩ]/;
+const PRONUNCIATION_CHUNK_SPLIT_RE = /([^。！？!?；;]+[。！？!?；;]?)/g;
+
+function pronunciationCueChunks(text: string): string[] {
+  return Array.from(text.matchAll(PRONUNCIATION_CHUNK_SPLIT_RE))
+    .map((match) => match[0].trim())
+    .filter((chunk) => PRONUNCIATION_CUE_RE.test(chunk));
+}
+
+function isStandalonePronunciationCueLine(text: string): boolean {
+  const chunks = Array.from(text.matchAll(PRONUNCIATION_CHUNK_SPLIT_RE))
+    .map((match) => match[0].trim())
+    .filter(Boolean);
+  return chunks.length > 0 && chunks.every((chunk) => PRONUNCIATION_CUE_RE.test(chunk));
+}
+
 function sectionParts(
   section?: Section,
   options: { preserveMixedParagraphs?: boolean } = {},
@@ -176,10 +192,10 @@ function sectionParts(
       : allContent.filter((line) => line.trim());
   const pronunciationCues = source
     .map(cleanInline)
-    .filter((line) => /(?:念作|唸作|發音同).*[（(][ㄅ-ㄩ]/.test(line));
+    .flatMap(pronunciationCueChunks);
   const text = cleanInline(
     source
-      .filter((line) => !pronunciationCues.includes(cleanInline(line)))
+      .filter((line) => !isStandalonePronunciationCueLine(cleanInline(line)))
       .join('\n')
       .replace(/\n{3,}/g, '\n\n'),
   );
