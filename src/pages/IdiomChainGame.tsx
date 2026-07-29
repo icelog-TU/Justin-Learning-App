@@ -485,20 +485,22 @@ export default function IdiomChainGame() {
           </button>
         </div>
 
-        <div className="flex gap-2 pt-1">
+        <div className="grid grid-cols-2 gap-2 pt-1 sm:grid-cols-3">
           <button
             type="button"
             onClick={() => handleHint()}
-            className="flex-1 bg-sky-100 text-sky-700 rounded-full py-2 text-sm font-medium hover:bg-sky-200"
+            className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-sky-100 px-4 py-2.5 text-sm font-medium leading-snug text-sky-700 hover:bg-sky-200"
           >
-            💡 提示（{hintCount} 個）
+            <span aria-hidden="true" className="shrink-0">💡</span>
+            <span>提示（{hintCount} 個）</span>
           </button>
           <button
             type="button"
             onClick={handleReroll}
-            className="flex-1 bg-gray-100 text-gray-600 rounded-full py-2 text-sm font-medium hover:bg-gray-200"
+            className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-gray-100 px-4 py-2.5 text-sm font-medium leading-snug text-gray-600 hover:bg-gray-200"
           >
-            🔄 換新的開頭字
+            <span aria-hidden="true" className="shrink-0">🔄</span>
+            <span>換新的開頭字</span>
           </button>
           <button
             type="button"
@@ -506,9 +508,10 @@ export default function IdiomChainGame() {
               setCustomStartOpen((cur) => !cur);
               setCustomStartError('');
             }}
-            className="flex-1 bg-gray-100 text-gray-600 rounded-full py-2 text-sm font-medium hover:bg-gray-200"
+            className="col-span-2 inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-gray-100 px-4 py-2.5 text-sm font-medium leading-snug text-gray-600 hover:bg-gray-200 sm:col-span-1"
           >
-            🎯 自選開頭字
+            <span aria-hidden="true" className="shrink-0">🎯</span>
+            <span>自選開頭字</span>
           </button>
         </div>
 
