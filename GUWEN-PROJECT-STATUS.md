@@ -21,7 +21,7 @@
 | 3 | 刻舟求劍 | `03-guwen-kezhouqiujian-decoder-content.md` | 新版全文 20 題、白話驗證卷軸與徽章收尾均已核准 | 交付正式 App 實作 |
 | 4 | 守株待兔 | `04-guwen-shouzhudaitu-decoder-content.md` | 18 題重寫版、收尾與 App 驗收完成 | 依實際使用回饋調整 |
 | 5 | 揠苗助長 | `05-guwen-yamiaozhuzhang-decoder-content.md` | 開場及第 1–17 題全部核准；白話驗證卷軸與完成徽章尚待設計 | 設計並審核白話驗證卷軸與完成徽章 |
-| 6 | 掩耳盜鐘 | `06-guwen-yanerdaozhong-decoder-content.md` | 以舊版為底逐題重審；第 1–5 題、第 7 題及第 9 題已核准，開場仍待審；第 6 題教材內容待審且成人預覽另有顯示問題；第 8 題依意見修正後待審；第 10–12 題精簡修正版待審；第 13–21 題及收尾保留舊版待重審 | 審核第 8 題及第 10–12 題；第 6 題預覽問題另交 Codex 處理 |
+| 6 | 掩耳盜鐘 | `06-guwen-yanerdaozhong-decoder-content.md` | 以舊版為底逐題重審；第 1–4 題、第 7–10 題及第 12 題已核准，開場仍待審；第 5 題依整句揭露規則補寫後待審；第 6 題教材內容待審且成人預覽另有顯示問題；第 11 題重寫版待審；第 13–21 題及收尾保留舊版待重審 | 審核第 5 題補寫的核心解答與重寫後的第 11 題；第 6 題預覽問題另交 Codex 處理 |
 | 7 | 鄭人買履 | `07-guwen-zhengrenmailv-decoder-content.md` | 以舊版為底進行實測後重寫；第 1–4 題已依新版文字分工重審，草稿待審；第 5–20 題與收尾仍沿用原核准版本 | 審核第 1–4 題，再依孩子回饋繼續減量 |
 | 8 | 長竿入城 | `08-guwen-changganrucheng-decoder-content.md` | 任務開場及第 1–9 題核准；第 10 題待審 | 審核第 10 題 |
 | 9 | 楊氏之子 | `09-guwen-yangshizi-decoder-content.md` | 第 1–7 題核准；開場及第 8–9 題待審 | 審核開場、第 8–9 題 |
