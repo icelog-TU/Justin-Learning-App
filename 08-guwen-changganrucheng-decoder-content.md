@@ -327,7 +327,7 @@
 
 #### 出處（成人資料）
 
-> 真實古文線索：《宋史・禮志》卷五十七（節錄）。[原文](https://ctext.org/wiki.pl?chapter=685514&if=zh)
+> 真實古文線索：《宋史》卷一百四〈志第五十七・禮七〉（節錄）。[中國哲學書電子化計劃全文](https://ctext.org/wiki.pl?chapter=685514&if=zh)｜[同句轉錄掃描頁（原句見頁面首段）](https://zh.wikisource.org/wiki/Page%3AGujin_Tushu_Jicheng%2C_Volume_184_%281700-1725%29.djvu/46)
 
 ### 線索二
 
@@ -594,7 +594,7 @@
 
 #### 出處（成人資料）
 
-> 真實古文線索：蘇洵〈上富丞相書〉（節錄）。[原文](https://zh.wikisource.org/zh-hant/%E4%B8%8A%E5%AF%8C%E4%B8%9E%E7%9B%B8%E6%9B%B8_%28%E8%98%87%E6%B4%B5%29)
+> 真實古文線索：北宋蘇洵〈上富丞相書〉（《皇朝文鑑》卷一百十七題作〈上富相公書〉，節錄）。[維基文庫作品全文](https://zh.wikisource.org/zh-hant/%E4%B8%8A%E5%AF%8C%E4%B8%9E%E7%9B%B8%E6%9B%B8_%28%E8%98%87%E6%B4%B5%29)｜[《皇朝文鑑》卷一百十七](https://zh.wikisource.org/zh-hant/%E7%9A%87%E6%9C%9D%E6%96%87%E9%91%91_%28%E5%9B%9B%E9%83%A8%E5%8F%A2%E5%88%8A%E6%9C%AC%29/%E5%8D%B7%E7%AC%AC%E4%B8%80%E7%99%BE%E5%8D%81%E4%B8%83)｜[原刻掃描頁](https://zh.wikisource.org/wiki/Page%3ASibu_Congkan2001-%E5%91%82%E7%A5%96%E8%AC%99-%E7%9A%87%E6%9C%9D%E6%96%87%E9%91%91-40-32.djvu/94)
 
 ## 請古文破譯家提交解法
 
@@ -1036,7 +1036,7 @@
 
 #### 出處（成人資料）
 
-> 真實古文線索：陸游〈對酒作〉（節錄）。[原文](https://zh.wikisource.org/zh-hant/%E5%8A%8E%E5%8D%97%E8%A9%A9%E6%A7%80_%28%E5%9B%9B%E5%BA%AB%E5%85%A8%E6%9B%B8%E6%9C%AC%29/%E5%8D%B776)
+> 真實古文線索：南宋陸游〈對酒作〉，見《劎南詩槀》卷七十六（節錄）。[維基文庫卷七十六（原句見〈對酒作〉）](https://zh.wikisource.org/zh-hant/%E5%8A%8E%E5%8D%97%E8%A9%A9%E6%A7%80_%28%E5%9B%9B%E5%BA%AB%E5%85%A8%E6%9B%B8%E6%9C%AC%29/%E5%8D%B776)｜[《御選唐宋詩醇》卷四十七轉錄](https://ctext.org/wiki.pl?chapter=276630&if=zh)
 
 ### 線索二
 
