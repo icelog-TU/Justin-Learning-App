@@ -15,6 +15,7 @@ import {
   totalGuwenLessonItems,
   type GuwenLesson,
   type ClassicalClue,
+  type DecodingKey,
   type PronunciationCue,
   type LessonStep,
   type RevealStep,
@@ -173,6 +174,11 @@ function coreFeedbackText(step: LessonStep, complete = false): string {
   return complete
     ? step.correctFeedback
     : speechParagraphs(step.correctFeedback)[0] ?? step.correctFeedback;
+}
+
+function stepAwardedKeys(step: LessonStep): DecodingKey[] {
+  if (step.keysAwarded?.length) return step.keysAwarded;
+  return step.keyAwarded ? [step.keyAwarded] : [];
 }
 
 function detailSpeechLines(step: LessonStep, completeFeedbackAsCore = false): string[] {
@@ -502,7 +508,7 @@ export default function GuwenLessonDecode() {
     setCeremonyCanSkip(false);
     setFireworkParticles(reduceMotion ? [] : buildFireworkParticles());
     playBadgeAwardSound();
-    speak(`恭喜你得到第${numberToChineseWords(badgeNumber)}枚徽章！`);
+    speak(lesson?.badgeClaimSuccessMessage ?? `恭喜你得到第${numberToChineseWords(badgeNumber)}枚徽章！`);
     ceremonyTimersRef.current = [
       window.setTimeout(finishBadgeClaimCelebration, reduceMotion ? 1700 : BADGE_CLAIM_CELEBRATION_MS),
     ];
@@ -1688,10 +1694,8 @@ export default function GuwenLessonDecode() {
           <p className="text-sm font-bold text-emerald-700">{reviewStep.correctFeedback}</p>
           <p className="text-sm text-emerald-700 whitespace-pre-line">{reviewStep.explanation}</p>
         </div>
-        {reviewStep.keyAwarded && (
-          <p className="text-xs text-amber-600">
-            🔑 密碼鑰匙：{reviewStep.keyAwarded.code} ＝ {reviewStep.keyAwarded.decodedEvidence}
-          </p>
+        {!!stepAwardedKeys(reviewStep).length && (
+          <GuwenKeyList keys={stepAwardedKeys(reviewStep)} heading="🔑 本題取得的密碼鑰匙" />
         )}
       </div>
     );
@@ -2054,10 +2058,13 @@ export default function GuwenLessonDecode() {
                 <div className="rounded-xl border-2 border-amber-300 bg-amber-50 p-3 text-center text-sm font-bold text-amber-700">
                   🪙 已獲得 {guwenCoinAmount} 金幣　⭐ 已獲得 {guwenStarAmount} 星星
                 </div>
-                {currentStep.keyAwarded && (
-                  <p className="rounded-lg bg-amber-50 p-3 text-sm font-bold text-amber-700">
-                    🔑 你破解了一把新密碼：{currentStep.keyAwarded.code} ＝ {currentStep.keyAwarded.decodedEvidence}
-                  </p>
+                {!!stepAwardedKeys(currentStep).length && (
+                  <GuwenKeyList
+                    keys={stepAwardedKeys(currentStep)}
+                    heading={stepAwardedKeys(currentStep).length === 1
+                      ? '🔑 你破解了一把新密碼'
+                      : '🔑 你破解了新的密碼鑰匙'}
+                  />
                 )}
                 {(correctFlowStage === 'core-feedback' || correctFlowStage === 'choices') && (
                   <button

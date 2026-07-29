@@ -11,6 +11,7 @@
     "tts:audit:pull": "tsx scripts/read-tts-audit.ts",
     "tts:audit:reusable": "tsx scripts/read-tts-audit.ts --reusable-groups",
     "tts:audit:test": "tsx scripts/test-tts-audit.ts",
+    "test:guwen:simaguang": "tsx scripts/test-sima-guang-lesson.ts",
     "test:guwen:shouzhudaitu": "tsx scripts/test-shou-zhu-dai-tu-lesson.ts",
     "test:guwen:kezhouqiujian": "tsx scripts/test-ke-zhou-qiu-jian-lesson.ts",
     "test:guwen:draft-preview": "tsx scripts/test-guwen-draft-preview.ts",

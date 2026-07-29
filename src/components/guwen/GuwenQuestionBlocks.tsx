@@ -22,7 +22,7 @@ export function GuwenHighlightedText({
   text: string;
   highlight?: string;
 }) {
-  const marked = highlight
+  const marked = highlight && !text.includes(`【${highlight}】`)
     ? text.replace(highlight, `【${highlight}】`)
     : text;
   const parts = marked.split(/(【[^】]+】)/g);

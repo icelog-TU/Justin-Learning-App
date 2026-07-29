@@ -93,6 +93,8 @@ interface LessonStepBase {
   finalDraftLine?: string;
   /** The decoding key this step contributes to a later reconstruction step's key table, if any. */
   keyAwarded?: DecodingKey;
+  /** Approved lessons may award more than one distinct key from the same solved interaction. */
+  keysAwarded?: DecodingKey[];
 }
 
 export interface EvidenceStep extends LessonStepBase {
@@ -136,6 +138,7 @@ export interface RevealStep {
   pronunciationCues?: StepPronunciationCues;
   finalDraftLine?: string;
   keyAwarded?: DecodingKey;
+  keysAwarded?: DecodingKey[];
 }
 
 export type LessonStep =

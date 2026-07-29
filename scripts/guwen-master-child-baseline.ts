@@ -34,7 +34,7 @@ import type { ChildSnapshot } from './guwen-master-child-snapshot';
 // 同步更新第五篇孩子端保護指紋。
 export const GUWEN_CHILD_BASELINE: Record<string, ChildSnapshot> = {
   'lessons/01-guwen-wangrong-rewrite.md': { questionCount: 20, hash: 'dd46c4423110b7b6b4dd21dfe04f37fdbd76f517c5c21af1c2ecf676cb2cdca4' },
-  '02-guwen-simaguang-decoder-content.md': { questionCount: 18, hash: '27d5c4b77cb2a13889aa12105043c4ca776f36488bf34d49426131bda64718ba' },
+  '02-guwen-simaguang-decoder-content.md': { questionCount: 18, hash: 'e78c3eec7012fa42d81eb24ef4a000221784b5c2ced4d479cda0757dd4bb817e' },
   '03-guwen-kezhouqiujian-decoder-content.md': { questionCount: 20, hash: 'b5f8e7b39b13a2b24a9b9a415831b567cf2777256f53ac3025ab65f0854ce666' },
   '04-guwen-shouzhudaitu-decoder-content.md': { questionCount: 18, hash: 'a8bb260c9673f078fa0a1ba81960c03446e86bc3d4e8fd1ab22fd628f462cbb9' },
   '05-guwen-yamiaozhuzhang-decoder-content.md': { questionCount: 17, hash: '4982239254b344c28ff4a0afd300361c43f12c515cc09bd66cd9f67b71f8560b' },

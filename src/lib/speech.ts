@@ -78,6 +78,7 @@
 function ttsSafe(text: string): string {
   return text
     .replace(/沒(?=[水入])/g, '末')
+    .replace(/(?<=出)沒/g, '末')
     .replace(/溱/g, '真')
     .replace(/(?<=[褰衣])裳/g, '傷')
     .replace(/好(?=上高|乘馬|辯)/g, '耗')
@@ -98,6 +99,7 @@ function ttsSafe(text: string): string {
     .replace(/量(?=自己的腳|腳|好的尺寸|得的尺寸|過自己的腳|過腳|測量)/g, '良')
     .replace(/(?<=日)中(?=如|，|。)/g, '鐘')
     .replace(/(?<=挑)中/g, '種')
+    .replace(/(?<=莫能|打不)中/g, '種')
     .replace(/(?<=[市歌曲])罷|罷(?=唸作爸)/g, '爸')
     .replace(/寧(?=信|可|唸作濘)/g, '濘')
     .replace(/(?<=以)為(?=神明|有神)/g, '圍')
