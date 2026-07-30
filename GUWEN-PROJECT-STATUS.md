@@ -25,6 +25,7 @@
 | 7 | 鄭人買履 | `07-guwen-zhengrenmailv-decoder-content.md` | 新版任務開場、第 1–20 題、白話驗證卷軸與徽章收尾均已完成雙重 AI 審核及使用者人工審核，全文核准並同步正式 App | 依實際使用回饋調整 |
 | 8 | 長竿入城 | `08-guwen-changganrucheng-decoder-content.md` | 新版任務開場、第 1–20 題、白話驗證卷軸與徽章收尾均已完成雙重 AI 審核及使用者人工審核，全文核准並同步正式 App | 依實際使用回饋調整 |
 | 9 | 楊氏之子 | `09-guwen-yangshizi-decoder-content.md` | 重寫時間線已重啟；依核准藍圖完成新版開場與第 1–20 題全文草稿，全部待審 | 交由 Claude Code 全文審稿，再依審稿意見修訂 |
+| 10 | 自相矛盾 | `10-guwen-zixiangmaodun-decoder-content.md` | 依核准藍圖完成任務開場、第 1–20 題、白話驗證卷軸與徽章收尾的全文草稿；全部待審，尚未核准 | 交由 Claude Code 全文審稿，再依審稿意見修訂後交使用者人工審核 |
 
 ## 已知版本關係
 
