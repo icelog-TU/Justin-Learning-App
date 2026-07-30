@@ -1,5 +1,7 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAppDataContext } from '../lib/AppDataContext';
+import { buildPracticeSummary } from '../lib/practiceSummary';
 import { TOTAL_CHARACTER_SLOTS } from '../lib/rewards';
 
 const CARDS = [
@@ -77,7 +79,8 @@ const CARDS = [
 
 export default function Home() {
   const { data } = useAppDataContext();
-  const idiomsMastered = Object.values(data.idiomStats).filter((s) => s.correct > 0 && s.lastCorrect).length;
+  const [showPracticeSummary, setShowPracticeSummary] = useState(false);
+  const practiceSummary = buildPracticeSummary(data);
   const totalCharacters = Object.keys(data.characters).length;
   const totalSlots = TOTAL_CHARACTER_SLOTS;
 
@@ -98,11 +101,68 @@ export default function Home() {
           </p>
           <p className="text-xs text-gray-500 mt-1">角色收藏</p>
         </Link>
-        <Link to="/progress" className="block hover:bg-gray-50 rounded-xl py-1">
-          <p className="text-2xl font-bold text-emerald-600">{idiomsMastered}</p>
-          <p className="text-xs text-gray-500 mt-1">已答對成語</p>
-        </Link>
+        <button
+          type="button"
+          onClick={() => setShowPracticeSummary(true)}
+          className="block w-full hover:bg-gray-50 rounded-xl py-1"
+          aria-haspopup="dialog"
+        >
+          <p className="text-2xl font-bold text-emerald-600">{practiceSummary.total}</p>
+          <p className="text-xs text-gray-500 mt-1">已完成練習</p>
+        </button>
       </section>
+
+      {showPracticeSummary && (
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/35 px-4 pb-4 sm:items-center"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="practice-summary-title"
+          onClick={() => setShowPracticeSummary(false)}
+        >
+          <div
+            className="w-full max-w-md rounded-3xl bg-white p-5 shadow-2xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h2 id="practice-summary-title" className="text-lg font-bold text-gray-800">
+                  已完成練習明細
+                </h2>
+                <p className="mt-1 text-sm text-gray-500">這裡只統計主要練習功能，不包含金幣、星星或角色收藏。</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowPracticeSummary(false)}
+                className="rounded-full bg-gray-100 px-3 py-1 text-sm font-bold text-gray-500 hover:bg-gray-200"
+                aria-label="關閉已完成練習明細"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="mt-4 rounded-2xl bg-emerald-50 px-4 py-3 text-center">
+              <p className="text-3xl font-black text-emerald-600">{practiceSummary.total}</p>
+              <p className="text-sm font-medium text-emerald-700">已完成練習</p>
+            </div>
+
+            <div className="mt-4 space-y-2">
+              {practiceSummary.items.map((item) => (
+                <div key={item.id} className="flex items-center justify-between gap-3 rounded-2xl border border-gray-100 p-3">
+                  <div>
+                    <p className="font-bold text-gray-800">{item.label}</p>
+                    <p className="text-xs text-gray-500">{item.description}</p>
+                  </div>
+                  <p className="shrink-0 text-lg font-black text-gray-800">
+                    {item.value}
+                    <span className="ml-0.5 text-xs font-medium text-gray-500">{item.unit}</span>
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       <section className="grid sm:grid-cols-2 gap-4">
         {CARDS.map((card) => (
