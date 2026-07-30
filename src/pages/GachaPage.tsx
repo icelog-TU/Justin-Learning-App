@@ -11,7 +11,6 @@ import {
   characterLabelFromId,
   formatBigNumber,
   characterValueFromId,
-  characterColor,
   TOTAL_CHARACTER_SLOTS,
   SQUARE_CHARACTER_COUNT,
   ownedSquareCharacterCount,
@@ -23,6 +22,7 @@ import {
 import type { GachaResult } from '../lib/rewards';
 import { playGachaSpinSound, playGachaRevealSound } from '../lib/sound';
 import { speak } from '../lib/speech';
+import { CharacterAvatar } from '../components/CharacterAvatar';
 
 export default function GachaPage() {
   const { data, rollGacha } = useAppDataContext();
@@ -63,7 +63,7 @@ export default function GachaPage() {
       <div>
         <h2 className="text-xl font-bold text-gray-800">轉蛋</h2>
         <p className="text-sm text-gray-500">
-          用金幣依序收集八組次方角色、平方角色與三次方角色，共 {TOTAL_CHARACTER_SLOTS} 隻！
+          用金幣依序收集八組次方角色、平方角色與立方角色，共 {TOTAL_CHARACTER_SLOTS} 隻！
         </p>
       </div>
 
@@ -81,7 +81,7 @@ export default function GachaPage() {
             <p className="text-sm text-gray-500">
               {cubeCollectionActive ? (
                 <>
-                  目前可以轉到 <span className="font-bold text-sky-600">1³ 到 50³ 的三次方</span>角色（
+                  目前可以轉到 <span className="font-bold text-sky-600">1³ 到 50³ 的立方</span>角色（
                   {cubeOwned} / {CUBE_CHARACTER_COUNT}）
                 </>
               ) : squareCollectionActive ? (
@@ -114,29 +114,7 @@ export default function GachaPage() {
             to={`/characters/${encodeURIComponent(lastResult.id)}`}
             className="block mt-4 bg-orange-50 hover:bg-orange-100 transition-colors rounded-2xl p-6 space-y-2 animate-in fade-in"
           >
-            <div
-              className="mx-auto w-20 h-20 rounded-full flex items-center justify-center text-white font-extrabold text-2xl"
-              style={{
-                backgroundColor: characterColor(
-                  lastResult.kind === 'square'
-                    ? lastResult.squareBase
-                    : lastResult.kind === 'cube'
-                      ? lastResult.cubeBase
-                      : lastResult.exponent,
-                  lastResult.kind === 'power'
-                    ? maxExponentForBase(lastResult.base)
-                    : lastResult.kind === 'square'
-                      ? SQUARE_CHARACTER_COUNT
-                      : CUBE_CHARACTER_COUNT,
-                ),
-              }}
-            >
-              {lastResult.kind === 'power'
-                ? lastResult.exponent
-                : lastResult.kind === 'square'
-                  ? lastResult.squareBase
-                  : lastResult.cubeBase}
-            </div>
+            <CharacterAvatar id={lastResult.id} size="medium" className="mx-auto" />
             {lastResult.isDupe ? (
               <>
                 <p className="font-bold text-gray-700">
@@ -192,7 +170,7 @@ export default function GachaPage() {
             to="/characters?collection=squares"
             className="flex items-center gap-3 rounded-lg hover:bg-gray-50 -mx-1 px-1 py-0.5"
           >
-            <span className="text-xl w-7">🔲</span>
+            <span className="w-7 text-xl leading-none text-violet-500">■</span>
             <span className="w-16 text-sm font-semibold text-gray-700">平方角色</span>
             <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
               <div
@@ -208,8 +186,8 @@ export default function GachaPage() {
             to="/characters?collection=cubes"
             className="flex items-center gap-3 rounded-lg hover:bg-gray-50 -mx-1 px-1 py-0.5"
           >
-            <span className="text-xl w-7">🧊</span>
-            <span className="w-16 text-sm font-semibold text-gray-700">三次方角色</span>
+            <span className="w-7 text-xl leading-none text-sky-500">▲</span>
+            <span className="w-16 text-sm font-semibold text-gray-700">立方角色</span>
             <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
               <div
                 className={`h-full ${cubeCollectionActive ? 'bg-sky-500' : 'bg-emerald-500'}`}

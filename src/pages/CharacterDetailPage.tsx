@@ -8,14 +8,11 @@ import {
   characterValueFromId,
   characterLabelFromId,
   characterMaxHearts,
-  characterColor,
-  maxExponentForBase,
   characterCollectionIndexFromId,
   characterInteractionTierCount,
   characterInteractionRequiredHearts,
-  SQUARE_CHARACTER_COUNT,
-  CUBE_CHARACTER_COUNT,
 } from '../lib/rewards';
+import { CharacterAvatar } from '../components/CharacterAvatar';
 import { numberToChineseWords } from '../lib/chineseNumber';
 import {
   characterInteractionTemplateIndex,
@@ -118,7 +115,7 @@ const TEMPLATES: {
   { icon: '🌠', label: '一起看流星雨', message: (base, exponent) => `我們一起看到了 ${(seedFor(base, exponent, 29) % 12) + 1} 顆流星，快許願！` },
   { icon: '🎆', label: '一起放煙火', message: (base, exponent) => `我們一起放了${pick(FIREWORK_COLORS, seedFor(base, exponent, 30))}的煙火！` },
   { icon: '🦁', label: '一起去動物園', message: (base, exponent) => `我們一起去動物園看了${pick(ANIMALS, seedFor(base, exponent, 31))}！` },
-  { icon: '🌟', label: '特別時刻', message: (_base, _exponent, requiredHearts) => `謝謝你給我 ${requiredHearts} 顆愛心！我們的感情越來越好了 ❤️` },
+  { icon: '💖', label: '特別時刻', message: (_base, _exponent, requiredHearts) => `謝謝你給我 ${requiredHearts} 顆愛心！我們的感情越來越好了 ❤️` },
 ];
 
 /**
@@ -208,15 +205,6 @@ export default function CharacterDetailPage() {
   const seenTiers = new Set(data.seenCharacterInteractions[id] ?? []);
   const value = characterValueFromId(id);
   const label = characterLabelFromId(id);
-  const color = characterColor(
-    parsed.kind === 'power' ? exponent : parsed.kind === 'square' ? parsed.squareBase : parsed.cubeBase,
-    parsed.kind === 'power'
-      ? maxExponentForBase(base)
-      : parsed.kind === 'square'
-        ? SQUARE_CHARACTER_COUNT
-        : CUBE_CHARACTER_COUNT,
-  );
-
   function handleGiveHeart() {
     const before = hearts;
     if (!giveHeart(id)) return;
@@ -264,10 +252,11 @@ export default function CharacterDetailPage() {
                 animation: `heart-burst-particle 0.9s ease-out ${p.delay}s forwards`,
               } as React.CSSProperties}>💗</span>
             ))}
-            <div className="w-28 h-28 rounded-full flex items-center justify-center text-white font-extrabold text-3xl shadow-inner"
-              style={{ backgroundColor: color, animation: shaking ? 'heart-happy 0.65s ease-in-out' : undefined }}>
-              {exponent}
-            </div>
+            <CharacterAvatar
+              id={id}
+              size="large"
+              style={{ animation: shaking ? 'heart-happy 0.65s ease-in-out' : undefined }}
+            />
             <span className="absolute -bottom-1 -right-1 text-3xl bg-white rounded-full shadow"
               style={shaking ? { animation: 'unlock-pop 0.6s ease-out' } : undefined}>
               {characterMood(hearts, maxHearts)}

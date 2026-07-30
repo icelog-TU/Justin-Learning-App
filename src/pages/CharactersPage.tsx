@@ -13,7 +13,6 @@ import {
   formatSquareCharacterLabel,
   formatBigNumber,
   characterValue,
-  characterColor,
   SQUARE_CHARACTER_COUNT,
   squareCharacterId,
   ownedSquareCharacterCount,
@@ -25,6 +24,7 @@ import {
   areSquareCharactersComplete,
 } from '../lib/rewards';
 import { playHeartSound } from '../lib/sound';
+import { CharacterAvatar } from '../components/CharacterAvatar';
 
 type CharacterSort = 'exponent-asc' | 'exponent-desc' | 'missing-desc' | 'missing-asc';
 type CollectionSelection = number | 'squares' | 'cubes';
@@ -143,7 +143,7 @@ export default function CharactersPage() {
               : 'bg-white text-gray-600 border-gray-200 hover:border-violet-300'
           }`}
         >
-          <span className="text-lg">🔲</span>
+          <span className="text-xl leading-none text-violet-500">■</span>
           <span className="flex-1 text-left leading-tight">
             <span className="block">1² 到 50²</span>
             <span className={`block text-[11px] ${isSquareCollection ? 'text-violet-100' : 'text-gray-400'}`}>
@@ -161,7 +161,7 @@ export default function CharactersPage() {
               : 'bg-white text-gray-600 border-gray-200 hover:border-sky-300'
           }`}
         >
-          <span className="text-lg">🧊</span>
+          <span className="text-xl leading-none text-sky-500">▲</span>
           <span className="flex-1 text-left leading-tight">
             <span className="block">1³ 到 50³</span>
             <span className={`block text-[11px] ${isCubeCollection ? 'text-sky-100' : 'text-gray-400'}`}>
@@ -248,12 +248,7 @@ export default function CharactersPage() {
                 {owned ? (
                   <>
                     <Link to={`/characters/${encodeURIComponent(id)}`} className="block">
-                      <div
-                        className="mx-auto w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm"
-                        style={{ backgroundColor: characterColor(index, selectedCount) }}
-                      >
-                        {index}
-                      </div>
+                      <CharacterAvatar id={id} className="mx-auto" />
                       <p className={`text-lg font-extrabold mt-1 ${
                         isSquareCollection ? 'text-violet-600' : isCubeCollection ? 'text-sky-600' : 'text-orange-600'
                       }`}>
