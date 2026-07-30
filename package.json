@@ -20,6 +20,7 @@
     "test:guwen:kezhouqiujian": "tsx scripts/test-ke-zhou-qiu-jian-lesson.ts",
     "test:guwen:zhengrenmailu": "tsx scripts/test-zheng-ren-mai-lu-lesson.ts",
     "test:guwen:changganrucheng": "tsx scripts/test-chang-gan-ru-cheng-lesson.ts",
+    "test:guwen:yangshizhizi": "tsx scripts/test-yang-shi-zhi-zi-lesson.ts",
     "test:guwen:draft-preview": "tsx scripts/test-guwen-draft-preview.ts",
     "test:guwen:praise": "tsx scripts/test-guwen-praise.ts",
     "test:guwen:unlock": "tsx scripts/test-guwen-unlock.ts",
