@@ -1,4 +1,5 @@
 import { zhengRenMaiLuLesson } from './zhengRenMaiLuLesson';
+import { changGanRuChengLesson } from './changGanRuChengLesson';
 import { wangRongLesson } from './wangRongLesson';
 import { simaGuangLesson } from './simaGuangLesson';
 import { shouZhuDaiTuLesson } from './shouZhuDaiTuLesson';
@@ -3301,6 +3302,7 @@ export const guwenLessons: GuwenLesson[] = [
   yaMiaoZhuZhangLesson,
   yanErDaoZhongLesson,
   zhengRenMaiLuLesson,
+  changGanRuChengLesson,
 ].map(distributeCorrectAnswerPositions);
 
 export function findGuwenLesson(id: string): GuwenLesson | undefined {
