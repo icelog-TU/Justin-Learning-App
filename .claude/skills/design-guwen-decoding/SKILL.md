@@ -33,6 +33,18 @@ Use this skill for:
 
 Do not edit production App data or UI. When the approved lesson is ready for implementation, hand it to `implement-guwen-app` without loading both skill bodies into an ordinary curriculum task.
 
+## Select a new text before planning questions
+
+When the user asks for the next lesson, follow `../../../design-standard.md` section `跨篇選文的最高原則` before creating a master or question blueprint.
+
+1. Use the status table and the key registry's shared rules, reminder counts, reading abilities, and selection checklist. Do not read prior lesson masters or load the registry's per-lesson tables in full.
+2. Search the registry only for words, patterns, and reading relations that actually occur in each candidate.
+3. Compare a small candidate set qualitatively: story interest or new idea, existing abilities the child can rely on, the real challenge, why it remains solvable, likely achievement, frustration risks, and the recommendation.
+4. Treat key counts, coverage ratios, length, and question estimates only as observations. Never impose a numeric quota or let accumulated keys make later selection harder.
+5. Let the user choose the text. Only then segment it, audit old and new uses, and start rhythm A or B.
+
+The desired outcome is a child who overcomes a real but manageable difficulty, feels capable, learns something meaningful, and wants to read more classical Chinese.
+
 ## Work in small approved scopes
 
 1. Confirm the active master, current approval boundary, target questions, and relevant old keys.
