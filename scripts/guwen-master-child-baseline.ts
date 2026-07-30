@@ -74,6 +74,7 @@ import type { ChildSnapshot } from './guwen-master-child-snapshot';
 // 並把用矛刺楯的兩種結果移到一般推理內容；同步更新草稿保護指紋。
 // 2026-07-30：《楊氏之子》Active 最新核准版接入正式 App；同步更新第九篇上線狀態後的保護指紋。
 // 同日補登遠端固定分支已加入的第十一篇 active 主檔保護指紋；只記錄當下文字，不代表教材已核准。
+// 2026-07-30：《自相矛盾》第 18 題以推論箭頭取代兩個冒號；同步更新第十篇草稿保護指紋。
 export const GUWEN_CHILD_BASELINE: Record<string, ChildSnapshot> = {
   'lessons/01-guwen-wangrong-rewrite.md': { questionCount: 20, hash: 'f66b7f8c6daf8f03e85be9990e7305f90466a808ec2b6608a798ac09e2d7d7e8' },
   '02-guwen-simaguang-decoder-content.md': { questionCount: 18, hash: 'e78c3eec7012fa42d81eb24ef4a000221784b5c2ced4d479cda0757dd4bb817e' },
@@ -84,7 +85,7 @@ export const GUWEN_CHILD_BASELINE: Record<string, ChildSnapshot> = {
   '07-guwen-zhengrenmailv-decoder-content.md': { questionCount: 20, hash: '688af97e8b6360595c4cb61d2fbacd8c7000ecd81b9e00abf97537347fbe3c72' },
   '08-guwen-changganrucheng-decoder-content.md': { questionCount: 20, hash: 'ae136007ed28f0a9490ced4f6758c5fe18dad39788bae6b8fe82b5f1910fcb42' },
   '09-guwen-yangshizi-decoder-content.md': { questionCount: 20, hash: '8ca3e8c301f4613e3ae810c829d8954a663625df67b39be9dc118e99b0be18f5' },
-  '10-guwen-zixiangmaodun-decoder-content.md': { questionCount: 20, hash: '4dcc0a704f6500234bf545dcc70317c02f6ab25049264eea17d660ca96bc59ef' },
+  '10-guwen-zixiangmaodun-decoder-content.md': { questionCount: 20, hash: '59eb08ff9e270ba57ec559f27abc35d9b393f84200862e09000d07b703be6b38' },
   '11-guwen-yurenshiyan-decoder-content.md': { questionCount: 21, hash: '1141a1426657e58209bf5b386acfbf67f6d79d52489fb811b10e4a3a0299a71e' },
   '12-guwen-yilinqiefu-decoder-content.md': { questionCount: 20, hash: '98674e7a02af906069a04385f400427d11d7bdbf11cbe753f6d59465ee3b58e7' },
 };
