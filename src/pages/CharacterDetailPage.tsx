@@ -122,10 +122,11 @@ const TEMPLATES: {
 ];
 
 /**
- * Each character receives a different deterministic walk through the 33 templates. Seven is coprime with 33,
- * so a character never repeats a template before all 33 have been visited. The collection index changes the
- * starting point for every character. Persistent interaction identity is the character id plus tier index;
- * internal identifiers must never be exposed in child-facing display or speech.
+ * Every character starts with greeting and number chat. After those two fixed relationship-building steps,
+ * each character receives a different deterministic walk through the remaining 31 templates. Seven is coprime
+ * with 31, so a character never repeats an activity before all remaining templates have been visited.
+ * Persistent interaction identity is the character id plus tier index; internal identifiers must never be
+ * exposed in child-facing display or speech.
  */
 function buildInteractionTiers(id: string, base: number, exponent: number, maxHearts: number): InteractionTier[] {
   const tierCount = characterInteractionTierCount(maxHearts);
@@ -133,9 +134,8 @@ function buildInteractionTiers(id: string, base: number, exponent: number, maxHe
   const tiers: InteractionTier[] = [];
   for (let i = 1; i <= tierCount; i++) {
     const requiredHearts = characterInteractionRequiredHearts(i - 1, maxHearts);
-    // Justin wants the four-heart/second interaction to always explain the character's multiplication.
-    // Swap its former activity into the one position that previously held the number template, leaving every
-    // other deterministic activity unchanged and preserving the no-duplicates guarantee.
+    // Justin wants every character to greet him first, then use the four-heart interaction to explain
+    // the character's multiplication. Only the remaining activities are shuffled.
     const templateIndex = characterInteractionTemplateIndex(characterIndex, i - 1, TEMPLATES.length);
     const template = TEMPLATES[templateIndex];
     tiers.push({

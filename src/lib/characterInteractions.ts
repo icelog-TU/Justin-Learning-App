@@ -5,18 +5,17 @@ export function characterNumberInteractionMessage(base: number, repetitions: num
 }
 
 /**
- * Keep every character's established deterministic activities, but reserve the second interaction for
- * the number lesson Justin prefers. The activity displaced from position two swaps into the position that
- * previously held the number template, so no other activity is lost and every tier remains unique.
+ * Every character starts with the same relationship-building sequence:
+ * greeting first, then Justin's preferred number lesson. Remaining activities follow a deterministic
+ * character-specific shuffle that excludes those two reserved templates and never repeats a template.
  */
 export function characterInteractionTemplateIndex(
   characterIndex: number,
   tierIndex: number,
   templateCount: number,
 ): number {
-  const originalTemplateIndex = (characterIndex + tierIndex * 7) % templateCount;
-  const originalSecondTemplateIndex = (characterIndex + 7) % templateCount;
+  if (tierIndex === 0) return 0;
   if (tierIndex === 1) return 1;
-  if (originalTemplateIndex === 1) return originalSecondTemplateIndex;
-  return originalTemplateIndex;
+  const shuffledTemplateCount = templateCount - 2;
+  return 2 + ((characterIndex + (tierIndex - 2) * 7) % shuffledTemplateCount);
 }
