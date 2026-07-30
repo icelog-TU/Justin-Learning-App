@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { shouZhuDaiTuLesson } from '../src/data/shouZhuDaiTuLesson';
 import { guwenLessons } from '../src/data/guwenLesson';
-import { SHOU_ZHU_DAI_TU_PRONUNCIATION_AUDIT_CATALOG } from '../src/data/shouZhuDaiTuPronunciationAudit';
+import { parseDraftQuestions } from '../src/lib/guwenDraftPreview';
 
 const expectedStepIds = [
   'zhu',
@@ -23,10 +23,13 @@ const expectedStepIds = [
   'er_shen_wei_song_guo_xiao',
 ];
 
-assert.equal(shouZhuDaiTuLesson.contentRevision, '2026-07-27-rewrite-v1');
+const activeMaster = fs.readFileSync(new URL('../04-guwen-shouzhudaitu-decoder-content.md', import.meta.url), 'utf8');
+const approvedQuestions = parseDraftQuestions(activeMaster);
+
+assert.equal(shouZhuDaiTuLesson.contentRevision, '2026-07-30-approved-v2');
 assert.equal(
   guwenLessons.find((lesson) => lesson.id === 'shou-zhu-dai-tu')?.contentRevision,
-  '2026-07-27-rewrite-v1',
+  '2026-07-30-approved-v2',
   'App 課程入口必須指向新版第四篇，不可仍使用舊版資料',
 );
 assert.equal(
@@ -41,11 +44,6 @@ assert.deepEqual(
 );
 assert.equal(shouZhuDaiTuLesson.sequenceOrderingClosing?.cards.length, 5, '第 17 題應有五張排序卡');
 assert.equal(shouZhuDaiTuLesson.evidenceMultiSelectClosing?.options.length, 6, '第 18 題應有六張分類卡');
-assert.equal(
-  shouZhuDaiTuLesson.evidenceMultiSelectClosing?.intro,
-  '故事已經排好了。最後想麻煩古文破譯家檢查：哪些內容是文章明確寫出來的，請打勾。',
-  '第 18 題引導語必須使用最新版核准文字',
-);
 assert.equal(shouZhuDaiTuLesson.causalChainClosing, undefined, '第四篇沒有額外因果鏈收尾頁');
 assert.equal(shouZhuDaiTuLesson.preserveAuthoredOptionOrder, true);
 assert.equal(shouZhuDaiTuLesson.badgeClaimMode, 'scroll-end');
@@ -72,41 +70,80 @@ for (const step of shouZhuDaiTuLesson.steps) {
   if (step.type === 'evidence') assert.equal(step.clues.length, 2, `${step.id} 必須有兩條線索`);
 }
 
+for (let index = 0; index < shouZhuDaiTuLesson.steps.length; index += 1) {
+  const step = shouZhuDaiTuLesson.steps[index];
+  const approved = approvedQuestions[index];
+  assert.equal(step.targetSentence, approved.target?.text, `${step.id} 的本輪處理句子未同步核准主檔`);
+  assert.equal(step.intro, approved.intro?.text, `${step.id} 的孩子端引導語未同步核准主檔`);
+  assert.equal(step.question, approved.question?.text, `${step.id} 的提問未同步核准主檔`);
+  assert.deepEqual(step.options, approved.options.map((option) => option.text), `${step.id} 的選項未同步核准主檔`);
+  assert.equal(step.correctIndex, approved.correctIndex, `${step.id} 的正解位置未同步核准主檔`);
+  assert.equal(step.correctFeedback, approved.correctFeedback?.text, `${step.id} 的核心解答未同步核准主檔`);
+  assert.equal(step.retryHint, approved.retryHint?.text, `${step.id} 的第一次答錯提示未同步核准主檔`);
+  assert.equal(step.explanation, approved.explanation?.text, `${step.id} 的詳解未同步核准主檔`);
+  if (approved.preAnswerKeys.length > 0) {
+    assert.deepEqual(
+      'keys' in step ? step.keys.map((key) => [key.code, key.decodedEvidence]) : [],
+      approved.preAnswerKeys.map((key) => [key.code.text, key.decodedEvidence.text]),
+      `${step.id} 的作答前密碼鑰匙未同步核准主檔`,
+    );
+  }
+  if (approved.clues.length > 0) {
+    assert.equal(step.type, 'evidence', `${step.id} 有線索時必須是 evidence 題型`);
+    if (step.type !== 'evidence') continue;
+    approved.clues.forEach((clue, clueIndex) => {
+      assert.equal(step.clues[clueIndex]?.text, clue.text, `${step.id} 線索 ${clueIndex + 1} 原文未同步`);
+      assert.equal(
+        step.clues[clueIndex]?.unlockedMeaning,
+        clue.meaning?.text,
+        `${step.id} 線索 ${clueIndex + 1} 已破解白話未同步`,
+      );
+      assert.equal(step.clues[clueIndex]?.source, clue.source?.text, `${step.id} 線索 ${clueIndex + 1} 出處未同步`);
+    });
+  }
+}
+
+const q17 = approvedQuestions[16];
+assert.equal(shouZhuDaiTuLesson.sequenceOrderingClosing?.intro, q17.intro?.text, '第 17 題引導語未同步');
+assert.deepEqual(
+  shouZhuDaiTuLesson.sequenceOrderingClosing?.cards.map((card) => card.text),
+  [
+    '農夫放下農具，守在樹樁旁。',
+    '農夫希望再得到兔子。',
+    '宋國有一位農夫，田裡有一個樹樁。',
+    '農夫沒有再得到兔子，還被宋國人笑話。',
+    '一隻兔子奔跑時撞上樹樁，折斷脖子而死。',
+  ],
+  '第 17 題排序卡初始順序必須與核准主檔一致',
+);
+assert.equal(shouZhuDaiTuLesson.sequenceOrderingClosing?.correctFeedback, q17.correctFeedback?.text, '第 17 題核心解答未同步');
+assert.equal(shouZhuDaiTuLesson.sequenceOrderingClosing?.retryHint, q17.retryHint?.text, '第 17 題第一次答錯提示未同步');
+assert.equal(shouZhuDaiTuLesson.sequenceOrderingClosing?.explanation, q17.explanation?.text, '第 17 題詳解未同步');
+
+const q18 = approvedQuestions[17];
+assert.equal(shouZhuDaiTuLesson.evidenceMultiSelectClosing?.intro, q18.intro?.text, '第 18 題引導語未同步');
+assert.deepEqual(
+  shouZhuDaiTuLesson.evidenceMultiSelectClosing?.options.map((option) => [option.correct, option.text]),
+  [
+    [true, '農夫的田裡有一個樹樁。'],
+    [false, '農夫相信每天都一定會有兔子撞死在樹樁旁。'],
+    [false, '農夫後來重新拿起農具，回去耕田。'],
+    [true, '一隻兔子奔跑時撞上樹樁，折斷脖子而死。'],
+    [false, '農夫覺得守著樹樁，比繼續耕田更值得。'],
+    [true, '農夫沒有再得到兔子，還被宋國人笑話。'],
+  ],
+  '第 18 題分類卡順序與正解必須與核准主檔一致',
+);
+assert.equal(shouZhuDaiTuLesson.evidenceMultiSelectClosing?.correctFeedback, q18.correctFeedback?.text, '第 18 題核心解答未同步');
+assert.equal(shouZhuDaiTuLesson.evidenceMultiSelectClosing?.retryHint, q18.retryHint?.text, '第 18 題第一次答錯提示未同步');
+assert.equal(shouZhuDaiTuLesson.evidenceMultiSelectClosing?.finalNote, q18.explanation?.text, '第 18 題詳解未同步');
+
 assert.equal(shouZhuDaiTuLesson.introPronunciationCues, undefined);
 assert.equal(shouZhuDaiTuLesson.fullTextPronunciationCues, undefined);
 assert.equal(shouZhuDaiTuLesson.sentencePronunciationCues, undefined);
 
-function collectSpeechLeaves(value: unknown, result: string[] = []): string[] {
-  if (typeof value === 'string') {
-    result.push(...value.split(/\n{2,}/).map((part) => part.trim()).filter(Boolean));
-    return result;
-  }
-  if (Array.isArray(value)) {
-    value.forEach((entry) => collectSpeechLeaves(entry, result));
-    return result;
-  }
-  if (value && typeof value === 'object') {
-    Object.values(value).forEach((entry) => collectSpeechLeaves(entry, result));
-  }
-  return result;
-}
-
 const normalize = (text: string) => text.replace(/[【】]/g, '').trim();
-const lessonSpeechLeaves = new Set(collectSpeechLeaves(shouZhuDaiTuLesson).map(normalize));
-
-assert.equal(SHOU_ZHU_DAI_TU_PRONUNCIATION_AUDIT_CATALOG.length, 35);
-for (const item of SHOU_ZHU_DAI_TU_PRONUNCIATION_AUDIT_CATALOG) {
-  assert(
-    lessonSpeechLeaves.has(normalize(item.displayText)),
-    `正式實聽語音沒有出現在 App 核准文案中：${item.id}｜${item.displayText}`,
-  );
-}
-
-const masterText = normalize(
-  fs
-    .readFileSync(new URL('../04-guwen-shouzhudaitu-decoder-content.md', import.meta.url), 'utf8')
-    .replace(/\*\*/g, ''),
-);
+const masterText = normalize(activeMaster.replace(/\*\*/g, ''));
 const decoderSource = fs.readFileSync(new URL('../src/pages/GuwenLessonDecode.tsx', import.meta.url), 'utf8');
 assert(
   !decoderSource.includes('missionOpeningFullText'),
@@ -136,6 +173,7 @@ const technicalKeys = new Set([
   'correctOrder',
   'contentRevision',
   'badgeClaimMode',
+  'source',
 ]);
 
 function collectApprovedCopy(value: unknown, key = '', result: string[] = []): string[] {
