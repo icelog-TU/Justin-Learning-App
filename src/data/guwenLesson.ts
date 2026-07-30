@@ -4,6 +4,7 @@ import { wangRongLesson } from './wangRongLesson';
 import { simaGuangLesson } from './simaGuangLesson';
 import { shouZhuDaiTuLesson } from './shouZhuDaiTuLesson';
 import { yaMiaoZhuZhangLesson } from './yaMiaoZhuZhangLesson';
+import { yanErDaoZhongLesson } from './yanErDaoZhongLesson';
 import { approvedKeZhouQiuJianLesson } from './keZhouQiuJianLesson';
 
 /**
@@ -90,6 +91,8 @@ interface LessonStepBase {
   explanation: string;
   /** Legacy-only side-note TTS corrections. New lessons explain pronunciation inline in correctFeedback. */
   pronunciationCues?: StepPronunciationCues;
+  /** 已取得的密碼鑰匙 — approved lessons may show this table before any scored question type. */
+  keys?: DecodingKey[];
   /** This step's contribution to the final assembled draft ("我的破譯稿"), only set on the 7 steps whose
    * solved meaning becomes one line of the reconstructed story (see 全文密碼地圖 in the source lesson). */
   finalDraftLine?: string;
@@ -2630,7 +2633,7 @@ export const legacyYaMiaoZhuZhangLesson: GuwenLesson = {
   },
 };
 
-export const yanErDaoZhongLesson: GuwenLesson = {
+export const legacyYanErDaoZhongLesson: GuwenLesson = {
   id: 'yan-er-dao-zhong',
   title: '掩耳盜鐘',
   source: '《呂氏春秋・自知》',

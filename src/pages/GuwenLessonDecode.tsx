@@ -195,6 +195,11 @@ function stepAutoPlayLines(step: LessonStep): string[] {
     ...speechParagraphs(step.intro),
     ...(step.pronunciationCues?.intro?.map((cue) => cue.speechText) ?? []),
   ];
+  if (step.keys) {
+    step.keys.forEach((k) => {
+      lines.push(k.code, k.decodedEvidence);
+    });
+  }
   if (step.type === 'evidence') {
     step.clues.forEach((c) =>
       lines.push(
@@ -204,14 +209,6 @@ function stepAutoPlayLines(step: LessonStep): string[] {
         c.unlockedMeaningPronunciationCue?.speechText ?? '',
       ),
     );
-  } else if (step.type === 'reconstruction') {
-    step.keys.forEach((k) => {
-      lines.push(k.code, k.decodedEvidence);
-    });
-  } else if (step.type === 'reveal' && step.keys) {
-    step.keys.forEach((k) => {
-      lines.push(k.code, k.decodedEvidence);
-    });
   }
   if (step.type !== 'reveal' && !questionRepeatsIntro(step.intro, step.question)) {
     lines.push(
@@ -2048,11 +2045,10 @@ export default function GuwenLessonDecode() {
               </div>
             )}
 
+            {currentStep.keys && currentStep.keys.length > 0 && renderKeyTable(currentStep.keys)}
             {currentStep.type === 'evidence' && (
               <div className="space-y-2">{currentStep.clues.map((c, i) => renderClue(c, i))}</div>
             )}
-            {currentStep.type === 'reconstruction' && renderKeyTable(currentStep.keys)}
-            {currentStep.type === 'reveal' && currentStep.keys && renderKeyTable(currentStep.keys)}
 
             {currentStep.type !== 'reveal' && (
               <>

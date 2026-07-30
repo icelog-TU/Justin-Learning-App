@@ -52,6 +52,8 @@ import type { ChildSnapshot } from './guwen-master-child-snapshot';
 // 已完成雙重 AI 審稿及使用者人工成人 APP 預覽測試，全文核准；同步更新第四篇孩子端保護指紋。
 // 2026-07-30：《揠苗助長》新版任務開場、第 1–17 題、白話驗證卷軸與完成徽章
 // 已完成雙重 AI 審核及使用者人工成人 APP 預覽測試，全文核准；同步更新第五篇孩子端保護指紋。
+// 2026-07-30：遠端固定分支已更新第七至九篇 active 主檔，重新對齊孩子端保護指紋；
+// 本次只同步保護基準，不改教材正文。
 export const GUWEN_CHILD_BASELINE: Record<string, ChildSnapshot> = {
   'lessons/01-guwen-wangrong-rewrite.md': { questionCount: 20, hash: 'f66b7f8c6daf8f03e85be9990e7305f90466a808ec2b6608a798ac09e2d7d7e8' },
   '02-guwen-simaguang-decoder-content.md': { questionCount: 18, hash: 'e78c3eec7012fa42d81eb24ef4a000221784b5c2ced4d479cda0757dd4bb817e' },
@@ -59,7 +61,7 @@ export const GUWEN_CHILD_BASELINE: Record<string, ChildSnapshot> = {
   '04-guwen-shouzhudaitu-decoder-content.md': { questionCount: 18, hash: '5472146176f793fd7521dab80d3452407e2167ed1d4d2f2ff797581a7977cb0c' },
   '05-guwen-yamiaozhuzhang-decoder-content.md': { questionCount: 17, hash: 'dbe8b610e3a7a2a2861fa35dcf1c0d009f3389184feff94724e322badb58c7ee' },
   '06-guwen-yanerdaozhong-decoder-content.md': { questionCount: 20, hash: '2ac5c90a0ea360234b60a75ee5c27d058dcfc5d6c4a124d6d9cdc5be3d47cd38' },
-  '07-guwen-zhengrenmailv-decoder-content.md': { questionCount: 20, hash: '67c76642ea46a1478c0ac2181766a7ff76bada9daf5b6c3a896b032c6e5da4cb' },
-  '08-guwen-changganrucheng-decoder-content.md': { questionCount: 10, hash: 'dee88ceb5412ef79b01d747cd07c4c94f463decdffce809abf9e2087732b734a' },
-  '09-guwen-yangshizi-decoder-content.md': { questionCount: 18, hash: '630fa967e03fa2280c0b3ab9a61574379e30511d501d574adaaa2c9b942978f6' },
+  '07-guwen-zhengrenmailv-decoder-content.md': { questionCount: 20, hash: '688af97e8b6360595c4cb61d2fbacd8c7000ecd81b9e00abf97537347fbe3c72' },
+  '08-guwen-changganrucheng-decoder-content.md': { questionCount: 20, hash: 'ae136007ed28f0a9490ced4f6758c5fe18dad39788bae6b8fe82b5f1910fcb42' },
+  '09-guwen-yangshizi-decoder-content.md': { questionCount: 20, hash: '5fae8aaa53bb786cdde11d62420862d36a0f2749ea3c1cb6aee28aabc68691b9' },
 };
