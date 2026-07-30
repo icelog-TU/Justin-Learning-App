@@ -4,6 +4,77 @@ export type DraftSource = {
   path: string;
 };
 
+const legacyLessonIdsByPath: Record<string, string> = {
+  'lessons/01-guwen-wangrong-rewrite.md': 'wang-rong-bu-qu-dao-pang-li',
+  '02-guwen-simaguang-decoder-content.md': 'si-ma-guang-po-weng-jiu-you',
+  '03-guwen-kezhouqiujian-decoder-content.md': 'ke-zhou-qiu-jian',
+  '04-guwen-shouzhudaitu-decoder-content.md': 'shou-zhu-dai-tu',
+  '05-guwen-yamiaozhuzhang-decoder-content.md': 'ya-miao-zhu-zhang',
+  '06-guwen-yanerdaozhong-decoder-content.md': 'yan-er-dao-zhong',
+  '07-guwen-zhengrenmailv-decoder-content.md': 'zheng-ren-mai-lv',
+  '08-guwen-changganrucheng-decoder-content.md': 'chang-gan-ru-cheng',
+  '09-guwen-yangshizi-decoder-content.md': 'yang-shi-zhi-zi',
+};
+
+function chineseLessonNumber(value: number): string {
+  if (!Number.isInteger(value) || value <= 0 || value > 999) return String(value);
+  const digits = ['', '一', '二', '三', '四', '五', '六', '七', '八', '九'];
+  const underOneHundred = (number: number) => {
+    if (number < 10) return digits[number];
+    const tens = Math.floor(number / 10);
+    const ones = number % 10;
+    return `${tens === 1 ? '' : digits[tens]}十${digits[ones]}`;
+  };
+  if (value < 100) return underOneHundred(value);
+  const hundreds = Math.floor(value / 100);
+  const remainder = value % 100;
+  if (!remainder) return `${digits[hundreds]}百`;
+  return `${digits[hundreds]}百${remainder < 10 ? '零' : ''}${underOneHundred(remainder)}`;
+}
+
+function derivedLessonId(path: string, lessonNumber: number): string {
+  const filename = path.split('/').at(-1) ?? '';
+  const slug = filename
+    .replace(/^\d+-guwen-/, '')
+    .replace(/-(?:decoder-content|rewrite)\.md$/, '')
+    .replace(/\.md$/, '')
+    .replace(/[^a-z0-9-]+/gi, '-')
+    .replace(/^-+|-+$/g, '')
+    .toLowerCase();
+  return slug || `guwen-lesson-${lessonNumber}`;
+}
+
+function safeActiveMasterPath(path: string): boolean {
+  return /^[a-z0-9_./-]+\.md$/i.test(path)
+    && !path.startsWith('/')
+    && !path.split('/').includes('..');
+}
+
+/**
+ * The project status table is the cross-chat authority for every active master. Building the adult
+ * preview catalog from it means lesson 10, lesson 100, and later lessons become available without a
+ * parallel hand-maintained App list, while archived copies stay out of the preview automatically.
+ */
+export function parseDraftSourcesFromProjectStatus(markdown: string): DraftSource[] {
+  const byNumber = new Map<number, DraftSource>();
+  for (const line of markdown.replace(/\r\n/g, '\n').split('\n')) {
+    const match = line.match(/^\|\s*(\d+)\s*\|\s*([^|]+?)\s*\|\s*`([^`]+\.md)`\s*\|/);
+    if (!match) continue;
+    const lessonNumber = Number(match[1]);
+    const lessonTitle = match[2].trim();
+    const path = match[3].trim();
+    if (!Number.isInteger(lessonNumber) || lessonNumber <= 0 || !lessonTitle || !safeActiveMasterPath(path)) continue;
+    byNumber.set(lessonNumber, {
+      lessonId: legacyLessonIdsByPath[path] ?? derivedLessonId(path, lessonNumber),
+      title: `第${chineseLessonNumber(lessonNumber)}篇｜${lessonTitle}`,
+      path,
+    });
+  }
+  return [...byNumber.entries()]
+    .sort(([first], [second]) => first - second)
+    .map(([, source]) => source);
+}
+
 export type DraftField = {
   text: string;
   heading: string;
@@ -63,40 +134,29 @@ export type DraftQuestion = {
   diagnostics: string[];
 };
 
-export const DRAFT_SOURCES: DraftSource[] = [
-  { lessonId: 'wang-rong-bu-qu-dao-pang-li', title: '第一篇｜王戎不取道旁李', path: 'lessons/01-guwen-wangrong-rewrite.md' },
-  { lessonId: 'si-ma-guang-po-weng-jiu-you', title: '第二篇｜司馬光破甕救友', path: '02-guwen-simaguang-decoder-content.md' },
-  { lessonId: 'ke-zhou-qiu-jian', title: '第三篇｜刻舟求劍', path: '03-guwen-kezhouqiujian-decoder-content.md' },
-  { lessonId: 'shou-zhu-dai-tu', title: '第四篇｜守株待兔', path: '04-guwen-shouzhudaitu-decoder-content.md' },
-  { lessonId: 'ya-miao-zhu-zhang', title: '第五篇｜揠苗助長', path: '05-guwen-yamiaozhuzhang-decoder-content.md' },
-  { lessonId: 'yan-er-dao-zhong', title: '第六篇｜掩耳盜鐘', path: '06-guwen-yanerdaozhong-decoder-content.md' },
-  { lessonId: 'zheng-ren-mai-lv', title: '第七篇｜鄭人買履', path: '07-guwen-zhengrenmailv-decoder-content.md' },
-  { lessonId: 'chang-gan-ru-cheng', title: '第八篇｜長竿入城', path: '08-guwen-changganrucheng-decoder-content.md' },
-  { lessonId: 'yang-shi-zhi-zi', title: '第九篇｜楊氏之子', path: '09-guwen-yangshizi-decoder-content.md' },
-];
-
 export type DraftSourceResolution = {
   index?: number;
   error?: string;
 };
 
 export function resolveDraftSource(
+  sources: DraftSource[],
   lessonPath: string | null,
   legacyLessonId: string | null,
 ): DraftSourceResolution {
   if (lessonPath !== null) {
-    const index = DRAFT_SOURCES.findIndex((source) => source.path === lessonPath);
+    const index = sources.findIndex((source) => source.path === lessonPath);
     return index >= 0
       ? { index }
       : { error: `找不到指定教材主檔：${lessonPath}` };
   }
   if (legacyLessonId !== null) {
-    const index = DRAFT_SOURCES.findIndex((source) => source.lessonId === legacyLessonId);
+    const index = sources.findIndex((source) => source.lessonId === legacyLessonId);
     return index >= 0
       ? { index }
       : { error: `找不到指定教材代碼：${legacyLessonId}` };
   }
-  return { index: 0 };
+  return sources.length ? { index: 0 } : { error: '進度表裡找不到任何 Active 教材主檔' };
 }
 
 export function draftQuestionIndexByNumber(
@@ -655,7 +715,12 @@ export function parseDraftQuestions(markdown: string): DraftQuestion[] {
 }
 
 export function githubRawUrl(source: DraftSource, cacheBuster = Date.now()): string {
-  return `https://raw.githubusercontent.com/icelog-TU/Justin-Learning-App/claude/chinese-learning-app-justin-yjcfam/${source.path}?v=${cacheBuster}`;
+  const encodedPath = source.path.split('/').map(encodeURIComponent).join('/');
+  return `https://raw.githubusercontent.com/icelog-TU/Justin-Learning-App/claude/chinese-learning-app-justin-yjcfam/${encodedPath}?v=${cacheBuster}`;
+}
+
+export function githubProjectStatusRawUrl(cacheBuster = Date.now()): string {
+  return `https://raw.githubusercontent.com/icelog-TU/Justin-Learning-App/claude/chinese-learning-app-justin-yjcfam/GUWEN-PROJECT-STATUS.md?v=${cacheBuster}`;
 }
 
 export function githubEditUrl(source: DraftSource, line?: number): string {

@@ -1,7 +1,11 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { DRAFT_SOURCES, parseDraftQuestions } from '../src/lib/guwenDraftPreview';
+import { parseDraftQuestions, parseDraftSourcesFromProjectStatus } from '../src/lib/guwenDraftPreview';
 import { childSnapshot, childSnapshotPayload } from './guwen-master-child-snapshot';
+
+const DRAFT_SOURCES = parseDraftSourcesFromProjectStatus(
+  fs.readFileSync('GUWEN-PROJECT-STATUS.md', 'utf8'),
+);
 
 const headingAliases = new Map<string, string>([
   ['本篇原文', '本篇完整原文（成人審稿用）'],

@@ -214,7 +214,7 @@ npm run check:guwen:master-format
 
 檢查至少涵蓋：
 
-1. 九篇正式主檔均列入 catalog。
+1. `GUWEN-PROJECT-STATUS.md` 中每一篇 Active 主檔均可由成人預覽 catalog 自動發現；新增篇章不得再依賴手動修改篇目清單。
 2. 題號、錨點及共同欄位使用唯一標題。
 3. 每條古文線索都有緊鄰的 `出處（成人資料）`。
 4. 禁用別名沒有重新出現在正式題目標題。

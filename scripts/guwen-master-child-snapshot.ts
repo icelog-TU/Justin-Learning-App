@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
-import { DRAFT_SOURCES, parseDraftQuestions } from '../src/lib/guwenDraftPreview';
+import { parseDraftQuestions, parseDraftSourcesFromProjectStatus } from '../src/lib/guwenDraftPreview';
 
 export type ChildSnapshot = {
   questionCount: number;
@@ -36,8 +36,11 @@ export function childSnapshot(markdown: string): ChildSnapshot {
 }
 
 export function currentChildSnapshots(): Record<string, ChildSnapshot> {
+  const draftSources = parseDraftSourcesFromProjectStatus(
+    fs.readFileSync('GUWEN-PROJECT-STATUS.md', 'utf8'),
+  );
   return Object.fromEntries(
-    DRAFT_SOURCES.map((source) => [
+    draftSources.map((source) => [
       source.path,
       childSnapshot(fs.readFileSync(path.resolve(source.path), 'utf8')),
     ]),

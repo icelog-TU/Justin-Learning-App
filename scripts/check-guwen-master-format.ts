@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { DRAFT_SOURCES, parseDraftQuestions } from '../src/lib/guwenDraftPreview';
+import { parseDraftQuestions, parseDraftSourcesFromProjectStatus } from '../src/lib/guwenDraftPreview';
 import { GUWEN_CHILD_BASELINE } from './guwen-master-child-baseline';
 import { childSnapshot } from './guwen-master-child-snapshot';
 
@@ -25,8 +25,11 @@ const forbiddenHeadings = new Set([
 
 const errors: string[] = [];
 const warnings: string[] = [];
+const DRAFT_SOURCES = parseDraftSourcesFromProjectStatus(
+  fs.readFileSync('GUWEN-PROJECT-STATUS.md', 'utf8'),
+);
 
-if (DRAFT_SOURCES.length !== 9) errors.push(`catalog 應為 9 篇，目前為 ${DRAFT_SOURCES.length} 篇`);
+if (!DRAFT_SOURCES.length) errors.push('跨篇進度表沒有可供成人預覽的 Active 教材主檔');
 
 for (const source of DRAFT_SOURCES) {
   const markdown = fs.readFileSync(path.resolve(source.path), 'utf8');

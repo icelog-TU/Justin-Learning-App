@@ -1,14 +1,17 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import {
-  DRAFT_SOURCES,
   draftPreviewSwipeDelta,
   draftQuestionIndexByNumber,
   parseDraftQuestions,
+  parseDraftSourcesFromProjectStatus,
   resolveDraftSource,
 } from '../src/lib/guwenDraftPreview';
 
 let failed = false;
+const DRAFT_SOURCES = parseDraftSourcesFromProjectStatus(
+  fs.readFileSync('GUWEN-PROJECT-STATUS.md', 'utf8'),
+);
 
 if (draftPreviewSwipeDelta({ x: 300, y: 200 }, { x: 120, y: 205 }) !== 1) {
   failed = true;
@@ -24,33 +27,56 @@ if (draftPreviewSwipeDelta({ x: 200, y: 100 }, { x: 205, y: 260 }) !== 0) {
 }
 
 const thirdLessonPathIndex = DRAFT_SOURCES.findIndex((source) => source.path === '03-guwen-kezhouqiujian-decoder-content.md');
-if (resolveDraftSource('03-guwen-kezhouqiujian-decoder-content.md', null).index !== thirdLessonPathIndex) {
+if (resolveDraftSource(DRAFT_SOURCES, '03-guwen-kezhouqiujian-decoder-content.md', null).index !== thirdLessonPathIndex) {
   failed = true;
   console.error('  ERROR: active MD 路徑沒有正確定位到第三篇');
 }
-if (resolveDraftSource(null, 'ke-zhou-qiu-jian').index !== thirdLessonPathIndex) {
+if (resolveDraftSource(DRAFT_SOURCES, null, 'ke-zhou-qiu-jian').index !== thirdLessonPathIndex) {
   failed = true;
   console.error('  ERROR: 舊 lessonId 連結不再相容第三篇');
 }
-if (resolveDraftSource('not-a-real-active-master.md', null).index !== undefined) {
+if (resolveDraftSource(DRAFT_SOURCES, 'not-a-real-active-master.md', null).index !== undefined) {
   failed = true;
   console.error('  ERROR: 無效 active MD 路徑仍默默退回第一篇');
 }
-if (!resolveDraftSource('not-a-real-active-master.md', null).error) {
+if (!resolveDraftSource(DRAFT_SOURCES, 'not-a-real-active-master.md', null).error) {
   failed = true;
   console.error('  ERROR: 無效 active MD 路徑沒有回報錯誤');
 }
-if (resolveDraftSource('03-guwen-kezhouqiujian-decoder-content.md', 'wrong-legacy-id').index !== thirdLessonPathIndex) {
+if (resolveDraftSource(DRAFT_SOURCES, '03-guwen-kezhouqiujian-decoder-content.md', 'wrong-legacy-id').index !== thirdLessonPathIndex) {
   failed = true;
   console.error('  ERROR: 同時提供參數時沒有優先採用 active MD 路徑');
 }
-if (resolveDraftSource('not-a-real-active-master.md', 'ke-zhou-qiu-jian').index !== undefined) {
+if (resolveDraftSource(DRAFT_SOURCES, 'not-a-real-active-master.md', 'ke-zhou-qiu-jian').index !== undefined) {
   failed = true;
   console.error('  ERROR: 無效 active MD 路徑被舊 lessonId 掩蓋');
 }
-if (resolveDraftSource(null, null).index !== 0) {
+if (resolveDraftSource(DRAFT_SOURCES, null, null).index !== 0) {
   failed = true;
   console.error('  ERROR: 未指定教材時無法開啟預覽首頁');
+}
+
+const tenthLessonPath = '10-guwen-zixiangmaodun-decoder-content.md';
+const tenthLessonPathIndex = DRAFT_SOURCES.findIndex((source) => source.path === tenthLessonPath);
+if (tenthLessonPathIndex !== 9 || resolveDraftSource(DRAFT_SOURCES, tenthLessonPath, null).index !== tenthLessonPathIndex) {
+  failed = true;
+  console.error('  ERROR: 第十篇沒有由跨篇進度表自動加入成人預覽目錄');
+}
+
+const hundredLessonSources = parseDraftSourcesFromProjectStatus(`
+| 篇次 | 篇名 | Active 教材主檔 | 狀態 |
+|---:|---|---|---|
+| 100 | 百篇測試 | \`100-guwen-bai-pian-test-decoder-content.md\` | 草稿 |
+| 10 | 第十測試 | \`10-guwen-tenth-test-decoder-content.md\` | 草稿 |
+`);
+if (
+  hundredLessonSources.length !== 2
+  || hundredLessonSources[0]?.title !== '第十篇｜第十測試'
+  || hundredLessonSources[1]?.title !== '第一百篇｜百篇測試'
+  || hundredLessonSources[1]?.path !== '100-guwen-bai-pian-test-decoder-content.md'
+) {
+  failed = true;
+  console.error('  ERROR: 成人預覽目錄無法依篇次自動擴充到第一百篇');
 }
 
 for (const source of DRAFT_SOURCES) {

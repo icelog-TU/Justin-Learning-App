@@ -1,16 +1,18 @@
 import { useEffect, useMemo, useRef, useState, type TouchEvent } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
-  DRAFT_SOURCES,
   draftPreviewSwipeDelta,
   draftQuestionIndexByNumber,
   findAdjacentRepetitions,
   githubEditUrl,
+  githubProjectStatusRawUrl,
   githubRawUrl,
   parseDraftQuestions,
+  parseDraftSourcesFromProjectStatus,
   resolveDraftSource,
   type DraftField,
   type DraftQuestion,
+  type DraftSource,
 } from '../lib/guwenDraftPreview';
 import { cancelSpeech, pauseSpeech, resumeSpeech, speakSequence } from '../lib/speech';
 import {
@@ -105,8 +107,8 @@ export default function GuwenDraftPreview() {
   const initialLegacyLessonId = initialParams.get('lesson');
   const initialLegacyQuestionIndex = Number(initialParams.get('question'));
   const initialPreviewState = initialParams.get('state');
-  const initialSource = resolveDraftSource(initialLessonPath, initialLegacyLessonId);
-  const [sourceIndex, setSourceIndex] = useState<number | undefined>(initialSource.index);
+  const [sources, setSources] = useState<DraftSource[]>([]);
+  const [sourceIndex, setSourceIndex] = useState<number | undefined>();
   const [questions, setQuestions] = useState<DraftQuestion[]>([]);
   const [questionIndex, setQuestionIndex] = useState(
     Number.isInteger(initialLegacyQuestionIndex) && initialLegacyQuestionIndex >= 0
@@ -116,18 +118,55 @@ export default function GuwenDraftPreview() {
   const [previewState, setPreviewState] = useState<PreviewState>(
     initialPreviewState === 'wrong' || initialPreviewState === 'correct' ? initialPreviewState : 'answering',
   );
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(initialSource.error ?? '');
+  const [catalogLoading, setCatalogLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
   const [loadedAt, setLoadedAt] = useState<Date>();
   const [playback, setPlayback] = useState<Playback>();
-  const [lessonQuery, setLessonQuery] = useState(initialSource.index === undefined ? '' : DRAFT_SOURCES[initialSource.index].title);
+  const [lessonQuery, setLessonQuery] = useState('');
   const [lessonSearchOpen, setLessonSearchOpen] = useState(false);
   const loadToken = useRef(0);
   const playbackToken = useRef(0);
   const swipeStart = useRef<{ x: number; y: number } | undefined>(undefined);
   const questionCard = useRef<HTMLDivElement>(null);
-  const source = sourceIndex === undefined ? undefined : DRAFT_SOURCES[sourceIndex];
+  const source = sourceIndex === undefined ? undefined : sources[sourceIndex];
   const question = questions[questionIndex];
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadCatalog() {
+      setCatalogLoading(true);
+      setError('');
+      try {
+        const response = await fetch(githubProjectStatusRawUrl(), { cache: 'no-store' });
+        if (!response.ok) throw new Error(`GitHub 進度表回傳 ${response.status}`);
+        const nextSources = parseDraftSourcesFromProjectStatus(await response.text());
+        if (!nextSources.length) throw new Error('進度表裡找不到任何 Active 教材主檔');
+        const resolved = resolveDraftSource(nextSources, initialLessonPath, initialLegacyLessonId);
+        if (cancelled) return;
+        setSources(nextSources);
+        if (resolved.index === undefined) {
+          setSourceIndex(undefined);
+          setLessonQuery('');
+          setError(resolved.error ?? '找不到指定教材');
+          return;
+        }
+        setSourceIndex(resolved.index);
+        setLessonQuery(nextSources[resolved.index].title);
+      } catch (reason) {
+        if (cancelled) return;
+        setSources([]);
+        setSourceIndex(undefined);
+        setError(reason instanceof Error ? reason.message : '無法載入古文 Active 教材目錄');
+      } finally {
+        if (!cancelled) setCatalogLoading(false);
+      }
+    }
+    void loadCatalog();
+    return () => {
+      cancelled = true;
+    };
+  }, [initialLegacyLessonId, initialLessonPath]);
 
   async function loadLatest() {
     if (!source) {
@@ -179,7 +218,7 @@ export default function GuwenDraftPreview() {
     void loadLatest();
     // source uniquely identifies the selected MD.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sourceIndex]);
+  }, [sourceIndex, sources]);
 
   useEffect(() => {
     if (!question || !source) return;
@@ -200,13 +239,13 @@ export default function GuwenDraftPreview() {
   const approvedCount = questions.filter((item) => /已核准|核准/.test(item.status)).length;
   const lessonMatches = useMemo(() => {
     const query = lessonQuery.trim().toLocaleLowerCase('zh-TW');
-    if (!query) return DRAFT_SOURCES.slice(0, 8);
-    return DRAFT_SOURCES.filter((item) => (
+    if (!query) return sources.slice(0, 8);
+    return sources.filter((item) => (
       item.title.toLocaleLowerCase('zh-TW').includes(query)
       || item.path.toLocaleLowerCase('zh-TW').includes(query)
       || item.lessonId.toLocaleLowerCase('zh-TW').includes(query)
     )).slice(0, 8);
-  }, [lessonQuery]);
+  }, [lessonQuery, sources]);
 
   function chooseQuestion(next: number) {
     if (next < 0 || next >= questions.length) return;
@@ -219,7 +258,7 @@ export default function GuwenDraftPreview() {
   }
 
   function chooseSource(next: number) {
-    const nextSource = DRAFT_SOURCES[next];
+    const nextSource = sources[next];
     if (!nextSource) return;
     stopPlayback();
     setError('');
@@ -322,7 +361,7 @@ export default function GuwenDraftPreview() {
                 onKeyDown={(event) => {
                   if (event.key === 'Enter' && lessonMatches.length === 1) {
                     event.preventDefault();
-                    chooseSource(DRAFT_SOURCES.indexOf(lessonMatches[0]));
+                    chooseSource(sources.indexOf(lessonMatches[0]));
                   }
                   if (event.key === 'Escape') {
                     setLessonSearchOpen(false);
@@ -340,7 +379,7 @@ export default function GuwenDraftPreview() {
               <button
                 type="button"
                 onClick={() => sourceIndex !== undefined && chooseSource(sourceIndex + 1)}
-                disabled={sourceIndex === undefined || sourceIndex >= DRAFT_SOURCES.length - 1}
+                disabled={sourceIndex === undefined || sourceIndex >= sources.length - 1}
                 className="rounded-lg border border-slate-300 bg-white px-2.5 py-2 text-sm text-slate-700 disabled:cursor-not-allowed disabled:opacity-35"
                 aria-label="下一篇教材"
               >
@@ -354,10 +393,10 @@ export default function GuwenDraftPreview() {
                 className="absolute inset-x-10 top-full z-30 mt-1 max-h-72 overflow-y-auto rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl"
               >
                 {lessonMatches.length ? lessonMatches.map((item) => {
-                  const index = DRAFT_SOURCES.indexOf(item);
+                  const index = sources.indexOf(item);
                   return (
                     <button
-                      key={item.lessonId}
+                      key={item.path}
                       type="button"
                       role="option"
                       aria-selected={index === sourceIndex}
@@ -397,10 +436,14 @@ export default function GuwenDraftPreview() {
         </div>
       </header>
 
-      {loading && <p className="mx-auto max-w-7xl p-8 text-center text-slate-500">正在讀取 GitHub 分支上的 MD……</p>}
+      {(catalogLoading || loading) && (
+        <p className="mx-auto max-w-7xl p-8 text-center text-slate-500">
+          {catalogLoading ? '正在讀取 GitHub 分支上的 Active 教材目錄……' : '正在讀取 GitHub 分支上的 MD……'}
+        </p>
+      )}
       {error && <p className="mx-auto mt-8 max-w-xl rounded-xl border border-red-200 bg-red-50 p-4 text-center text-red-700">讀取失敗：{error}</p>}
 
-      {!loading && question && source && (
+      {!catalogLoading && !loading && question && source && (
         <div className="mx-auto grid max-w-7xl gap-5 p-4 lg:grid-cols-[minmax(0,1fr)_360px]">
           <section>
             <div className="mb-3 flex flex-wrap items-center gap-2 text-xs">
@@ -699,7 +742,7 @@ export default function GuwenDraftPreview() {
         </div>
       )}
 
-      {!loading && question && (
+      {!catalogLoading && !loading && question && (
         <nav
           aria-label="題目快速切換"
           className={`fixed inset-x-3 z-40 mx-auto flex max-w-md items-center gap-2 rounded-2xl border border-slate-200 bg-white/95 p-2 shadow-2xl backdrop-blur transition-[bottom] ${
