@@ -62,6 +62,8 @@ import type { ChildSnapshot } from './guwen-master-child-snapshot';
 // 同步更新第十篇草稿保護指紋。指紋只保護本輪待複審文字，不代表教材已核准。
 // 2026-07-30：《自相矛盾》第 1～7 題經使用者核准；第 8 題移除未說明的「甲」，
 // 改用一個孩子與三個孩子的舉石情境比較「不能／莫能」；同步更新草稿保護指紋。
+// 2026-07-30：《楊氏之子》Active 最新核准版接入正式 App；同步更新第九篇上線狀態後的保護指紋。
+// 同日補登遠端固定分支已加入的第十一篇 active 主檔保護指紋；只記錄當下文字，不代表教材已核准。
 export const GUWEN_CHILD_BASELINE: Record<string, ChildSnapshot> = {
   'lessons/01-guwen-wangrong-rewrite.md': { questionCount: 20, hash: 'f66b7f8c6daf8f03e85be9990e7305f90466a808ec2b6608a798ac09e2d7d7e8' },
   '02-guwen-simaguang-decoder-content.md': { questionCount: 18, hash: 'e78c3eec7012fa42d81eb24ef4a000221784b5c2ced4d479cda0757dd4bb817e' },
@@ -71,7 +73,8 @@ export const GUWEN_CHILD_BASELINE: Record<string, ChildSnapshot> = {
   '06-guwen-yanerdaozhong-decoder-content.md': { questionCount: 20, hash: '2ac5c90a0ea360234b60a75ee5c27d058dcfc5d6c4a124d6d9cdc5be3d47cd38' },
   '07-guwen-zhengrenmailv-decoder-content.md': { questionCount: 20, hash: '688af97e8b6360595c4cb61d2fbacd8c7000ecd81b9e00abf97537347fbe3c72' },
   '08-guwen-changganrucheng-decoder-content.md': { questionCount: 20, hash: 'ae136007ed28f0a9490ced4f6758c5fe18dad39788bae6b8fe82b5f1910fcb42' },
-  '09-guwen-yangshizi-decoder-content.md': { questionCount: 20, hash: '5fae8aaa53bb786cdde11d62420862d36a0f2749ea3c1cb6aee28aabc68691b9' },
+  '09-guwen-yangshizi-decoder-content.md': { questionCount: 20, hash: '8ca3e8c301f4613e3ae810c829d8954a663625df67b39be9dc118e99b0be18f5' },
   '10-guwen-zixiangmaodun-decoder-content.md': { questionCount: 20, hash: '3baa4ff37ad40bb3a4d02cc143be20225a590870cce7a9ba155039c150087b35' },
+  '11-guwen-yurenshiyan-decoder-content.md': { questionCount: 21, hash: '1141a1426657e58209bf5b386acfbf67f6d79d52489fb811b10e4a3a0299a71e' },
   '12-guwen-yilinqiefu-decoder-content.md': { questionCount: 20, hash: '98674e7a02af906069a04385f400427d11d7bdbf11cbe753f6d59465ee3b58e7' },
 };
