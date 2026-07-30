@@ -3,6 +3,7 @@ import { changGanRuChengLesson } from './changGanRuChengLesson';
 import { wangRongLesson } from './wangRongLesson';
 import { simaGuangLesson } from './simaGuangLesson';
 import { shouZhuDaiTuLesson } from './shouZhuDaiTuLesson';
+import { yaMiaoZhuZhangLesson } from './yaMiaoZhuZhangLesson';
 import { approvedKeZhouQiuJianLesson } from './keZhouQiuJianLesson';
 
 /**
@@ -2121,7 +2122,7 @@ export const legacyShouZhuDaiTuLesson: GuwenLesson = {
   },
 };
 
-export const yaMiaoZhuZhangLesson: GuwenLesson = {
+export const legacyYaMiaoZhuZhangLesson: GuwenLesson = {
   id: 'ya-miao-zhu-zhang',
   title: '揠苗助長',
   source: '《孟子・公孫丑上》',
