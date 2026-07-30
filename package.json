@@ -21,6 +21,7 @@
     "test:guwen:zhengrenmailu": "tsx scripts/test-zheng-ren-mai-lu-lesson.ts",
     "test:guwen:changganrucheng": "tsx scripts/test-chang-gan-ru-cheng-lesson.ts",
     "test:guwen:yangshizhizi": "tsx scripts/test-yang-shi-zhi-zi-lesson.ts",
+    "test:guwen:zixiangmaodun": "tsx scripts/test-zi-xiang-mao-dun-lesson.ts",
     "test:practice-summary": "tsx scripts/test-practice-summary.ts",
     "test:guwen:draft-preview": "tsx scripts/test-guwen-draft-preview.ts",
     "test:guwen:praise": "tsx scripts/test-guwen-praise.ts",
