@@ -24,7 +24,7 @@
 | 6 | 掩耳盜鐘 | `06-guwen-yanerdaozhong-decoder-content.md` | 新版 20 題藍圖已核准並完成全篇草稿；第 1–5 題及第 7–12 題已核准，第 6 題、開場、第 13–20 題與收尾待審；正式 App 維持既有版本 | 交由 Claude Code 進行全篇獨立 AI 審稿，再依審稿意見修訂 |
 | 7 | 鄭人買履 | `07-guwen-zhengrenmailv-decoder-content.md` | 新版任務開場、第 1–20 題、白話驗證卷軸與徽章收尾均已完成雙重 AI 審核及使用者人工審核，全文核准並同步正式 App | 依實際使用回饋調整 |
 | 8 | 長竿入城 | `08-guwen-changganrucheng-decoder-content.md` | 新版任務開場、第 1–20 題、白話驗證卷軸與徽章收尾均已完成雙重 AI 審核及使用者人工審核，全文核准並同步正式 App | 依實際使用回饋調整 |
-| 9 | 楊氏之子 | `09-guwen-yangshizi-decoder-content.md` | 重寫時間線已重啟；依核准藍圖完成新版開場與第 1–20 題全文草稿，全部待審 | 交由 Claude Code 全文審稿，再依審稿意見修訂 |
+| 9 | 楊氏之子 | `09-guwen-yangshizi-decoder-content.md` | 重寫時間線已重啟；新版開場與第 1–20 題已完成獨立 AI 全文審稿並依意見修訂，全部仍待使用者人工審核 | 使用成人預覽 App 逐題人工審核 |
 | 10 | 自相矛盾 | `10-guwen-zixiangmaodun-decoder-content.md` | 依核准藍圖完成任務開場、第 1–20 題、白話驗證卷軸與徽章收尾的全文草稿；全部待審，尚未核准 | 交由 Claude Code 全文審稿，再依審稿意見修訂後交使用者人工審核 |
 
 ## 已知版本關係
