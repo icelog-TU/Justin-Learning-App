@@ -18,9 +18,42 @@ export function maxExponentForBase(base: number): number {
 }
 export const SQUARE_CHARACTER_COUNT = 50;
 export const CUBE_CHARACTER_COUNT = 50;
-/** Existing power-series slots stay first; the standalone 1²..50² collection unlocks after them. */
+export const TRIANGULAR_CHARACTER_COUNT = 50;
+export const FIBONACCI_CHARACTER_COUNT = 30;
+export const PRIME_CHARACTER_COUNT = 50;
+export const FACTORIAL_CHARACTER_COUNT = 20;
+
+export type SequenceCharacterKind =
+  | 'square'
+  | 'cube'
+  | 'triangular'
+  | 'fibonacci'
+  | 'prime'
+  | 'factorial';
+
+export interface SequenceCollectionDefinition {
+  kind: SequenceCharacterKind;
+  slug: string;
+  name: string;
+  rangeLabel: string;
+  symbol: string;
+  count: number;
+}
+
+/** Unlock order after the eight power-series collections. Existing square/cube order never moves. */
+export const SEQUENCE_CHARACTER_COLLECTIONS: readonly SequenceCollectionDefinition[] = [
+  { kind: 'square', slug: 'squares', name: '平方角色', rangeLabel: '1² 到 50²', symbol: '■', count: SQUARE_CHARACTER_COUNT },
+  { kind: 'cube', slug: 'cubes', name: '立方角色', rangeLabel: '1³ 到 50³', symbol: '▲', count: CUBE_CHARACTER_COUNT },
+  { kind: 'triangular', slug: 'triangular', name: '三角數角色', rangeLabel: '第 1～50 個三角數', symbol: '▼', count: TRIANGULAR_CHARACTER_COUNT },
+  { kind: 'fibonacci', slug: 'fibonacci', name: '斐波那契角色', rangeLabel: '第 1～30 個斐波那契數', symbol: '◆', count: FIBONACCI_CHARACTER_COUNT },
+  { kind: 'prime', slug: 'primes', name: '質數角色', rangeLabel: '前 50 個質數', symbol: '⬢', count: PRIME_CHARACTER_COUNT },
+  { kind: 'factorial', slug: 'factorials', name: '階乘角色', rangeLabel: '1! 到 20!', symbol: '✦', count: FACTORIAL_CHARACTER_COUNT },
+];
+
+/** Existing power-series slots stay first; sequence collections follow the order above. */
 export const POWER_CHARACTER_SLOTS = GACHA_BASES.reduce((sum, base) => sum + maxExponentForBase(base), 0);
-export const TOTAL_CHARACTER_SLOTS = POWER_CHARACTER_SLOTS + SQUARE_CHARACTER_COUNT + CUBE_CHARACTER_COUNT;
+export const TOTAL_CHARACTER_SLOTS = POWER_CHARACTER_SLOTS
+  + SEQUENCE_CHARACTER_COLLECTIONS.reduce((sum, collection) => sum + collection.count, 0);
 export const GACHA_COST_COINS = 10;
 export const HEART_COST_STARS = 3;
 /** Pity system: a brand-new character is guaranteed at least once every this many rolls. */
@@ -99,11 +132,23 @@ export function characterId(base: number, exponent: number): string {
 }
 
 export function squareCharacterId(squareBase: number): string {
-  return `square:${squareBase}`;
+  return sequenceCharacterId('square', squareBase);
 }
 
 export function cubeCharacterId(cubeBase: number): string {
-  return `cube:${cubeBase}`;
+  return sequenceCharacterId('cube', cubeBase);
+}
+
+export function sequenceCharacterId(kind: SequenceCharacterKind, index: number): string {
+  return `${kind}:${index}`;
+}
+
+export function getSequenceCollection(kind: SequenceCharacterKind): SequenceCollectionDefinition {
+  return SEQUENCE_CHARACTER_COLLECTIONS.find((collection) => collection.kind === kind)!;
+}
+
+export function getSequenceCollectionBySlug(slug: string | null): SequenceCollectionDefinition | null {
+  return SEQUENCE_CHARACTER_COLLECTIONS.find((collection) => collection.slug === slug) ?? null;
 }
 
 export function isSquareCharacterId(id: string): boolean {
@@ -116,13 +161,12 @@ export function isCubeCharacterId(id: string): boolean {
 
 export function parseCharacterId(id: string):
   | { kind: 'power'; base: number; exponent: number }
-  | { kind: 'square'; squareBase: number }
-  | { kind: 'cube'; cubeBase: number } {
-  if (isSquareCharacterId(id)) {
-    return { kind: 'square', squareBase: Number(id.slice('square:'.length)) };
-  }
-  if (isCubeCharacterId(id)) {
-    return { kind: 'cube', cubeBase: Number(id.slice('cube:'.length)) };
+  | { kind: SequenceCharacterKind; index: number } {
+  for (const collection of SEQUENCE_CHARACTER_COLLECTIONS) {
+    const prefix = `${collection.kind}:`;
+    if (id.startsWith(prefix)) {
+      return { kind: collection.kind, index: Number(id.slice(prefix.length)) };
+    }
   }
   const [base, exponent] = id.split('^').map(Number);
   return { kind: 'power', base, exponent };
@@ -149,11 +193,72 @@ export function formatCubeCharacterLabel(cubeBase: number): string {
   return formatCharacterLabel(cubeBase, 3);
 }
 
+function formatSubscriptNumber(value: number): string {
+  const subscripts: Record<string, string> = {
+    '0': '₀', '1': '₁', '2': '₂', '3': '₃', '4': '₄',
+    '5': '₅', '6': '₆', '7': '₇', '8': '₈', '9': '₉',
+  };
+  return String(value).split('').map((digit) => subscripts[digit]).join('');
+}
+
+export function formatSequenceCharacterLabel(kind: SequenceCharacterKind, index: number): string {
+  if (kind === 'square') return formatSquareCharacterLabel(index);
+  if (kind === 'cube') return formatCubeCharacterLabel(index);
+  if (kind === 'triangular') return `△${formatSubscriptNumber(index)}`;
+  if (kind === 'fibonacci') return `F${formatSubscriptNumber(index)}`;
+  if (kind === 'prime') return `P${formatSubscriptNumber(index)}`;
+  return `${index}!`;
+}
+
+export function triangularValue(index: number): bigint {
+  return BigInt(index * (index + 1) / 2);
+}
+
+export function fibonacciValue(index: number): bigint {
+  if (index <= 2) return 1n;
+  let previous = 1n;
+  let current = 1n;
+  for (let position = 3; position <= index; position++) {
+    [previous, current] = [current, previous + current];
+  }
+  return current;
+}
+
+export function primeValue(index: number): bigint {
+  let found = 0;
+  let candidate = 1;
+  while (found < index) {
+    candidate += 1;
+    let isPrime = true;
+    for (let divisor = 2; divisor * divisor <= candidate; divisor++) {
+      if (candidate % divisor === 0) {
+        isPrime = false;
+        break;
+      }
+    }
+    if (isPrime) found += 1;
+  }
+  return BigInt(candidate);
+}
+
+export function factorialValue(index: number): bigint {
+  let result = 1n;
+  for (let factor = 2; factor <= index; factor++) result *= BigInt(factor);
+  return result;
+}
+
+export function sequenceCharacterValue(kind: SequenceCharacterKind, index: number): bigint {
+  if (kind === 'square') return characterValue(index, 2);
+  if (kind === 'cube') return characterValue(index, 3);
+  if (kind === 'triangular') return triangularValue(index);
+  if (kind === 'fibonacci') return fibonacciValue(index);
+  if (kind === 'prime') return primeValue(index);
+  return factorialValue(index);
+}
+
 export function characterMaxHearts(id: string): number {
   const parsed = parseCharacterId(id);
-  if (parsed.kind === 'square') return parsed.squareBase;
-  if (parsed.kind === 'cube') return parsed.cubeBase;
-  return parsed.exponent;
+  return parsed.kind === 'power' ? parsed.exponent : parsed.index;
 }
 
 export function characterInteractionTierCount(maxHearts: number): number {
@@ -166,18 +271,36 @@ export function characterInteractionRequiredHearts(tierIndex: number, maxHearts:
   return Math.round(((tierIndex + 1) / tierCount) * maxHearts);
 }
 
+/** New number-pattern families always expose both greeting and explanation, even for their first members. */
+export function characterInteractionTierCountForId(id: string): number {
+  const parsed = parseCharacterId(id);
+  const tierCount = characterInteractionTierCount(characterMaxHearts(id));
+  return parsed.kind === 'triangular'
+    || parsed.kind === 'fibonacci'
+    || parsed.kind === 'prime'
+    || parsed.kind === 'factorial'
+    ? Math.max(2, tierCount)
+    : tierCount;
+}
+
+export function characterInteractionRequiredHeartsForId(id: string, tierIndex: number): number {
+  const maxHearts = characterMaxHearts(id);
+  const tierCount = characterInteractionTierCountForId(id);
+  return Math.max(1, Math.round(((tierIndex + 1) / tierCount) * maxHearts));
+}
+
 export function characterLabelFromId(id: string): string {
   const parsed = parseCharacterId(id);
-  if (parsed.kind === 'square') return formatSquareCharacterLabel(parsed.squareBase);
-  if (parsed.kind === 'cube') return formatCubeCharacterLabel(parsed.cubeBase);
-  return formatCharacterLabel(parsed.base, parsed.exponent);
+  return parsed.kind === 'power'
+    ? formatCharacterLabel(parsed.base, parsed.exponent)
+    : formatSequenceCharacterLabel(parsed.kind, parsed.index);
 }
 
 export function characterValueFromId(id: string): bigint {
   const parsed = parseCharacterId(id);
-  if (parsed.kind === 'square') return characterValue(parsed.squareBase, 2);
-  if (parsed.kind === 'cube') return characterValue(parsed.cubeBase, 3);
-  return characterValue(parsed.base, parsed.exponent);
+  return parsed.kind === 'power'
+    ? characterValue(parsed.base, parsed.exponent)
+    : sequenceCharacterValue(parsed.kind, parsed.index);
 }
 
 export function formatBigNumber(n: bigint): string {
@@ -206,11 +329,13 @@ export function characterCollectionIndex(base: number, exponent: number): number
 
 export function characterCollectionIndexFromId(id: string): number {
   const parsed = parseCharacterId(id);
-  if (parsed.kind === 'square') return POWER_CHARACTER_SLOTS + Math.max(0, parsed.squareBase - 1);
-  if (parsed.kind === 'cube') {
-    return POWER_CHARACTER_SLOTS + SQUARE_CHARACTER_COUNT + Math.max(0, parsed.cubeBase - 1);
+  if (parsed.kind === 'power') return characterCollectionIndex(parsed.base, parsed.exponent);
+  let offset = POWER_CHARACTER_SLOTS;
+  for (const collection of SEQUENCE_CHARACTER_COLLECTIONS) {
+    if (collection.kind === parsed.kind) return offset + Math.max(0, parsed.index - 1);
+    offset += collection.count;
   }
-  return characterCollectionIndex(parsed.base, parsed.exponent);
+  return offset;
 }
 
 /** Which base is currently open for gacha pulls: the first base in order that isn't fully collected yet. */
@@ -234,17 +359,21 @@ export function ownedCountForBase(characters: Record<string, number>, base: numb
 }
 
 export function ownedSquareCharacterCount(characters: Record<string, number>): number {
-  let count = 0;
-  for (let squareBase = 1; squareBase <= SQUARE_CHARACTER_COUNT; squareBase++) {
-    if (characters[squareCharacterId(squareBase)] !== undefined) count++;
-  }
-  return count;
+  return ownedSequenceCharacterCount(characters, 'square');
 }
 
 export function ownedCubeCharacterCount(characters: Record<string, number>): number {
+  return ownedSequenceCharacterCount(characters, 'cube');
+}
+
+export function ownedSequenceCharacterCount(
+  characters: Record<string, number>,
+  kind: SequenceCharacterKind,
+): number {
+  const collection = getSequenceCollection(kind);
   let count = 0;
-  for (let cubeBase = 1; cubeBase <= CUBE_CHARACTER_COUNT; cubeBase++) {
-    if (characters[cubeCharacterId(cubeBase)] !== undefined) count++;
+  for (let index = 1; index <= collection.count; index++) {
+    if (characters[sequenceCharacterId(kind, index)] !== undefined) count++;
   }
   return count;
 }
@@ -254,7 +383,35 @@ export function arePowerCharactersComplete(characters: Record<string, number>): 
 }
 
 export function areSquareCharactersComplete(characters: Record<string, number>): boolean {
-  return ownedSquareCharacterCount(characters) >= SQUARE_CHARACTER_COUNT;
+  return isSequenceCollectionComplete(characters, 'square');
+}
+
+export function isSequenceCollectionComplete(
+  characters: Record<string, number>,
+  kind: SequenceCharacterKind,
+): boolean {
+  const collection = getSequenceCollection(kind);
+  return ownedSequenceCharacterCount(characters, kind) >= collection.count;
+}
+
+export function nextIncompleteSequenceCollection(
+  characters: Record<string, number>,
+): SequenceCollectionDefinition | null {
+  return SEQUENCE_CHARACTER_COLLECTIONS.find(
+    (collection) => !isSequenceCollectionComplete(characters, collection.kind),
+  ) ?? null;
+}
+
+export function isSequenceCollectionUnlocked(
+  characters: Record<string, number>,
+  kind: SequenceCharacterKind,
+): boolean {
+  if (!arePowerCharactersComplete(characters)) return false;
+  for (const collection of SEQUENCE_CHARACTER_COLLECTIONS) {
+    if (collection.kind === kind) return true;
+    if (!isSequenceCollectionComplete(characters, collection.kind)) return false;
+  }
+  return false;
 }
 
 export interface PowerGachaResult {
@@ -265,21 +422,14 @@ export interface PowerGachaResult {
   isDupe: boolean;
 }
 
-export interface SquareGachaResult {
-  kind: 'square';
+export interface SequenceGachaResult {
+  kind: SequenceCharacterKind;
   id: string;
-  squareBase: number;
+  index: number;
   isDupe: boolean;
 }
 
-export interface CubeGachaResult {
-  kind: 'cube';
-  id: string;
-  cubeBase: number;
-  isDupe: boolean;
-}
-
-export type GachaResult = PowerGachaResult | SquareGachaResult | CubeGachaResult;
+export type GachaResult = PowerGachaResult | SequenceGachaResult;
 
 export interface LevelInfo {
   level: number;
@@ -316,6 +466,16 @@ export const LEVELS: LevelInfo[] = [
   { level: 23, title: '立方探索家', icon: '🧊', threshold: 435 },
   { level: 24, title: '立方大師', icon: '🧠', threshold: 452 },
   { level: 25, title: '次方傳奇', icon: '🌠', threshold: 468 },
+  { level: 26, title: '三角數探索家', icon: '🔻', threshold: 485 },
+  { level: 27, title: '三角數大師', icon: '📐', threshold: 502 },
+  { level: 28, title: '圖形數傳奇', icon: '🔺', threshold: 518 },
+  { level: 29, title: '數列小偵探', icon: '🔍', threshold: 533 },
+  { level: 30, title: '斐波那契大師', icon: '🌀', threshold: 548 },
+  { level: 31, title: '質數探索家', icon: '💎', threshold: 565 },
+  { level: 32, title: '質數大師', icon: '🧩', threshold: 582 },
+  { level: 33, title: '質數守護者', icon: '🛡️', threshold: 598 },
+  { level: 34, title: '階乘挑戰者', icon: '✖️', threshold: 608 },
+  { level: 35, title: '數字規律之王', icon: '👑', threshold: 618 },
 ];
 
 export function currentLevel(charactersOwned: number): LevelInfo {

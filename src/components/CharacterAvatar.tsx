@@ -1,8 +1,7 @@
 import type { CSSProperties } from 'react';
 import {
-  CUBE_CHARACTER_COUNT,
-  SQUARE_CHARACTER_COUNT,
   characterColor,
+  getSequenceCollection,
   maxExponentForBase,
   parseCharacterId,
 } from '../lib/rewards';
@@ -24,8 +23,7 @@ interface CharacterAvatarProps {
 
 /**
  * Keep all character portraits in one visual system:
- * power characters are filled circles, square characters are filled squares,
- * and cube characters are filled triangles. Every collection keeps its rainbow color progression.
+ * Every collection uses a simple filled geometric shape and keeps its own rainbow color progression.
  */
 export function CharacterAvatar({
   id,
@@ -36,26 +34,36 @@ export function CharacterAvatar({
   const parsed = parseCharacterId(id);
   const number = parsed.kind === 'power'
     ? parsed.exponent
-    : parsed.kind === 'square'
-      ? parsed.squareBase
-      : parsed.cubeBase;
+    : parsed.index;
   const max = parsed.kind === 'power'
     ? maxExponentForBase(parsed.base)
-    : parsed.kind === 'square'
-      ? SQUARE_CHARACTER_COUNT
-      : CUBE_CHARACTER_COUNT;
+    : getSequenceCollection(parsed.kind).count;
   const shapeClass = parsed.kind === 'power'
     ? 'rounded-full'
     : parsed.kind === 'square'
       ? 'rounded-lg'
       : '';
+  const clipPath = parsed.kind === 'cube'
+    ? 'polygon(50% 3%, 98% 94%, 2% 94%)'
+    : parsed.kind === 'triangular'
+      ? 'polygon(2% 6%, 98% 6%, 50% 97%)'
+      : parsed.kind === 'fibonacci'
+        ? 'polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)'
+        : parsed.kind === 'prime'
+          ? 'polygon(25% 4%, 75% 4%, 100% 50%, 75% 96%, 25% 96%, 0% 50%)'
+          : parsed.kind === 'factorial'
+            ? 'polygon(30% 0%, 70% 0%, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0% 70%, 0% 30%)'
+            : undefined;
   const shapeStyle: CSSProperties = {
     backgroundColor: characterColor(number, max),
-    ...(parsed.kind === 'cube'
-      ? { clipPath: 'polygon(50% 3%, 98% 94%, 2% 94%)' }
-      : {}),
+    ...(clipPath ? { clipPath } : {}),
     ...style,
   };
+  const numberPositionClass = parsed.kind === 'cube'
+    ? 'translate-y-[18%]'
+    : parsed.kind === 'triangular'
+      ? '-translate-y-[15%]'
+      : undefined;
 
   return (
     <div
@@ -63,7 +71,7 @@ export function CharacterAvatar({
       className={`${SIZE_CLASSES[size]} ${shapeClass} flex items-center justify-center font-extrabold text-white shadow-inner ${className}`}
       style={shapeStyle}
     >
-      <span className={parsed.kind === 'cube' ? 'translate-y-[18%]' : undefined}>{number}</span>
+      <span className={numberPositionClass}>{number}</span>
     </div>
   );
 }

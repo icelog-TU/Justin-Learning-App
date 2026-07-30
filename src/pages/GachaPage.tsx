@@ -12,17 +12,30 @@ import {
   formatBigNumber,
   characterValueFromId,
   TOTAL_CHARACTER_SLOTS,
-  SQUARE_CHARACTER_COUNT,
-  ownedSquareCharacterCount,
   arePowerCharactersComplete,
-  CUBE_CHARACTER_COUNT,
-  ownedCubeCharacterCount,
-  areSquareCharactersComplete,
+  SEQUENCE_CHARACTER_COLLECTIONS,
+  nextIncompleteSequenceCollection,
+  ownedSequenceCharacterCount,
+  isSequenceCollectionUnlocked,
+  type SequenceCharacterKind,
 } from '../lib/rewards';
 import type { GachaResult } from '../lib/rewards';
 import { playGachaSpinSound, playGachaRevealSound } from '../lib/sound';
 import { speak } from '../lib/speech';
 import { CharacterAvatar } from '../components/CharacterAvatar';
+
+const SEQUENCE_PROGRESS_THEME: Record<SequenceCharacterKind, {
+  symbol: string;
+  activeBar: string;
+  text: string;
+}> = {
+  square: { symbol: 'text-violet-500', activeBar: 'bg-violet-500', text: 'text-violet-600' },
+  cube: { symbol: 'text-sky-500', activeBar: 'bg-sky-500', text: 'text-sky-600' },
+  triangular: { symbol: 'text-rose-500', activeBar: 'bg-rose-500', text: 'text-rose-600' },
+  fibonacci: { symbol: 'text-amber-500', activeBar: 'bg-amber-500', text: 'text-amber-600' },
+  prime: { symbol: 'text-emerald-500', activeBar: 'bg-emerald-500', text: 'text-emerald-600' },
+  factorial: { symbol: 'text-indigo-500', activeBar: 'bg-indigo-500', text: 'text-indigo-600' },
+};
 
 export default function GachaPage() {
   const { data, rollGacha } = useAppDataContext();
@@ -32,12 +45,10 @@ export default function GachaPage() {
 
   const activeBase = currentUnlockedBase(data.characters);
   const powersComplete = arePowerCharactersComplete(data.characters);
-  const squareOwned = ownedSquareCharacterCount(data.characters);
-  const cubeOwned = ownedCubeCharacterCount(data.characters);
-  const squareCollectionActive = powersComplete && squareOwned < SQUARE_CHARACTER_COUNT;
-  const squaresComplete = areSquareCharactersComplete(data.characters);
-  const cubeCollectionActive = powersComplete && squaresComplete && cubeOwned < CUBE_CHARACTER_COUNT;
-  const allCollected = powersComplete && squaresComplete && cubeOwned >= CUBE_CHARACTER_COUNT;
+  const activeSequenceCollection = powersComplete
+    ? nextIncompleteSequenceCollection(data.characters)
+    : null;
+  const allCollected = powersComplete && activeSequenceCollection === null;
   const canAfford = data.coins >= GACHA_COST_COINS;
 
   function handleRoll() {
@@ -63,7 +74,7 @@ export default function GachaPage() {
       <div>
         <h2 className="text-xl font-bold text-gray-800">轉蛋</h2>
         <p className="text-sm text-gray-500">
-          用金幣依序收集八組次方角色、平方角色與立方角色，共 {TOTAL_CHARACTER_SLOTS} 隻！
+          用金幣依序收集次方、平方、立方和四組數字規律角色，共 {TOTAL_CHARACTER_SLOTS} 隻！
         </p>
       </div>
 
@@ -79,15 +90,15 @@ export default function GachaPage() {
         ) : (
           <>
             <p className="text-sm text-gray-500">
-              {cubeCollectionActive ? (
+              {activeSequenceCollection ? (
                 <>
-                  目前可以轉到 <span className="font-bold text-sky-600">1³ 到 50³ 的立方</span>角色（
-                  {cubeOwned} / {CUBE_CHARACTER_COUNT}）
-                </>
-              ) : squareCollectionActive ? (
-                <>
-                  目前可以轉到 <span className="font-bold text-violet-600">1² 到 50² 的平方</span>角色（
-                  {squareOwned} / {SQUARE_CHARACTER_COUNT}）
+                  目前可以轉到{' '}
+                  <span className={`font-bold ${SEQUENCE_PROGRESS_THEME[activeSequenceCollection.kind].text}`}>
+                    {activeSequenceCollection.name}
+                  </span>
+                  （{ownedSequenceCharacterCount(data.characters, activeSequenceCollection.kind)}
+                  {' / '}
+                  {activeSequenceCollection.count}）
                 </>
               ) : (
                 <>
@@ -166,38 +177,31 @@ export default function GachaPage() {
               </Link>
             );
           })}
-          <Link
-            to="/characters?collection=squares"
-            className="flex items-center gap-3 rounded-lg hover:bg-gray-50 -mx-1 px-1 py-0.5"
-          >
-            <span className="w-7 text-xl leading-none text-violet-500">■</span>
-            <span className="w-16 text-sm font-semibold text-gray-700">平方角色</span>
-            <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
-              <div
-                className={`h-full ${squareCollectionActive ? 'bg-violet-500' : 'bg-emerald-500'}`}
-                style={{ width: `${(squareOwned / SQUARE_CHARACTER_COUNT) * 100}%` }}
-              />
-            </div>
-            <span className="text-xs text-gray-400 w-14 text-right">
-              {!powersComplete ? '🔒 未解鎖' : `${squareOwned}/${SQUARE_CHARACTER_COUNT}`}
-            </span>
-          </Link>
-          <Link
-            to="/characters?collection=cubes"
-            className="flex items-center gap-3 rounded-lg hover:bg-gray-50 -mx-1 px-1 py-0.5"
-          >
-            <span className="w-7 text-xl leading-none text-sky-500">▲</span>
-            <span className="w-16 text-sm font-semibold text-gray-700">立方角色</span>
-            <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
-              <div
-                className={`h-full ${cubeCollectionActive ? 'bg-sky-500' : 'bg-emerald-500'}`}
-                style={{ width: `${(cubeOwned / CUBE_CHARACTER_COUNT) * 100}%` }}
-              />
-            </div>
-            <span className="text-xs text-gray-400 w-14 text-right">
-              {!squaresComplete ? '🔒 未解鎖' : `${cubeOwned}/${CUBE_CHARACTER_COUNT}`}
-            </span>
-          </Link>
+          {SEQUENCE_CHARACTER_COLLECTIONS.map((collection) => {
+            const owned = ownedSequenceCharacterCount(data.characters, collection.kind);
+            const unlocked = isSequenceCollectionUnlocked(data.characters, collection.kind);
+            const isActive = activeSequenceCollection?.kind === collection.kind;
+            const theme = SEQUENCE_PROGRESS_THEME[collection.kind];
+            return (
+              <Link
+                key={collection.kind}
+                to={`/characters?collection=${collection.slug}`}
+                className="flex items-center gap-3 rounded-lg hover:bg-gray-50 -mx-1 px-1 py-0.5"
+              >
+                <span className={`w-7 text-xl leading-none ${theme.symbol}`}>{collection.symbol}</span>
+                <span className="w-20 text-sm font-semibold text-gray-700">{collection.name}</span>
+                <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
+                  <div
+                    className={`h-full ${isActive ? theme.activeBar : 'bg-emerald-500'}`}
+                    style={{ width: `${(owned / collection.count) * 100}%` }}
+                  />
+                </div>
+                <span className="text-xs text-gray-400 w-14 text-right">
+                  {!unlocked ? '🔒 未解鎖' : `${owned}/${collection.count}`}
+                </span>
+              </Link>
+            );
+          })}
         </div>
       </div>
     </div>

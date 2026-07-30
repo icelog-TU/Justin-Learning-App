@@ -7,15 +7,11 @@ import {
   ASSOCIATION_CHAR_MILESTONE_INTERVAL,
   characterId,
   currentUnlockedBase,
-  SQUARE_CHARACTER_COUNT,
-  squareCharacterId,
-  ownedSquareCharacterCount,
-  CUBE_CHARACTER_COUNT,
-  cubeCharacterId,
-  ownedCubeCharacterCount,
+  nextIncompleteSequenceCollection,
+  sequenceCharacterId,
   characterMaxHearts,
-  characterInteractionTierCount,
-  characterInteractionRequiredHearts,
+  characterInteractionTierCountForId,
+  characterInteractionRequiredHeartsForId,
   type GachaResult,
 } from './rewards';
 import type { CustomChainEntry } from './chainGame';
@@ -183,9 +179,8 @@ export function reconcileLearningDates(data: AppData): AppData {
 function migrateLegacySeenCharacterInteractions(characters: Record<string, number>): Record<string, number[]> {
   return Object.fromEntries(
     Object.entries(characters).map(([id, hearts]) => {
-      const maxHearts = characterMaxHearts(id);
-      const seen = Array.from({ length: characterInteractionTierCount(maxHearts) }, (_, index) => index)
-        .filter((index) => hearts >= characterInteractionRequiredHearts(index, maxHearts));
+      const seen = Array.from({ length: characterInteractionTierCountForId(id) }, (_, index) => index)
+        .filter((index) => hearts >= characterInteractionRequiredHeartsForId(id, index));
       return [id, seen];
     }),
   );
@@ -282,43 +277,34 @@ export function earnRewards(data: AppData, coins: number, stars: number): AppDat
 export function rollGacha(data: AppData): { data: AppData; result: GachaResult | null } {
   if (data.coins < GACHA_COST_COINS) return { data, result: null };
   const base = currentUnlockedBase(data.characters);
-  const squareCollectionActive = base === null && ownedSquareCharacterCount(data.characters) < SQUARE_CHARACTER_COUNT;
-  const cubeCollectionActive = base === null && !squareCollectionActive;
-  if (cubeCollectionActive && ownedCubeCharacterCount(data.characters) >= CUBE_CHARACTER_COUNT) {
-    return { data, result: null };
-  }
+  const sequenceCollection = base === null ? nextIncompleteSequenceCollection(data.characters) : null;
+  if (base === null && sequenceCollection === null) return { data, result: null };
 
   data.coins -= GACHA_COST_COINS;
 
   // Pity system: if the last GACHA_PITY_LIMIT - 1 rolls were all dupes, this roll is guaranteed new.
   const forceNew = data.gachaPityCounter >= GACHA_PITY_LIMIT - 1;
   let result: GachaResult;
-  if (squareCollectionActive) {
-    let squareBase: number;
+  if (sequenceCollection) {
+    let index: number;
     if (forceNew) {
       const unowned: number[] = [];
-      for (let candidate = 1; candidate <= SQUARE_CHARACTER_COUNT; candidate++) {
-        if (data.characters[squareCharacterId(candidate)] === undefined) unowned.push(candidate);
+      for (let candidate = 1; candidate <= sequenceCollection.count; candidate++) {
+        if (data.characters[sequenceCharacterId(sequenceCollection.kind, candidate)] === undefined) {
+          unowned.push(candidate);
+        }
       }
-      squareBase = unowned[Math.floor(Math.random() * unowned.length)];
+      index = unowned[Math.floor(Math.random() * unowned.length)];
     } else {
-      squareBase = 1 + Math.floor(Math.random() * SQUARE_CHARACTER_COUNT);
+      index = 1 + Math.floor(Math.random() * sequenceCollection.count);
     }
-    const id = squareCharacterId(squareBase);
-    result = { kind: 'square', id, squareBase, isDupe: data.characters[id] !== undefined };
-  } else if (cubeCollectionActive) {
-    let cubeBase: number;
-    if (forceNew) {
-      const unowned: number[] = [];
-      for (let candidate = 1; candidate <= CUBE_CHARACTER_COUNT; candidate++) {
-        if (data.characters[cubeCharacterId(candidate)] === undefined) unowned.push(candidate);
-      }
-      cubeBase = unowned[Math.floor(Math.random() * unowned.length)];
-    } else {
-      cubeBase = 1 + Math.floor(Math.random() * CUBE_CHARACTER_COUNT);
-    }
-    const id = cubeCharacterId(cubeBase);
-    result = { kind: 'cube', id, cubeBase, isDupe: data.characters[id] !== undefined };
+    const id = sequenceCharacterId(sequenceCollection.kind, index);
+    result = {
+      kind: sequenceCollection.kind,
+      id,
+      index,
+      isDupe: data.characters[id] !== undefined,
+    };
   } else {
     if (base === null) return { data, result: null };
     const maxExponent = maxExponentForBase(base);

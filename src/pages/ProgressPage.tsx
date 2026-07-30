@@ -7,12 +7,10 @@ import { getStreakDays } from '../lib/storage';
 import {
   GACHA_BASES,
   TOTAL_CHARACTER_SLOTS,
-  SQUARE_CHARACTER_COUNT,
   maxExponentForBase,
   currentLevel,
-  ownedSquareCharacterCount,
-  CUBE_CHARACTER_COUNT,
-  ownedCubeCharacterCount,
+  SEQUENCE_CHARACTER_COLLECTIONS,
+  ownedSequenceCharacterCount,
 } from '../lib/rewards';
 import { guwenLessons } from '../data/guwenLesson';
 
@@ -85,14 +83,18 @@ export default function ProgressPage() {
               </Link>
             );
           })}
-          <Link to="/characters?collection=squares" className="rounded-lg py-1 hover:bg-gray-50">
-            <p className="font-bold text-gray-700">{ownedSquareCharacterCount(data.characters)}/{SQUARE_CHARACTER_COUNT}</p>
-            <p>1² 到 50²</p>
-          </Link>
-          <Link to="/characters?collection=cubes" className="rounded-lg py-1 hover:bg-gray-50">
-            <p className="font-bold text-gray-700">{ownedCubeCharacterCount(data.characters)}/{CUBE_CHARACTER_COUNT}</p>
-            <p>1³ 到 50³</p>
-          </Link>
+          {SEQUENCE_CHARACTER_COLLECTIONS.map((collection) => (
+            <Link
+              key={collection.kind}
+              to={`/characters?collection=${collection.slug}`}
+              className="rounded-lg py-1 hover:bg-gray-50"
+            >
+              <p className="font-bold text-gray-700">
+                {ownedSequenceCharacterCount(data.characters, collection.kind)}/{collection.count}
+              </p>
+              <p>{collection.name}</p>
+            </Link>
+          ))}
         </div>
       </div>
 

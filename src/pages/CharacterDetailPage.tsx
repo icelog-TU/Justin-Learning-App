@@ -9,14 +9,16 @@ import {
   characterLabelFromId,
   characterMaxHearts,
   characterCollectionIndexFromId,
-  characterInteractionTierCount,
-  characterInteractionRequiredHearts,
+  characterInteractionTierCountForId,
+  characterInteractionRequiredHeartsForId,
 } from '../lib/rewards';
 import { CharacterAvatar } from '../components/CharacterAvatar';
 import { numberToChineseWords } from '../lib/chineseNumber';
 import {
+  characterGreetingMessage,
   characterInteractionTemplateIndex,
-  characterNumberInteractionMessage,
+  characterNumberInteractionMessageForId,
+  characterSecretMessage,
 } from '../lib/characterInteractions';
 import { speak } from '../lib/speech';
 import { playPageEnterSound, playHeartSound, playInteractionSound, playUnlockFanfare } from '../lib/sound';
@@ -77,8 +79,8 @@ const TEMPLATES: {
 }[] = [
   { icon: '👋', label: '打招呼', message: (base, exponent) => `你好！我是 ${base} 的 ${exponent} 次方！` },
   {
-    icon: '💬', label: '聊聊天', message: (base, _exponent, requiredHearts) =>
-      characterNumberInteractionMessage(base, requiredHearts),
+    // The builder supplies the family-specific number explanation for this reserved position.
+    icon: '💬', label: '聊聊天', message: () => '',
   },
   { icon: '🍽️', label: '一起吃飯', message: (base, exponent) => `我們一起吃了${pick(FOODS, seedFor(base, exponent, 2))}，好好吃！` },
   { icon: '🎤', label: '一起唱歌', message: (base, exponent) => `我們一起唱了《${pick(SONGS, seedFor(base, exponent, 3))}》，唱得好開心！` },
@@ -125,21 +127,28 @@ const TEMPLATES: {
  * Persistent interaction identity is the character id plus tier index; internal identifiers must never be
  * exposed in child-facing display or speech.
  */
-function buildInteractionTiers(id: string, base: number, exponent: number, maxHearts: number): InteractionTier[] {
-  const tierCount = characterInteractionTierCount(maxHearts);
+function buildInteractionTiers(id: string, base: number, exponent: number): InteractionTier[] {
+  const tierCount = characterInteractionTierCountForId(id);
   const characterIndex = characterCollectionIndexFromId(id);
   const tiers: InteractionTier[] = [];
   for (let i = 1; i <= tierCount; i++) {
-    const requiredHearts = characterInteractionRequiredHearts(i - 1, maxHearts);
-    // Justin wants every character to greet him first, then use the four-heart interaction to explain
-    // the character's multiplication. Only the remaining activities are shuffled.
+    const requiredHearts = characterInteractionRequiredHeartsForId(id, i - 1);
+    // Justin wants every character to greet him first, then explain how its number is formed.
+    // Only the remaining activities are shuffled.
     const templateIndex = characterInteractionTemplateIndex(characterIndex, i - 1, TEMPLATES.length);
     const template = TEMPLATES[templateIndex];
+    const message = templateIndex === 0
+      ? characterGreetingMessage(id)
+      : templateIndex === 1
+        ? characterNumberInteractionMessageForId(id, requiredHearts)
+        : templateIndex === 10
+          ? characterSecretMessage(id)
+          : template.message(base, exponent, requiredHearts);
     tiers.push({
       requiredHearts,
       icon: template.icon,
       label: template.label,
-      message: template.message(base, exponent, requiredHearts),
+      message,
     });
   }
   return tiers;
@@ -192,16 +201,12 @@ export default function CharacterDetailPage() {
   }
 
   const parsed = parseCharacterId(id);
-  const base = parsed.kind === 'power'
-    ? parsed.base
-    : parsed.kind === 'square'
-      ? parsed.squareBase
-      : parsed.cubeBase;
-  const exponent = parsed.kind === 'power' ? parsed.exponent : parsed.kind === 'square' ? 2 : 3;
+  const base = parsed.kind === 'power' ? parsed.base : characterCollectionIndexFromId(id) + 1;
+  const exponent = parsed.kind === 'power' ? parsed.exponent : parsed.index;
   const maxHearts = characterMaxHearts(id);
   const isFull = hearts >= maxHearts;
   const canGiveHeart = !isFull && data.stars >= HEART_COST_STARS;
-  const tiers = buildInteractionTiers(id, base, exponent, maxHearts);
+  const tiers = buildInteractionTiers(id, base, exponent);
   const seenTiers = new Set(data.seenCharacterInteractions[id] ?? []);
   const value = characterValueFromId(id);
   const label = characterLabelFromId(id);
@@ -225,7 +230,7 @@ export default function CharacterDetailPage() {
   }
 
   function handleGreeting() {
-    const text = TEMPLATES[0].message(base, exponent, 0);
+    const text = characterGreetingMessage(id);
     setMessage(text);
     speak(text);
   }

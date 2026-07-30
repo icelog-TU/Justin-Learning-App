@@ -9,25 +9,73 @@ import {
   characterId,
   currentUnlockedBase,
   ownedCountForBase,
-  formatCharacterLabel,
-  formatSquareCharacterLabel,
   formatBigNumber,
-  characterValue,
-  SQUARE_CHARACTER_COUNT,
-  squareCharacterId,
-  ownedSquareCharacterCount,
-  arePowerCharactersComplete,
-  CUBE_CHARACTER_COUNT,
-  cubeCharacterId,
-  ownedCubeCharacterCount,
-  formatCubeCharacterLabel,
-  areSquareCharactersComplete,
+  characterLabelFromId,
+  characterValueFromId,
+  SEQUENCE_CHARACTER_COLLECTIONS,
+  getSequenceCollection,
+  getSequenceCollectionBySlug,
+  sequenceCharacterId,
+  ownedSequenceCharacterCount,
+  isSequenceCollectionUnlocked,
+  type SequenceCharacterKind,
 } from '../lib/rewards';
 import { playHeartSound } from '../lib/sound';
 import { CharacterAvatar } from '../components/CharacterAvatar';
 
 type CharacterSort = 'exponent-asc' | 'exponent-desc' | 'missing-desc' | 'missing-asc';
-type CollectionSelection = number | 'squares' | 'cubes';
+type CollectionSelection = number | SequenceCharacterKind;
+
+const SEQUENCE_THEME: Record<SequenceCharacterKind, {
+  selected: string;
+  idle: string;
+  symbol: string;
+  selectedSubtext: string;
+  cardText: string;
+}> = {
+  square: {
+    selected: 'bg-violet-500 text-white border-violet-500',
+    idle: 'bg-white text-gray-600 border-gray-200 hover:border-violet-300',
+    symbol: 'text-violet-500',
+    selectedSubtext: 'text-violet-100',
+    cardText: 'text-violet-600',
+  },
+  cube: {
+    selected: 'bg-sky-500 text-white border-sky-500',
+    idle: 'bg-white text-gray-600 border-gray-200 hover:border-sky-300',
+    symbol: 'text-sky-500',
+    selectedSubtext: 'text-sky-100',
+    cardText: 'text-sky-600',
+  },
+  triangular: {
+    selected: 'bg-rose-500 text-white border-rose-500',
+    idle: 'bg-white text-gray-600 border-gray-200 hover:border-rose-300',
+    symbol: 'text-rose-500',
+    selectedSubtext: 'text-rose-100',
+    cardText: 'text-rose-600',
+  },
+  fibonacci: {
+    selected: 'bg-amber-500 text-white border-amber-500',
+    idle: 'bg-white text-gray-600 border-gray-200 hover:border-amber-300',
+    symbol: 'text-amber-500',
+    selectedSubtext: 'text-amber-100',
+    cardText: 'text-amber-600',
+  },
+  prime: {
+    selected: 'bg-emerald-500 text-white border-emerald-500',
+    idle: 'bg-white text-gray-600 border-gray-200 hover:border-emerald-300',
+    symbol: 'text-emerald-500',
+    selectedSubtext: 'text-emerald-100',
+    cardText: 'text-emerald-600',
+  },
+  factorial: {
+    selected: 'bg-indigo-500 text-white border-indigo-500',
+    idle: 'bg-white text-gray-600 border-gray-200 hover:border-indigo-300',
+    symbol: 'text-indigo-500',
+    selectedSubtext: 'text-indigo-100',
+    cardText: 'text-indigo-600',
+  },
+};
 
 export default function CharactersPage() {
   const { data, giveHeart } = useAppDataContext();
@@ -35,8 +83,9 @@ export default function CharactersPage() {
   const [searchParams] = useSearchParams();
   const baseFromUrl = Number(searchParams.get('base'));
   const requestedCollection = searchParams.get('collection');
-  const initialCollection: CollectionSelection = requestedCollection === 'squares' || requestedCollection === 'cubes'
-    ? requestedCollection
+  const requestedSequence = getSequenceCollectionBySlug(requestedCollection);
+  const initialCollection: CollectionSelection = requestedSequence
+    ? requestedSequence.kind
     : GACHA_BASES.includes(baseFromUrl as (typeof GACHA_BASES)[number])
       ? baseFromUrl
       : (activeBase ?? GACHA_BASES[0]);
@@ -44,17 +93,13 @@ export default function CharactersPage() {
   const [onlyNeedsHearts, setOnlyNeedsHearts] = useState(false);
   const [sortBy, setSortBy] = useState<CharacterSort>('exponent-asc');
 
-  const isSquareCollection = selectedCollection === 'squares';
-  const isCubeCollection = selectedCollection === 'cubes';
-  const selectedCount = isSquareCollection
-    ? SQUARE_CHARACTER_COUNT
-    : isCubeCollection
-      ? CUBE_CHARACTER_COUNT
-      : maxExponentForBase(selectedCollection);
+  const selectedSequence = typeof selectedCollection === 'number'
+    ? null
+    : getSequenceCollection(selectedCollection);
+  const selectedCount = selectedSequence?.count ?? maxExponentForBase(selectedCollection as number);
   const idForIndex = (index: number) => {
-    if (isSquareCollection) return squareCharacterId(index);
-    if (isCubeCollection) return cubeCharacterId(index);
-    return characterId(selectedCollection, index);
+    if (selectedSequence) return sequenceCharacterId(selectedSequence.kind, index);
+    return characterId(selectedCollection as number, index);
   };
   const characterIndexes = Array.from({ length: selectedCount }, (_, i) => i + 1)
     .filter((index) => {
@@ -84,11 +129,9 @@ export default function CharactersPage() {
     const hearts = data.characters[idForIndex(index)];
     return hearts !== undefined && hearts < index;
   }).length;
-  const selectedOwnedCount = isSquareCollection
-    ? ownedSquareCharacterCount(data.characters)
-    : isCubeCollection
-      ? ownedCubeCharacterCount(data.characters)
-      : ownedCountForBase(data.characters, selectedCollection);
+  const selectedOwnedCount = selectedSequence
+    ? ownedSequenceCharacterCount(data.characters, selectedSequence.kind)
+    : ownedCountForBase(data.characters, selectedCollection as number);
 
   return (
     <div className="space-y-4">
@@ -134,42 +177,33 @@ export default function CharactersPage() {
             </button>
           );
         })}
-        <button
-          type="button"
-          onClick={() => setSelectedCollection('squares')}
-          className={`px-3 py-2 rounded-xl text-sm font-medium border flex items-center gap-2 ${
-            isSquareCollection
-              ? 'bg-violet-500 text-white border-violet-500'
-              : 'bg-white text-gray-600 border-gray-200 hover:border-violet-300'
-          }`}
-        >
-          <span className="text-xl leading-none text-violet-500">■</span>
-          <span className="flex-1 text-left leading-tight">
-            <span className="block">1² 到 50²</span>
-            <span className={`block text-[11px] ${isSquareCollection ? 'text-violet-100' : 'text-gray-400'}`}>
-              {ownedSquareCharacterCount(data.characters)}/{SQUARE_CHARACTER_COUNT}
-            </span>
-          </span>
-          {!arePowerCharactersComplete(data.characters) && <span>🔒</span>}
-        </button>
-        <button
-          type="button"
-          onClick={() => setSelectedCollection('cubes')}
-          className={`px-3 py-2 rounded-xl text-sm font-medium border flex items-center gap-2 ${
-            isCubeCollection
-              ? 'bg-sky-500 text-white border-sky-500'
-              : 'bg-white text-gray-600 border-gray-200 hover:border-sky-300'
-          }`}
-        >
-          <span className="text-xl leading-none text-sky-500">▲</span>
-          <span className="flex-1 text-left leading-tight">
-            <span className="block">1³ 到 50³</span>
-            <span className={`block text-[11px] ${isCubeCollection ? 'text-sky-100' : 'text-gray-400'}`}>
-              {ownedCubeCharacterCount(data.characters)}/{CUBE_CHARACTER_COUNT}
-            </span>
-          </span>
-          {!areSquareCharactersComplete(data.characters) && <span>🔒</span>}
-        </button>
+        {SEQUENCE_CHARACTER_COLLECTIONS.map((collection) => {
+          const isSelected = selectedCollection === collection.kind;
+          const theme = SEQUENCE_THEME[collection.kind];
+          const owned = ownedSequenceCharacterCount(data.characters, collection.kind);
+          const unlocked = isSequenceCollectionUnlocked(data.characters, collection.kind);
+          return (
+            <button
+              key={collection.kind}
+              type="button"
+              onClick={() => setSelectedCollection(collection.kind)}
+              className={`px-3 py-2 rounded-xl text-sm font-medium border flex items-center gap-2 ${
+                isSelected ? theme.selected : theme.idle
+              }`}
+            >
+              <span className={`text-xl leading-none ${isSelected ? 'text-white' : theme.symbol}`}>
+                {collection.symbol}
+              </span>
+              <span className="flex-1 text-left leading-tight">
+                <span className="block">{collection.rangeLabel}</span>
+                <span className={`block text-[11px] ${isSelected ? theme.selectedSubtext : 'text-gray-400'}`}>
+                  {owned}/{collection.count}
+                </span>
+              </span>
+              {!unlocked && <span>🔒</span>}
+            </button>
+          );
+        })}
       </div>
 
       <details className="group rounded-2xl border-2 border-pink-200 bg-pink-50 p-4 shadow-sm">
@@ -204,8 +238,8 @@ export default function CharactersPage() {
               onChange={(event) => setSortBy(event.target.value as CharacterSort)}
               className="w-full rounded-xl border border-pink-200 bg-white px-3 py-3 text-sm text-gray-700"
             >
-              <option value="exponent-asc">{isSquareCollection || isCubeCollection ? '底數' : '次方'}：小到大</option>
-              <option value="exponent-desc">{isSquareCollection || isCubeCollection ? '底數' : '次方'}：大到小</option>
+              <option value="exponent-asc">{selectedSequence ? '編號' : '次方'}：小到大</option>
+              <option value="exponent-desc">{selectedSequence ? '編號' : '次方'}：大到小</option>
               <option value="missing-desc">愛心缺最多的在最上面</option>
               <option value="missing-asc">愛心最接近填滿的在最上面</option>
             </select>
@@ -227,16 +261,11 @@ export default function CharactersPage() {
             const currentHearts = hearts ?? 0;
             const isFull = owned && currentHearts >= index;
             const canGiveHeart = owned && !isFull && data.stars >= HEART_COST_STARS;
-            const label = isSquareCollection
-              ? formatSquareCharacterLabel(index)
-              : isCubeCollection
-                ? formatCubeCharacterLabel(index)
-                : formatCharacterLabel(selectedCollection, index);
-            const value = isSquareCollection
-              ? characterValue(index, 2)
-              : isCubeCollection
-                ? characterValue(index, 3)
-                : characterValue(selectedCollection, index);
+            const label = characterLabelFromId(id);
+            const value = characterValueFromId(id);
+            const labelColor = selectedSequence
+              ? SEQUENCE_THEME[selectedSequence.kind].cardText
+              : 'text-orange-600';
 
             return (
               <div
@@ -249,9 +278,7 @@ export default function CharactersPage() {
                   <>
                     <Link to={`/characters/${encodeURIComponent(id)}`} className="block">
                       <CharacterAvatar id={id} className="mx-auto" />
-                      <p className={`text-lg font-extrabold mt-1 ${
-                        isSquareCollection ? 'text-violet-600' : isCubeCollection ? 'text-sky-600' : 'text-orange-600'
-                      }`}>
+                      <p className={`text-lg font-extrabold mt-1 ${labelColor}`}>
                         {label}
                       </p>
                       <p className="text-[11px] text-gray-400 leading-tight">
