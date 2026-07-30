@@ -56,6 +56,8 @@ import type { ChildSnapshot } from './guwen-master-child-snapshot';
 // 本次只同步保護基準，不改教材正文。
 // 2026-07-30：成人預覽 catalog 改由跨篇進度表自動建立；同步第七至十篇目前 Active 主檔指紋，
 // 讓新篇加入進度表後即可納入格式保護。指紋只記錄當下文字，不改變各篇待審或核准狀態。
+// 2026-07-30：《疑鄰竊斧》依使用者核准藍圖完成第十二篇全文草稿；
+// 建立草稿孩子端保護指紋，避免送審期間被未授權改寫。指紋不代表教材已核准。
 export const GUWEN_CHILD_BASELINE: Record<string, ChildSnapshot> = {
   'lessons/01-guwen-wangrong-rewrite.md': { questionCount: 20, hash: 'f66b7f8c6daf8f03e85be9990e7305f90466a808ec2b6608a798ac09e2d7d7e8' },
   '02-guwen-simaguang-decoder-content.md': { questionCount: 18, hash: 'e78c3eec7012fa42d81eb24ef4a000221784b5c2ced4d479cda0757dd4bb817e' },
@@ -67,4 +69,5 @@ export const GUWEN_CHILD_BASELINE: Record<string, ChildSnapshot> = {
   '08-guwen-changganrucheng-decoder-content.md': { questionCount: 20, hash: 'ae136007ed28f0a9490ced4f6758c5fe18dad39788bae6b8fe82b5f1910fcb42' },
   '09-guwen-yangshizi-decoder-content.md': { questionCount: 20, hash: '5fae8aaa53bb786cdde11d62420862d36a0f2749ea3c1cb6aee28aabc68691b9' },
   '10-guwen-zixiangmaodun-decoder-content.md': { questionCount: 20, hash: 'ab5f45cee24c55430bafbe51cd8794c25d3b640e90e0c4c5c79e9200f7143b81' },
+  '12-guwen-yilinqiefu-decoder-content.md': { questionCount: 20, hash: '98674e7a02af906069a04385f400427d11d7bdbf11cbe753f6d59465ee3b58e7' },
 };
