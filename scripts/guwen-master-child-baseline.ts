@@ -68,6 +68,8 @@ import type { ChildSnapshot } from './guwen-master-child-snapshot';
 // 第 16 題改為直接判斷兩句話能否同時成立；同步更新草稿保護指紋。
 // 2026-07-30：《自相矛盾》第 16、17、19、20 題經使用者核准；第 14 題補清楚皇帝在評價周勃，
 // 第 18 題在兩種結果前補上具體測試說明；同步更新草稿保護指紋。
+// 2026-07-30：《自相矛盾》第 14 題刪除白話線索中提前翻出的【何如】意思，
+// 改由國王的回答提供推理證據；同步更新草稿保護指紋。
 // 2026-07-30：《楊氏之子》Active 最新核准版接入正式 App；同步更新第九篇上線狀態後的保護指紋。
 // 同日補登遠端固定分支已加入的第十一篇 active 主檔保護指紋；只記錄當下文字，不代表教材已核准。
 export const GUWEN_CHILD_BASELINE: Record<string, ChildSnapshot> = {
@@ -80,7 +82,7 @@ export const GUWEN_CHILD_BASELINE: Record<string, ChildSnapshot> = {
   '07-guwen-zhengrenmailv-decoder-content.md': { questionCount: 20, hash: '688af97e8b6360595c4cb61d2fbacd8c7000ecd81b9e00abf97537347fbe3c72' },
   '08-guwen-changganrucheng-decoder-content.md': { questionCount: 20, hash: 'ae136007ed28f0a9490ced4f6758c5fe18dad39788bae6b8fe82b5f1910fcb42' },
   '09-guwen-yangshizi-decoder-content.md': { questionCount: 20, hash: '8ca3e8c301f4613e3ae810c829d8954a663625df67b39be9dc118e99b0be18f5' },
-  '10-guwen-zixiangmaodun-decoder-content.md': { questionCount: 20, hash: '6a2a783132a85bd8c986c596a37fef3673201fde43c9f2d371ec6cbfa5bedb8a' },
+  '10-guwen-zixiangmaodun-decoder-content.md': { questionCount: 20, hash: '7eeaf5cbf8504677ccf2366e856b48a1407eb77bcbf9374b3e162a20ba87765d' },
   '11-guwen-yurenshiyan-decoder-content.md': { questionCount: 21, hash: '1141a1426657e58209bf5b386acfbf67f6d79d52489fb811b10e4a3a0299a71e' },
   '12-guwen-yilinqiefu-decoder-content.md': { questionCount: 20, hash: '98674e7a02af906069a04385f400427d11d7bdbf11cbe753f6d59465ee3b58e7' },
 };
