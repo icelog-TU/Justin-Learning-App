@@ -75,6 +75,8 @@ import type { ChildSnapshot } from './guwen-master-child-snapshot';
 // 2026-07-30：《楊氏之子》Active 最新核准版接入正式 App；同步更新第九篇上線狀態後的保護指紋。
 // 同日補登遠端固定分支已加入的第十一篇 active 主檔保護指紋；只記錄當下文字，不代表教材已核准。
 // 2026-07-30：《自相矛盾》第 18 題以推論箭頭取代兩個冒號；同步更新第十篇草稿保護指紋。
+// 2026-07-31：《疑鄰竊斧》第 1 題依使用者人工審核意見補足兩條線索的前後文，
+// 並刪除重複引導語；同步更新第十二篇草稿保護指紋。指紋不代表教材已核准。
 export const GUWEN_CHILD_BASELINE: Record<string, ChildSnapshot> = {
   'lessons/01-guwen-wangrong-rewrite.md': { questionCount: 20, hash: 'f66b7f8c6daf8f03e85be9990e7305f90466a808ec2b6608a798ac09e2d7d7e8' },
   '02-guwen-simaguang-decoder-content.md': { questionCount: 18, hash: 'e78c3eec7012fa42d81eb24ef4a000221784b5c2ced4d479cda0757dd4bb817e' },
@@ -87,5 +89,5 @@ export const GUWEN_CHILD_BASELINE: Record<string, ChildSnapshot> = {
   '09-guwen-yangshizi-decoder-content.md': { questionCount: 20, hash: '8ca3e8c301f4613e3ae810c829d8954a663625df67b39be9dc118e99b0be18f5' },
   '10-guwen-zixiangmaodun-decoder-content.md': { questionCount: 20, hash: '59eb08ff9e270ba57ec559f27abc35d9b393f84200862e09000d07b703be6b38' },
   '11-guwen-yurenshiyan-decoder-content.md': { questionCount: 21, hash: '1141a1426657e58209bf5b386acfbf67f6d79d52489fb811b10e4a3a0299a71e' },
-  '12-guwen-yilinqiefu-decoder-content.md': { questionCount: 20, hash: '98674e7a02af906069a04385f400427d11d7bdbf11cbe753f6d59465ee3b58e7' },
+  '12-guwen-yilinqiefu-decoder-content.md': { questionCount: 20, hash: '6fba73bd0542ad3fa1f05b4082019d3427967e6adae3d5dce27d7ec47587421e' },
 };
