@@ -95,7 +95,7 @@ const TEMPLATES: {
     },
   },
   { icon: '🏃', label: '一起運動', message: (base, exponent) => `我們一起做了${pick(SPORTS, seedFor(base, exponent, 9))}運動！` },
-  { icon: '🤫', label: '說悄悄話', message: (base, exponent) => `偷偷告訴你，我最要好的朋友是 ${base} 的 ${Math.min(46, exponent + 1)} 次方！` },
+  { icon: '🤫', label: '說悄悄話', message: (base, exponent) => `偷偷告訴你，我最要好的朋友是 ${base} 的 ${exponent + 1} 次方！` },
   { icon: '🎨', label: '一起畫畫', message: (base, exponent) => `我們一起畫了一幅${pick(DRAW_SUBJECTS, seedFor(base, exponent, 11))}的畫！` },
   { icon: '📚', label: '一起看書', message: (base, exponent) => `我們一起看了《${pick(BOOKS, seedFor(base, exponent, 12))}》！` },
   { icon: '🪁', label: '一起放風箏', message: (base, exponent) => `我們一起放了${pick(KITES, seedFor(base, exponent, 13))}，飛得好高！` },
@@ -117,13 +117,30 @@ const TEMPLATES: {
   { icon: '🌠', label: '一起看流星雨', message: (base, exponent) => `我們一起看到了 ${(seedFor(base, exponent, 29) % 12) + 1} 顆流星，快許願！` },
   { icon: '🎆', label: '一起放煙火', message: (base, exponent) => `我們一起放了${pick(FIREWORK_COLORS, seedFor(base, exponent, 30))}的煙火！` },
   { icon: '🦁', label: '一起去動物園', message: (base, exponent) => `我們一起去動物園看了${pick(ANIMALS, seedFor(base, exponent, 31))}！` },
+  { icon: '🧪', label: '一起做實驗', message: (base, exponent) => `我們一起完成了 ${(seedFor(base, exponent, 32) % 5) + 1} 個有趣的小實驗！` },
+  { icon: '🪴', label: '一起照顧植物', message: (base, exponent) => `我們一起幫植物澆了 ${(seedFor(base, exponent, 33) % 6) + 1} 杯水！` },
+  { icon: '🏛️', label: '一起逛博物館', message: () => '我們一起逛博物館，看到了好多珍貴的展品！' },
+  { icon: '🚂', label: '一起搭火車', message: (base, exponent) => `我們一起搭火車經過了 ${(seedFor(base, exponent, 35) % 8) + 2} 個車站！` },
+  { icon: '🛶', label: '一起划船', message: () => '我們一起慢慢划船，欣賞水面上的風景！' },
+  { icon: '👨‍🍳', label: '一起做料理', message: (base, exponent) => `我們一起做了${pick(FOODS, seedFor(base, exponent, 37))}！` },
+  { icon: '🔭', label: '一起看星空', message: () => '我們用望遠鏡尋找星座，還看見了明亮的月亮！' },
+  { icon: '🦋', label: '一起看蝴蝶', message: (base, exponent) => `我們一起看見了 ${(seedFor(base, exponent, 39) % 9) + 2} 隻漂亮的蝴蝶！` },
+  { icon: '🐚', label: '一起撿貝殼', message: (base, exponent) => `我們一起撿了 ${(seedFor(base, exponent, 40) % 15) + 3} 個美麗的貝殼！` },
+  { icon: '🪄', label: '一起變魔術', message: () => '我們一起練習魔術，成功變出了一朵花！' },
+  { icon: '🥁', label: '一起打鼓', message: (base, exponent) => `我們一起打了 ${(seedFor(base, exponent, 42) % 20) + 5} 下節奏響亮的鼓！` },
+  { icon: '🧱', label: '一起搭積木', message: (base, exponent) => `我們一起用 ${(seedFor(base, exponent, 43) % 40) + 10} 塊積木蓋了一座城堡！` },
+  { icon: '🗺️', label: '一起尋寶', message: () => '我們一起看著藏寶圖，找到了閃亮的寶箱！' },
+  { icon: '📷', label: '一起拍照', message: (base, exponent) => `我們一起拍了 ${(seedFor(base, exponent, 45) % 12) + 3} 張開心的照片！` },
+  { icon: '🪐', label: '一起探索行星', message: () => '我們搭著想像中的太空船，一起探索神祕的行星！' },
+  { icon: '🏮', label: '一起做燈籠', message: () => '我們一起做了一盞漂亮的彩色燈籠！' },
+  { icon: '🎳', label: '一起打保齡球', message: (base, exponent) => `我們一起打倒了 ${(seedFor(base, exponent, 48) % 10) + 1} 個球瓶！` },
   { icon: '💖', label: '特別時刻', message: (_base, _exponent, requiredHearts) => `謝謝你給我 ${requiredHearts} 顆愛心！我們的感情越來越好了 ❤️` },
 ];
 
 /**
  * Every character starts with greeting and number chat. After those two fixed relationship-building steps,
- * each character receives a different deterministic walk through the remaining 31 templates. Seven is coprime
- * with 31, so a character never repeats an activity before all remaining templates have been visited.
+ * each character receives a different deterministic walk through the remaining 48 templates. Seven is coprime
+ * with 48, so even a 100-heart character's 50 interactions never repeat an activity or icon.
  * Persistent interaction identity is the character id plus tier index; internal identifiers must never be
  * exposed in child-facing display or speech.
  */
@@ -269,8 +286,8 @@ export default function CharacterDetailPage() {
           </div>
           <p className="text-3xl font-extrabold text-orange-600 mt-3">{label}</p>
         </button>
-        <p className="text-sm text-gray-400 flex items-center justify-center gap-1.5">
-          = {formatBigNumber(value)}
+        <p className="flex items-start justify-center gap-1.5 break-all px-2 text-sm text-gray-400">
+          <span>= {formatBigNumber(value)}</span>
           <button type="button" onClick={handleSpeakValue} className="text-sky-500 hover:text-sky-600" aria-label="唸出這個數字" title="唸出這個數字">🔊</button>
         </p>
 
@@ -294,7 +311,7 @@ export default function CharacterDetailPage() {
       </div>
 
       {message && (
-        <div className="bg-pink-50 rounded-2xl shadow p-4 text-sm text-gray-700">
+        <div className="break-words bg-pink-50 rounded-2xl shadow p-4 text-sm text-gray-700">
           <span className="font-semibold text-pink-600">{label}：</span>{message}
         </div>
       )}

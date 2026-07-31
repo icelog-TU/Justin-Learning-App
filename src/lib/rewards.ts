@@ -2,19 +2,23 @@
  * Every base here has a distinct prime-factor ratio, so no two positive powers in the supported range
  * can evaluate to the same character value. For example, 12 = 2²×3 and 15 = 3×5 are both safe additions. */
 export const GACHA_BASES = [2, 3, 5, 6, 7, 11, 12, 15] as const;
-/** Per-base max exponent — every base runs equally deep (46). */
+/**
+ * Per-base max exponent. Existing ids such as `2^46` never change, so expanding a group preserves
+ * every collected character and heart count while making the first newly-incomplete group resume gacha.
+ */
 export const BASE_MAX_EXPONENT: Record<number, number> = {
-  2: 46,
-  3: 46,
-  5: 46,
-  6: 46,
-  7: 46,
-  11: 46,
-  12: 46,
-  15: 46,
+  2: 100,
+  3: 100,
+  5: 100,
+  6: 100,
+  7: 100,
+  11: 50,
+  12: 50,
+  15: 50,
 };
+export const ORIGINAL_POWER_EXPONENT_LIMIT = 46;
 export function maxExponentForBase(base: number): number {
-  return BASE_MAX_EXPONENT[base] ?? 46;
+  return BASE_MAX_EXPONENT[base] ?? ORIGINAL_POWER_EXPONENT_LIMIT;
 }
 export const SQUARE_CHARACTER_COUNT = 50;
 export const CUBE_CHARACTER_COUNT = 50;
@@ -318,20 +322,40 @@ export function characterColor(exponent: number, maxExponent: number = 46): stri
   return `hsl(${hue.toFixed(0)}, 70%, 50%)`;
 }
 
-/** Stable zero-based position of a character in the complete collection. */
-export function characterCollectionIndex(base: number, exponent: number): number {
-  let offset = 0;
-  for (const candidate of GACHA_BASES) {
-    if (candidate === base) return offset + Math.max(0, exponent - 1);
-    offset += maxExponentForBase(candidate);
+/** Keeps the original 1..46 portraits unchanged; added exponents use a darker second rainbow. */
+export function powerCharacterColor(exponent: number, maxExponent: number): string {
+  if (exponent <= ORIGINAL_POWER_EXPONENT_LIMIT) {
+    return characterColor(exponent, ORIGINAL_POWER_EXPONENT_LIMIT);
   }
-  return offset + Math.max(0, exponent - 1);
+  const addedCount = Math.max(1, maxExponent - ORIGINAL_POWER_EXPONENT_LIMIT);
+  const addedIndex = exponent - ORIGINAL_POWER_EXPONENT_LIMIT;
+  const hue = addedCount > 1 ? ((addedIndex - 1) / (addedCount - 1)) * 300 : 0;
+  return `hsl(${hue.toFixed(0)}, 75%, 38%)`;
+}
+
+/**
+ * Stable zero-based seed position. The original 618 characters keep their old positions so expanding power
+ * groups never reshuffles an existing character's activities; newly added power characters are placed after it.
+ */
+export function characterCollectionIndex(base: number, exponent: number): number {
+  const basePosition = GACHA_BASES.indexOf(base as (typeof GACHA_BASES)[number]);
+  if (exponent <= ORIGINAL_POWER_EXPONENT_LIMIT) {
+    return Math.max(0, basePosition) * ORIGINAL_POWER_EXPONENT_LIMIT + Math.max(0, exponent - 1);
+  }
+  const originalPowerSlots = GACHA_BASES.length * ORIGINAL_POWER_EXPONENT_LIMIT;
+  const originalSequenceSlots = SEQUENCE_CHARACTER_COLLECTIONS.reduce((sum, collection) => sum + collection.count, 0);
+  let addedOffset = originalPowerSlots + originalSequenceSlots;
+  for (const candidate of GACHA_BASES) {
+    if (candidate === base) return addedOffset + exponent - ORIGINAL_POWER_EXPONENT_LIMIT - 1;
+    addedOffset += Math.max(0, maxExponentForBase(candidate) - ORIGINAL_POWER_EXPONENT_LIMIT);
+  }
+  return addedOffset + Math.max(0, exponent - ORIGINAL_POWER_EXPONENT_LIMIT - 1);
 }
 
 export function characterCollectionIndexFromId(id: string): number {
   const parsed = parseCharacterId(id);
   if (parsed.kind === 'power') return characterCollectionIndex(parsed.base, parsed.exponent);
-  let offset = POWER_CHARACTER_SLOTS;
+  let offset = GACHA_BASES.length * ORIGINAL_POWER_EXPONENT_LIMIT;
   for (const collection of SEQUENCE_CHARACTER_COLLECTIONS) {
     if (collection.kind === parsed.kind) return offset + Math.max(0, parsed.index - 1);
     offset += collection.count;
@@ -477,6 +501,16 @@ export const LEVELS: LevelInfo[] = [
   { level: 33, title: '質數守護者', icon: '🛡️', threshold: 598 },
   { level: 34, title: '階乘挑戰者', icon: '✖️', threshold: 608 },
   { level: 35, title: '數字規律之王', icon: '👑', threshold: 618 },
+  { level: 36, title: '百次方探險家', icon: '🧭', threshold: 650 },
+  { level: 37, title: '百次方研究員', icon: '🔬', threshold: 680 },
+  { level: 38, title: '百次方大師', icon: '💯', threshold: 710 },
+  { level: 39, title: '大數觀察家', icon: '🔭', threshold: 740 },
+  { level: 40, title: '大數計算王', icon: '🧮', threshold: 770 },
+  { level: 41, title: '指數探險家', icon: '🚀', threshold: 800 },
+  { level: 42, title: '指數大師', icon: '🌠', threshold: 825 },
+  { level: 43, title: '超級次方學者', icon: '📚', threshold: 850 },
+  { level: 44, title: '數字宇宙守護者', icon: '🌌', threshold: 875 },
+  { level: 45, title: '百次方傳奇', icon: '🏆', threshold: 900 },
 ];
 
 export function currentLevel(charactersOwned: number): LevelInfo {

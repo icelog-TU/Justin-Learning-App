@@ -285,7 +285,7 @@ export default function CharactersPage() {
                       <p className={`text-lg font-extrabold mt-1 ${labelColor}`}>
                         {label}
                       </p>
-                      <p className="text-[11px] text-gray-400 leading-tight">
+                      <p className="break-all text-[11px] text-gray-400 leading-tight">
                         {formatBigNumber(value)}
                       </p>
                       <p className="text-xs text-gray-600">

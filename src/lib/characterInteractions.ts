@@ -3,6 +3,7 @@ import {
   fibonacciValue,
   formatBigNumber,
   getSequenceCollection,
+  maxExponentForBase,
   parseCharacterId,
   sequenceCharacterValue,
 } from './rewards';
@@ -55,7 +56,9 @@ export function characterNumberInteractionMessageForId(id: string): string {
 export function characterSecretMessage(id: string): string {
   const parsed = parseCharacterId(id);
   if (parsed.kind === 'power') {
-    return `偷偷告訴你，我最要好的朋友是 ${parsed.base} 的 ${Math.min(46, parsed.exponent + 1)} 次方！`;
+    const maxExponent = maxExponentForBase(parsed.base);
+    const friendExponent = parsed.exponent >= maxExponent ? 1 : parsed.exponent + 1;
+    return `偷偷告訴你，我最要好的朋友是 ${parsed.base} 的 ${friendExponent} 次方！`;
   }
   const collection = getSequenceCollection(parsed.kind);
   return `偷偷告訴你，我住在${collection.name}家族，是第 ${parsed.index} 號！`;
@@ -73,6 +76,13 @@ export function characterInteractionTemplateIndex(
 ): number {
   if (tierIndex === 0) return 0;
   if (tierIndex === 1) return 1;
-  const shuffledTemplateCount = templateCount - 2;
-  return 2 + ((characterIndex + (tierIndex - 2) * 7) % shuffledTemplateCount);
+  // Keep the original 33-template walk unchanged for every pre-expansion interaction. A 100-heart
+  // character uses all 31 original activities first, then walks through the 17 new activities.
+  const originalTemplateCount = 33;
+  if (tierIndex < originalTemplateCount) {
+    return 2 + ((characterIndex + (tierIndex - 2) * 7) % (originalTemplateCount - 2));
+  }
+  const addedTemplateCount = templateCount - originalTemplateCount;
+  return originalTemplateCount
+    + ((characterIndex + (tierIndex - originalTemplateCount) * 7) % addedTemplateCount);
 }

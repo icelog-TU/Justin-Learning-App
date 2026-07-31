@@ -31,6 +31,14 @@ export function numberToChineseWords(value: bigint | number): string {
   const negative = n < 0n;
   if (negative) n = -n;
 
+  const decimalDigits = n.toString();
+  // Chinese large-number unit names beyond 載 are uncommon and inconsistently named. For values larger
+  // than this table, reading every digit is unambiguous and prevents silently dropping high-order places.
+  if (Math.ceil(decimalDigits.length / 4) > CN_BIG_UNITS.length) {
+    const spokenDigits = decimalDigits.split('').map((digit) => CN_DIGITS[Number(digit)]).join('、');
+    return negative ? `負${spokenDigits}` : spokenDigits;
+  }
+
   const groups: number[] = [];
   while (n > 0n) {
     groups.unshift(Number(n % 10000n));

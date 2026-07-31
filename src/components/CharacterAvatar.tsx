@@ -4,6 +4,7 @@ import {
   getSequenceCollection,
   maxExponentForBase,
   parseCharacterId,
+  powerCharacterColor,
 } from '../lib/rewards';
 
 type CharacterAvatarSize = 'small' | 'medium' | 'large';
@@ -55,7 +56,9 @@ export function CharacterAvatar({
             ? 'polygon(30% 0%, 70% 0%, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0% 70%, 0% 30%)'
             : undefined;
   const shapeStyle: CSSProperties = {
-    backgroundColor: characterColor(number, max),
+    backgroundColor: parsed.kind === 'power'
+      ? powerCharacterColor(number, max)
+      : characterColor(number, max),
     ...(clipPath ? { clipPath } : {}),
     ...style,
   };

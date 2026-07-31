@@ -13,6 +13,7 @@
     "tts:audit:test": "tsx scripts/test-tts-audit.ts",
     "test:speech:sequence": "tsx scripts/test-speech-sequence.ts",
     "test:character-interactions": "tsx scripts/test-character-interactions.ts",
+    "test:power-expansion": "tsx scripts/test-power-expansion.ts",
     "test:guwen:wangrong": "tsx scripts/test-wang-rong-lesson.ts",
     "test:guwen:simaguang": "tsx scripts/test-sima-guang-lesson.ts",
     "test:guwen:shouzhudaitu": "tsx scripts/test-shou-zhu-dai-tu-lesson.ts",

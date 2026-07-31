@@ -138,7 +138,7 @@ export default function GachaPage() {
                 <p className="text-2xl font-extrabold text-orange-600">
                   {characterLabelFromId(lastResult.id)}
                 </p>
-                <p className="text-sm text-gray-500">
+                <p className="break-all text-sm text-gray-500">
                   = {formatBigNumber(characterValueFromId(lastResult.id))}
                 </p>
                 <p className="font-bold text-emerald-600">獲得新角色！</p>
