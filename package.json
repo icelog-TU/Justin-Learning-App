@@ -12,6 +12,7 @@
     "tts:audit:reusable": "tsx scripts/read-tts-audit.ts --reusable-groups",
     "tts:audit:test": "tsx scripts/test-tts-audit.ts",
     "test:speech:sequence": "tsx scripts/test-speech-sequence.ts",
+    "test:character-interactions": "tsx scripts/test-character-interactions.ts",
     "test:guwen:wangrong": "tsx scripts/test-wang-rong-lesson.ts",
     "test:guwen:simaguang": "tsx scripts/test-sima-guang-lesson.ts",
     "test:guwen:shouzhudaitu": "tsx scripts/test-shou-zhu-dai-tu-lesson.ts",

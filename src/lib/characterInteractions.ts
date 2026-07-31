@@ -26,14 +26,13 @@ export function characterGreetingMessage(id: string): string {
   return `你好！我是 ${parsed.index} 的階乘，${value}！`;
 }
 
-export function characterNumberInteractionMessageForId(id: string, repetitions: number): string {
+export function characterNumberInteractionMessageForId(id: string): string {
   const parsed = parseCharacterId(id);
   if (parsed.kind === 'power') {
-    return characterNumberInteractionMessage(parsed.base, repetitions);
+    return characterNumberInteractionMessage(parsed.base, parsed.exponent);
   }
-  if (parsed.kind === 'square' || parsed.kind === 'cube') {
-    return characterNumberInteractionMessage(parsed.index, repetitions);
-  }
+  if (parsed.kind === 'square') return characterNumberInteractionMessage(parsed.index, 2);
+  if (parsed.kind === 'cube') return characterNumberInteractionMessage(parsed.index, 3);
 
   const value = formatBigNumber(sequenceCharacterValue(parsed.kind, parsed.index));
   if (parsed.kind === 'triangular') {

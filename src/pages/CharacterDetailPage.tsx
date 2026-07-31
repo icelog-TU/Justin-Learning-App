@@ -140,7 +140,7 @@ function buildInteractionTiers(id: string, base: number, exponent: number): Inte
     const message = templateIndex === 0
       ? characterGreetingMessage(id)
       : templateIndex === 1
-        ? characterNumberInteractionMessageForId(id, requiredHearts)
+        ? characterNumberInteractionMessageForId(id)
         : templateIndex === 10
           ? characterSecretMessage(id)
           : template.message(base, exponent, requiredHearts);
