@@ -15,12 +15,14 @@ import {
 import { guwenLessons } from '../data/guwenLesson';
 
 const RECENT_ROUNDS_SHOWN = 5;
+const RECENT_BADGES_SHOWN = 8;
+const RECENT_CRACKED_CHARACTERS_SHOWN = 10;
+const RECENT_SENTENCES_SHOWN = 8;
 
 export default function ProgressPage() {
   const { data } = useAppDataContext();
   const streak = getStreakDays(data.visitDates);
   const [expandedRound, setExpandedRound] = useState<number | null>(null);
-  const [showAllRounds, setShowAllRounds] = useState(false);
   const charactersOwned = Object.keys(data.characters).length;
   const level = currentLevel(charactersOwned);
 
@@ -33,7 +35,23 @@ export default function ProgressPage() {
   const confusableCorrectCount = confusableAttempts.filter((s) => s.lastCorrect).length;
 
   const sentencePassed = data.sentenceLog.filter((s) => s.passed).length;
-  const visibleRounds = showAllRounds ? data.chainRoundHistory : data.chainRoundHistory.slice(0, RECENT_ROUNDS_SHOWN);
+  const visibleRounds = data.chainRoundHistory.slice(0, RECENT_ROUNDS_SHOWN);
+  const badgeEntries = guwenLessons.map((lesson, index) => ({
+    lesson,
+    number: index + 1,
+    completedAt: data.guwenProgress[lesson.id]?.completedAt ?? '',
+  }));
+  const earnedBadges = badgeEntries
+    .filter((entry) => entry.completedAt)
+    .sort((a, b) => b.completedAt.localeCompare(a.completedAt));
+  const upcomingBadges = badgeEntries.filter((entry) => !entry.completedAt);
+  const badgePreview = [...earnedBadges, ...upcomingBadges].slice(0, RECENT_BADGES_SHOWN);
+  const crackedCharacterEntries = Object.entries(data.associationCracked).sort(([charA], [charB]) => {
+    const dateA = data.associationCrackLog[charA]?.[0]?.crackedAt ?? '';
+    const dateB = data.associationCrackLog[charB]?.[0]?.crackedAt ?? '';
+    return dateB.localeCompare(dateA);
+  });
+  const crackedCharacterPreview = crackedCharacterEntries.slice(0, RECENT_CRACKED_CHARACTERS_SHOWN);
 
   return (
     <div className="space-y-4">
@@ -105,14 +123,14 @@ export default function ProgressPage() {
           {' / '}
           {guwenLessons.length} 枚
         </p>
-        <div className="grid grid-cols-5 sm:grid-cols-8 gap-2">
-          {guwenLessons.map((l, i) => {
-            const earned = Boolean(data.guwenProgress[l.id]?.completedAt);
+        <div className="grid grid-cols-4 sm:grid-cols-8 gap-2">
+          {badgePreview.map(({ lesson, number, completedAt }) => {
+            const earned = Boolean(completedAt);
             return (
               <Link
-                key={l.id}
-                to={`/guwen-lesson/${l.id}`}
-                title={l.title}
+                key={lesson.id}
+                to={`/guwen-lesson/${lesson.id}`}
+                title={lesson.title}
                 className={`aspect-square rounded-full flex flex-col items-center justify-center text-xs font-bold ${
                   earned
                     ? 'bg-gradient-to-br from-amber-400 to-pink-500 text-white shadow'
@@ -120,11 +138,17 @@ export default function ProgressPage() {
                 }`}
               >
                 <span className="text-base leading-none">{earned ? '🏅' : '🔒'}</span>
-                <span className="leading-none mt-0.5">{i + 1}</span>
+                <span className="leading-none mt-0.5">{number}</span>
               </Link>
             );
           })}
         </div>
+        <Link
+          to="/progress/guwen-badges"
+          className="mt-3 flex min-h-11 items-center justify-center rounded-xl bg-amber-50 px-4 py-2 text-sm font-bold text-amber-700 hover:bg-amber-100"
+        >
+          查看全部 {guwenLessons.length} 枚徽章 →
+        </Link>
       </div>
 
       <Link
@@ -147,10 +171,9 @@ export default function ProgressPage() {
         {Object.keys(data.associationCracked).length === 0 ? (
           <p className="text-sm text-gray-400">還沒有破解任何字，去「一字成語王」挑戰看看！</p>
         ) : (
-          <div className="flex flex-wrap gap-2">
-            {Object.entries(data.associationCracked)
-              .reverse()
-              .map(([char, count]) => (
+          <>
+            <div className="flex flex-wrap gap-2">
+              {crackedCharacterPreview.map(([char, count]) => (
                 <Link
                   key={char}
                   to={`/progress/association/${encodeURIComponent(char)}`}
@@ -160,7 +183,14 @@ export default function ProgressPage() {
                   {count > 1 && <span className="text-[11px] text-violet-400 font-normal">x{count}</span>}
                 </Link>
               ))}
-          </div>
+            </div>
+            <Link
+              to="/progress/association"
+              className="mt-3 flex min-h-11 items-center justify-center rounded-xl bg-violet-50 px-4 py-2 text-sm font-bold text-violet-700 hover:bg-violet-100"
+            >
+              查看全部 {crackedCharacterEntries.length} 個破解字 →
+            </Link>
+          </>
         )}
       </div>
 
@@ -207,15 +237,12 @@ export default function ProgressPage() {
                 );
               })}
             </div>
-            {data.chainRoundHistory.length > RECENT_ROUNDS_SHOWN && (
-              <button
-                type="button"
-                onClick={() => setShowAllRounds((v) => !v)}
-                className="w-full mt-3 text-sm font-medium text-teal-600 hover:text-teal-700 py-1"
-              >
-                {showAllRounds ? '▲ 收起，只看最近 5 輪' : `▼ 顯示全部 ${data.chainRoundHistory.length} 輪`}
-              </button>
-            )}
+            <Link
+              to="/progress/chain-links"
+              className="mt-3 flex min-h-11 items-center justify-center rounded-xl bg-teal-50 px-4 py-2 text-sm font-bold text-teal-700 hover:bg-teal-100"
+            >
+              查看全部 {data.chainRoundHistory.length} 輪 →
+            </Link>
           </>
         )}
       </div>
@@ -260,17 +287,25 @@ export default function ProgressPage() {
         {data.sentenceLog.length === 0 ? (
           <p className="text-sm text-gray-400">還沒有練習過造句，快去試試看吧！</p>
         ) : (
-          <div className="space-y-2 max-h-64 overflow-y-auto">
-            {data.sentenceLog.slice(0, 20).map((entry, i) => (
-              <div key={i} className="text-sm border-b last:border-0 border-gray-100 pb-2">
-                <p className="text-gray-700">
-                  {entry.passed ? '✅' : '📝'} <span className="font-semibold text-orange-600">{entry.word}</span>：
-                  {entry.sentence}
-                </p>
-                <p className="text-xs text-gray-400">{new Date(entry.date).toLocaleString('zh-TW')}</p>
-              </div>
-            ))}
-          </div>
+          <>
+            <div className="space-y-2">
+              {data.sentenceLog.slice(0, RECENT_SENTENCES_SHOWN).map((entry, i) => (
+                <div key={i} className="text-sm border-b last:border-0 border-gray-100 pb-2">
+                  <p className="text-gray-700">
+                    {entry.passed ? '✅' : '📝'} <span className="font-semibold text-orange-600">{entry.word}</span>：
+                    {entry.sentence}
+                  </p>
+                  <p className="text-xs text-gray-400">{new Date(entry.date).toLocaleString('zh-TW')}</p>
+                </div>
+              ))}
+            </div>
+            <Link
+              to="/progress/sentences"
+              className="mt-3 flex min-h-11 items-center justify-center rounded-xl bg-orange-50 px-4 py-2 text-sm font-bold text-orange-700 hover:bg-orange-100"
+            >
+              查看全部 {data.sentenceLog.length} 句 →
+            </Link>
+          </>
         )}
       </div>
     </div>

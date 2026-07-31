@@ -17,6 +17,9 @@ import StreakDetailPage from './pages/StreakDetailPage';
 import LevelDetailPage from './pages/LevelDetailPage';
 import ChainLinksDetailPage from './pages/ChainLinksDetailPage';
 import AssociationCharacterDetailPage from './pages/AssociationCharacterDetailPage';
+import AssociationCracksPage from './pages/AssociationCracksPage';
+import GuwenBadgesPage from './pages/GuwenBadgesPage';
+import SentenceHistoryPage from './pages/SentenceHistoryPage';
 import GuwenHome from './pages/GuwenHome';
 import GuwenLessonDecode from './pages/GuwenLessonDecode';
 import SettingsPage from './pages/SettingsPage';
@@ -50,6 +53,9 @@ export default function App() {
             <Route path="/progress/streak" element={<StreakDetailPage />} />
             <Route path="/progress/level" element={<LevelDetailPage />} />
             <Route path="/progress/chain-links" element={<ChainLinksDetailPage />} />
+            <Route path="/progress/guwen-badges" element={<GuwenBadgesPage />} />
+            <Route path="/progress/sentences" element={<SentenceHistoryPage />} />
+            <Route path="/progress/association" element={<AssociationCracksPage />} />
             <Route path="/progress/association/:char" element={<AssociationCharacterDetailPage />} />
             <Route path="/settings" element={<SettingsPage />} />
           </Route>

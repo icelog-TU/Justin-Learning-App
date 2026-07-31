@@ -270,13 +270,17 @@ export default function CharactersPage() {
             return (
               <div
                 key={id}
-                className={`rounded-xl border p-3 text-center space-y-1 ${
+                data-character-card={id}
+                className={`overflow-hidden rounded-xl border text-center ${
                   owned ? 'bg-white border-orange-100' : 'bg-gray-50 border-gray-100'
                 }`}
               >
                 {owned ? (
                   <>
-                    <Link to={`/characters/${encodeURIComponent(id)}`} className="block">
+                    <Link
+                      to={`/characters/${encodeURIComponent(id)}`}
+                      className="block px-3 pb-4 pt-3 hover:bg-orange-50/50"
+                    >
                       <CharacterAvatar id={id} className="mx-auto" />
                       <p className={`text-lg font-extrabold mt-1 ${labelColor}`}>
                         {label}
@@ -291,20 +295,24 @@ export default function CharactersPage() {
                         {currentHearts} / {index} 顆愛心{isFull && ' 💯'}
                       </p>
                       {!isFull && <p className="text-[11px] font-medium text-pink-500">還缺 {index - currentHearts} 顆</p>}
+                      <p className="mt-2 text-[10px] font-medium text-gray-400">查看角色互動 ›</p>
                     </Link>
-                    <button
-                      type="button"
-                      disabled={!canGiveHeart}
-                      onClick={() => {
-                        if (giveHeart(id)) playHeartSound();
-                      }}
-                      className="mt-1 w-full text-xs font-medium rounded-full py-1 bg-pink-500 disabled:bg-gray-200 disabled:text-gray-400 text-white"
-                    >
-                      {isFull ? '已滿 ❤️' : `給愛心 (${HEART_COST_STARS}⭐)`}
-                    </button>
+                    <div className="border-t-2 border-pink-100 bg-pink-50/80 px-2.5 py-2.5">
+                      <button
+                        type="button"
+                        data-heart-button={id}
+                        disabled={!canGiveHeart}
+                        onClick={() => {
+                          if (giveHeart(id)) playHeartSound();
+                        }}
+                        className="min-h-11 w-full rounded-xl bg-pink-500 px-2 py-2 text-xs font-bold text-white shadow-sm active:scale-95 disabled:bg-gray-200 disabled:text-gray-400"
+                      >
+                        {isFull ? '已滿 ❤️' : `給愛心 (${HEART_COST_STARS}⭐)`}
+                      </button>
+                    </div>
                   </>
                 ) : (
-                  <p className="text-2xl text-gray-300 py-3">？</p>
+                  <p className="p-3 py-6 text-2xl text-gray-300">？</p>
                 )}
               </div>
             );

@@ -24,8 +24,8 @@ export default function AssociationCharacterDetailPage() {
         <Link to="/idioms/association" className="text-violet-600 underline">
           ← 回一字成語王
         </Link>
-        <Link to="/progress" className="text-teal-600 underline">
-          回學習紀錄 →
+        <Link to="/progress/association" className="text-teal-600 underline">
+          回全部破解字 →
         </Link>
       </div>
 

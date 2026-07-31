@@ -1,4 +1,6 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { LoadMoreButton } from '../components/LoadMoreButton';
 import { useAppDataContext } from '../lib/AppDataContext';
 import type { ChainRoundLog } from '../lib/storage';
 import { speak } from '../lib/speech';
@@ -8,11 +10,15 @@ function dateKey(iso: string): string {
   return iso.slice(0, 10);
 }
 
+const ROUNDS_PER_BATCH = 20;
+
 export default function ChainLinksDetailPage() {
   const { data } = useAppDataContext();
+  const [visibleCount, setVisibleCount] = useState(ROUNDS_PER_BATCH);
+  const visibleRounds = data.chainRoundHistory.slice(0, visibleCount);
 
   const groups = new Map<string, ChainRoundLog[]>();
-  for (const round of data.chainRoundHistory) {
+  for (const round of visibleRounds) {
     const key = dateKey(round.completedAt);
     const bucket = groups.get(key);
     if (bucket) bucket.push(round);
@@ -47,49 +53,58 @@ export default function ChainLinksDetailPage() {
           <p className="text-sm text-gray-400">還沒有接龍紀錄。</p>
         </div>
       ) : (
-        sortedDates.map((date) => {
-          const dayRounds = groups.get(date)!;
-          const dayTotal = dayRounds.reduce((sum, r) => sum + r.length, 0);
-          return (
-            <div key={date} className="bg-white rounded-2xl shadow p-5 space-y-3">
-              <div className="flex items-center justify-between">
-                <h3 className="font-bold text-gray-800 text-sm">{date}</h3>
-                <span className="text-xs text-gray-400">共 {dayTotal} 個成語</span>
-              </div>
-              {dayRounds.map((round, ri) => (
-                <div key={ri} className="flex flex-wrap items-center gap-2">
-                  {round.words.map((word, wi) => (
-                    <div key={wi} className="flex items-center gap-1">
-                      <span className="bg-teal-50 text-teal-700 font-semibold text-sm rounded-full pl-3 pr-1.5 py-1 flex items-center gap-1">
-                        {word}
-                        <button
-                          type="button"
-                          onClick={() => speak(word)}
-                          className="text-sm leading-none"
-                          aria-label="聽發音"
-                          title="聽發音"
-                        >
-                          🔊
-                        </button>
-                        <a
-                          href={buildIdiomSearchUrl(word)}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-sm leading-none"
-                          aria-label="查意思／典故"
-                          title="查意思／典故"
-                        >
-                          🔍
-                        </a>
-                      </span>
-                      {wi < round.words.length - 1 && <span className="text-gray-300">→</span>}
-                    </div>
-                  ))}
+        <>
+          {sortedDates.map((date) => {
+            const dayRounds = groups.get(date)!;
+            const dayTotal = dayRounds.reduce((sum, r) => sum + r.length, 0);
+            return (
+              <div key={date} className="bg-white rounded-2xl shadow p-5 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-bold text-gray-800 text-sm">{date}</h3>
+                  <span className="text-xs text-gray-400">共 {dayTotal} 個成語</span>
                 </div>
-              ))}
-            </div>
-          );
-        })
+                {dayRounds.map((round, ri) => (
+                  <div key={ri} className="flex flex-wrap items-center gap-2">
+                    {round.words.map((word, wi) => (
+                      <div key={wi} className="flex items-center gap-1">
+                        <span className="bg-teal-50 text-teal-700 font-semibold text-sm rounded-full pl-3 pr-1.5 py-1 flex items-center gap-1">
+                          {word}
+                          <button
+                            type="button"
+                            onClick={() => speak(word)}
+                            className="text-sm leading-none"
+                            aria-label="聽發音"
+                            title="聽發音"
+                          >
+                            🔊
+                          </button>
+                          <a
+                            href={buildIdiomSearchUrl(word)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-sm leading-none"
+                            aria-label="查意思／典故"
+                            title="查意思／典故"
+                          >
+                            🔍
+                          </a>
+                        </span>
+                        {wi < round.words.length - 1 && <span className="text-gray-300">→</span>}
+                      </div>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            );
+          })}
+          <LoadMoreButton
+            shown={visibleRounds.length}
+            total={data.chainRoundHistory.length}
+            batchSize={ROUNDS_PER_BATCH}
+            noun="輪"
+            onLoadMore={() => setVisibleCount((count) => count + ROUNDS_PER_BATCH)}
+          />
+        </>
       )}
     </div>
   );
