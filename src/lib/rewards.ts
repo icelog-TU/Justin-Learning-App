@@ -67,7 +67,8 @@ export const QUIZ_PERFECT_BONUS_COINS = 20;
 export const QUIZ_PERFECT_BONUS_STARS = 10;
 export const DUPE_CONSOLATION_STARS = 5;
 
-export const COIN_PER_CHAIN_LINK = 8;
+/** Shared per-idiom reward for both 成語接龍 and 一字成語王. */
+export const COIN_PER_CHAIN_LINK = 5;
 export const STAR_PER_CHAIN_LINK = 4;
 export const CHAIN_MILESTONE_INTERVAL = 5;
 /** Per-milestone-level bonus base — multiplied by the milestone number, so the 10th-link bonus is bigger than the 5th's. */
