@@ -63,6 +63,20 @@ if (tenthLessonPathIndex !== 9 || resolveDraftSource(DRAFT_SOURCES, tenthLessonP
   console.error('  ERROR: 第十篇沒有由跨篇進度表自動加入成人預覽目錄');
 }
 
+const eleventhLessonQuestions = parseDraftQuestions(
+  fs.readFileSync('11-guwen-yurenshiyan-decoder-content.md', 'utf8'),
+);
+const eleventhLessonQuestionTwenty = eleventhLessonQuestions.find((question) => question.number === 20);
+if (
+  eleventhLessonQuestionTwenty?.kind !== 'sequence'
+  || eleventhLessonQuestionTwenty.sequenceCards.length !== 6
+  || eleventhLessonQuestionTwenty.sequenceCorrectOrder.join('') !== 'DBFCAE'
+  || eleventhLessonQuestionTwenty.options.length !== 0
+) {
+  failed = true;
+  console.error('  ERROR: 第十一篇第 20 題沒有解析成六張 DBFCAE 拖曳事件卡，或仍殘留整串單選');
+}
+
 const hundredLessonSources = parseDraftSourcesFromProjectStatus(`
 | 篇次 | 篇名 | Active 教材主檔 | 狀態 |
 |---:|---|---|---|

@@ -1,4 +1,12 @@
-import { useEffect, useMemo, useRef, useState, type TouchEvent } from 'react';
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type PointerEvent as ReactPointerEvent,
+  type TouchEvent,
+} from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
   draftPreviewSwipeDelta,
@@ -28,6 +36,15 @@ import {
 } from '../components/guwen/GuwenQuestionBlocks';
 
 type PreviewState = 'answering' | 'wrong' | 'correct';
+
+interface PreviewOrderingDragState {
+  cardId: string;
+  pointerId: number;
+  startY: number;
+  currentY: number;
+  startCenterY: number;
+  targetIndex: number;
+}
 
 function Highlighted({ text }: { text: string }) {
   const parts = text.split(/(【[^】]+】)/g);
@@ -125,6 +142,10 @@ export default function GuwenDraftPreview() {
   const [playback, setPlayback] = useState<Playback>();
   const [lessonQuery, setLessonQuery] = useState('');
   const [lessonSearchOpen, setLessonSearchOpen] = useState(false);
+  const [sequenceArrangement, setSequenceArrangement] = useState<string[]>([]);
+  const sequenceCardRefs = useRef(new Map<string, HTMLDivElement>());
+  const sequenceDragRef = useRef<PreviewOrderingDragState | null>(null);
+  const [sequenceDrag, setSequenceDrag] = useState<PreviewOrderingDragState | null>(null);
   const loadToken = useRef(0);
   const playbackToken = useRef(0);
   const swipeStart = useRef<{ x: number; y: number } | undefined>(undefined);
@@ -234,6 +255,12 @@ export default function GuwenDraftPreview() {
     cancelSpeech();
   }, []);
 
+  useEffect(() => {
+    setSequenceArrangement(question?.sequenceCards.map((card) => card.id) ?? []);
+    sequenceDragRef.current = null;
+    setSequenceDrag(null);
+  }, [question]);
+
   const order = useMemo(() => question ? readingOrder(question) : [], [question]);
   const repetitions = useMemo(() => findAdjacentRepetitions(order), [order]);
   const approvedCount = questions.filter((item) => /已核准|核准/.test(item.status)).length;
@@ -291,6 +318,93 @@ export default function GuwenDraftPreview() {
   function choosePreviewState(next: PreviewState) {
     stopPlayback();
     setPreviewState(next);
+  }
+
+  function moveSequenceCard(index: number, direction: -1 | 1) {
+    setSequenceArrangement((current) => {
+      const target = index + direction;
+      if (target < 0 || target >= current.length) return current;
+      const next = [...current];
+      [next[index], next[target]] = [next[target], next[index]];
+      return next;
+    });
+    setPreviewState('answering');
+  }
+
+  function updateSequenceDrag(next: PreviewOrderingDragState | null) {
+    sequenceDragRef.current = next;
+    setSequenceDrag(next);
+  }
+
+  function handleSequencePointerDown(cardId: string, index: number, event: ReactPointerEvent<HTMLButtonElement>) {
+    if (previewState === 'correct' || (event.pointerType === 'mouse' && event.button !== 0)) return;
+    const card = sequenceCardRefs.current.get(cardId);
+    if (!card) return;
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    const rect = card.getBoundingClientRect();
+    updateSequenceDrag({
+      cardId,
+      pointerId: event.pointerId,
+      startY: event.clientY,
+      currentY: event.clientY,
+      startCenterY: rect.top + rect.height / 2,
+      targetIndex: index,
+    });
+    setPreviewState('answering');
+  }
+
+  function handleSequencePointerMove(event: ReactPointerEvent<HTMLButtonElement>) {
+    const drag = sequenceDragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+    event.preventDefault();
+    const draggedCenterY = drag.startCenterY + (event.clientY - drag.startY);
+    const otherCards = sequenceArrangement.filter((id) => id !== drag.cardId);
+    const targetIndex = otherCards.reduce((position, id) => {
+      const rect = sequenceCardRefs.current.get(id)?.getBoundingClientRect();
+      return rect && draggedCenterY > rect.top + rect.height / 2 ? position + 1 : position;
+    }, 0);
+    updateSequenceDrag({ ...drag, currentY: event.clientY, targetIndex });
+    const edgeSize = 72;
+    if (event.clientY < edgeSize) window.scrollBy({ top: -12, behavior: 'auto' });
+    else if (event.clientY > window.innerHeight - edgeSize) window.scrollBy({ top: 12, behavior: 'auto' });
+  }
+
+  function finishSequenceDrag(event: ReactPointerEvent<HTMLButtonElement>, commit: boolean) {
+    const drag = sequenceDragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+    if (commit) {
+      setSequenceArrangement((current) => {
+        const next = current.filter((id) => id !== drag.cardId);
+        next.splice(drag.targetIndex, 0, drag.cardId);
+        return next;
+      });
+    }
+    updateSequenceDrag(null);
+  }
+
+  function handleSequenceKeyDown(index: number, event: ReactKeyboardEvent<HTMLButtonElement>) {
+    if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return;
+    event.preventDefault();
+    moveSequenceCard(index, event.key === 'ArrowUp' ? -1 : 1);
+  }
+
+  function submitSequence() {
+    if (!question || question.kind !== 'sequence') return;
+    const correct =
+      sequenceArrangement.length === question.sequenceCorrectOrder.length
+      && sequenceArrangement.every((id, index) => id === question.sequenceCorrectOrder[index]);
+    setPreviewState(correct ? 'correct' : 'wrong');
+  }
+
+  function revealAssistedAnswer() {
+    if (question?.kind === 'sequence') {
+      setSequenceArrangement([...question.sequenceCorrectOrder]);
+    }
+    setPreviewState('correct');
   }
 
   function stopPlayback() {
@@ -533,22 +647,58 @@ export default function GuwenDraftPreview() {
                 {question.kind === 'sequence' && (
                   <div className="space-y-2" data-preview-question-kind="sequence">
                     <p className="rounded-lg bg-indigo-50 px-3 py-2 text-xs font-medium text-indigo-700">
-                      正式孩子端可按住右側的 ⠿ 上下拖曳；成人預覽以作答狀態模擬排列結果。
+                      按住每張卡片右側的 ⠿，上下拖曳到想放的位置，再放開手指。
                     </p>
                     {(previewState === 'correct'
                       ? question.sequenceCorrectOrder
-                          .map((id) => question.sequenceCards.find((card) => card.id === id))
-                          .filter((card): card is DraftQuestion['sequenceCards'][number] => Boolean(card))
-                      : question.sequenceCards
-                    ).map((card, index) => (
+                      : sequenceArrangement
+                    )
+                      .map((id) => question.sequenceCards.find((card) => card.id === id))
+                      .filter((card): card is DraftQuestion['sequenceCards'][number] => Boolean(card))
+                      .map((card, index) => (
                       <GuwenSequenceCardRow
                         key={card.id}
+                        outerRef={(element) => {
+                          if (element) sequenceCardRefs.current.set(card.id, element);
+                          else sequenceCardRefs.current.delete(card.id);
+                        }}
                         position={index + 1}
                         text={card.text}
+                        active={sequenceDrag?.cardId === card.id}
                         onPlay={() => togglePlayback(`sequence-${card.id}`, `事件卡 ${index + 1}`, [card.text])}
-                        handle={<span className="flex h-11 w-11 items-center justify-center rounded-xl border-2 border-indigo-200 bg-white text-2xl text-indigo-600">⠿</span>}
+                        style={sequenceDrag?.cardId === card.id
+                          ? { transform: `translateY(${sequenceDrag.currentY - sequenceDrag.startY}px)` }
+                          : undefined}
+                        handle={previewState !== 'correct' ? (
+                          <button
+                            type="button"
+                            aria-label={`拖曳第 ${index + 1} 張卡片重新排序`}
+                            aria-keyshortcuts="ArrowUp ArrowDown"
+                            onPointerDown={(event) => handleSequencePointerDown(card.id, index, event)}
+                            onPointerMove={handleSequencePointerMove}
+                            onPointerUp={(event) => finishSequenceDrag(event, true)}
+                            onPointerCancel={(event) => finishSequenceDrag(event, false)}
+                            onKeyDown={(event) => handleSequenceKeyDown(index, event)}
+                            className={`flex h-11 w-11 shrink-0 touch-none items-center justify-center rounded-xl border-2 text-2xl leading-none ${
+                              sequenceDrag?.cardId === card.id
+                                ? 'cursor-grabbing border-indigo-500 bg-indigo-600 text-white'
+                                : 'cursor-grab border-indigo-200 bg-white text-indigo-600 active:bg-indigo-100'
+                            }`}
+                          >
+                            ⠿
+                          </button>
+                        ) : undefined}
                       />
                     ))}
+                    {previewState !== 'correct' && (
+                      <button
+                        type="button"
+                        onClick={submitSequence}
+                        className="mt-3 w-full rounded-xl bg-emerald-600 py-2.5 font-bold text-white"
+                      >
+                        提交排序
+                      </button>
+                    )}
                   </div>
                 )}
 
@@ -605,7 +755,7 @@ export default function GuwenDraftPreview() {
                             ? '幫我勾出正確答案'
                             : '幫我選出正確答案'
                       }
-                      onReveal={() => setPreviewState('correct')}
+                      onReveal={revealAssistedAnswer}
                     />
                   </div>
                 )}
