@@ -255,37 +255,50 @@ export function GuwenMultiSelectList({
 }) {
   return (
     <div className="space-y-2" data-guwen-block="multiselect">
-      {options.map((option, index) => (
-        <label
-          key={`${option.text}-${index}`}
-          className={`flex items-start gap-2 rounded-xl border-2 px-3 py-2 ${
-            solved || !onToggle ? 'cursor-default' : 'cursor-pointer'
-          } ${selected.has(index) ? 'border-indigo-300 bg-indigo-50' : 'border-gray-200 bg-gray-50'}`}
-        >
-          <input
-            type="checkbox"
-            checked={selected.has(index)}
-            disabled={solved || !onToggle}
-            onChange={() => onToggle?.(index)}
-            className="mt-1"
-          />
-          <span className="flex-1 text-sm text-gray-800">{option.text}</span>
-          {onPlay && (
-            <button
-              type="button"
-              onClick={(event) => {
-                event.preventDefault();
-                event.stopPropagation();
-                onPlay(option.text, index);
-              }}
-              aria-label={`播放勾選項目 ${index + 1}`}
-              className="shrink-0 text-sky-500"
-            >
-              🔊
-            </button>
-          )}
-        </label>
-      ))}
+      {options.map((option, index) => {
+        const isCorrectAnswer = solved && option.correct;
+        return (
+          <label
+            key={`${option.text}-${index}`}
+            data-answer-state={isCorrectAnswer ? 'correct' : solved ? 'not-correct' : 'answering'}
+            className={`flex items-start gap-2 rounded-xl border-2 px-3 py-2 ${
+              solved || !onToggle ? 'cursor-default' : 'cursor-pointer'
+            } ${
+              isCorrectAnswer
+                ? 'border-emerald-400 bg-emerald-50'
+                : selected.has(index)
+                  ? 'border-indigo-300 bg-indigo-50'
+                  : 'border-gray-200 bg-gray-50'
+            }`}
+          >
+            <input
+              type="checkbox"
+              checked={selected.has(index)}
+              disabled={solved || !onToggle}
+              onChange={() => onToggle?.(index)}
+              className="mt-1"
+            />
+            <span className={`flex-1 text-sm ${isCorrectAnswer ? 'font-medium text-emerald-900' : 'text-gray-800'}`}>
+              {option.text}
+            </span>
+            {isCorrectAnswer && <span className="shrink-0 text-xs font-bold text-emerald-700">✓ 正確</span>}
+            {onPlay && (
+              <button
+                type="button"
+                onClick={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  onPlay(option.text, index);
+                }}
+                aria-label={`播放勾選項目 ${index + 1}`}
+                className="shrink-0 text-sky-500"
+              >
+                🔊
+              </button>
+            )}
+          </label>
+        );
+      })}
     </div>
   );
 }

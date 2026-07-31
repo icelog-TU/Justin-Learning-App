@@ -379,12 +379,17 @@ function sequenceCardFields(sections: Section[]): DraftSequenceCard[] {
   return cards;
 }
 
-function multiSelectOptionFields(sections: Section[]): DraftMultiSelectOption[] {
+function multiSelectOptionFields(
+  sections: Section[],
+  correctAnswer?: DraftField,
+): DraftMultiSelectOption[] {
   const section = firstSection(sections, [/^勾選項目$/, /待判斷.*敘述/, /^全文證據檢查$/]);
   if (!section) return [];
-  const supported = field(firstSection(sections, [/^應勾選$/]))?.text ?? '';
+  const supportedSection = field(firstSection(sections, [/^應勾選$/]));
+  const supported = supportedSection?.text ?? correctAnswer?.text ?? '';
   const supportedNumbers = new Set(
-    [...supported.matchAll(/(?:^|\n)\s*[-*]?\s*([1-9]\d*)[.、]/g)].map((match) => Number(match[1])),
+    [...supported.matchAll(supportedSection ? /(?:^|\n)\s*[-*]?\s*([1-9]\d*)[.、]/g : /([1-9]\d*)/g)]
+      .map((match) => Number(match[1])),
   );
   const options: DraftMultiSelectOption[] = [];
   section.lines.forEach((line, index) => {
@@ -565,7 +570,7 @@ function parseOneQuestion(header: RegExpMatchArray, lines: string[], start: numb
   const options = optionFields(sections);
   const sequenceCards = sequenceCardFields(sections);
   const sequenceCorrectOrder = sequenceOrder(correctAnswer);
-  const multiSelectOptions = multiSelectOptionFields(sections);
+  const multiSelectOptions = multiSelectOptionFields(sections, correctAnswer);
   const causalNodes = causalNodeFields(sections);
   const title = cleanInline(header[4] ?? `第 ${parseQuestionNumber(header[2])} 題`);
   const kind: DraftQuestionKind = sequenceCards.length

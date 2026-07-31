@@ -77,6 +77,19 @@ if (
   console.error('  ERROR: 第十一篇第 20 題沒有解析成六張 DBFCAE 拖曳事件卡，或仍殘留整串單選');
 }
 
+const eleventhLessonQuestionTwentyOne = eleventhLessonQuestions.find((question) => question.number === 21);
+if (
+  eleventhLessonQuestionTwentyOne?.kind !== 'multiselect'
+  || eleventhLessonQuestionTwentyOne.multiSelectOptions.length !== 6
+  || eleventhLessonQuestionTwentyOne.multiSelectOptions
+    .flatMap((option, index) => option.correct ? [index + 1] : [])
+    .join(',') !== '1,3,4,6'
+  || eleventhLessonQuestionTwentyOne.diagnostics.includes('找不到應勾選項目')
+) {
+  failed = true;
+  console.error('  ERROR: 第十一篇第 21 題沒有解析成六項證據多選與 1、3、4、6 正解');
+}
+
 const hundredLessonSources = parseDraftSourcesFromProjectStatus(`
 | 篇次 | 篇名 | Active 教材主檔 | 狀態 |
 |---:|---|---|---|

@@ -161,6 +161,8 @@ https://icelog-tu.github.io/Justin-Learning-App/#/guwen-draft-preview?lessonPath
 
 純教材文字修改可更新主檔並 push，預覽器直接讀取固定分支；只有預覽器程式或正式 App 改動才需要完整建置與部署。
 
+拖曳故事排序與全文證據多選必須逐字套用 `GUWEN-MARKDOWN-FORMAT.md` 第六節的唯一結構；SOP 不另存第二份模板。交付成人預覽前，格式檢查必須確認排序題解析成事件卡、證據題解析出全部正確勾選項目。
+
 預覽時檢查作答前、第一次答錯、答對後、線索出處、逐段／整頁 TTS。出處與成人資料只顯示、不朗讀。
 
 ## 6. 發音流程
