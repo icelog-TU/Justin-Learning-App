@@ -79,7 +79,7 @@ import type { ChildSnapshot } from './guwen-master-child-snapshot';
 // 並刪除重複引導語；同步更新第十二篇草稿保護指紋。指紋不代表教材已核准。
 // 2026-07-31：《疑鄰竊斧》第 1～3 題經使用者核准；第 4、5、7 題依人工審核意見
 // 更換或簡化低負擔線索；同步更新第十二篇草稿保護指紋。指紋不代表教材已核准。
-// 2026-07-31：《愚人食鹽》第 20 題依使用者要求移除整串順序單選，
+// 2026-07-31：《疑鄰竊斧》第 4～6 題經使用者核准；第 7 題修正括號範圍，\n// 第 8 題移除答案洩漏並重寫可推理線索；同步更新第十二篇草稿保護指紋。指紋不代表教材已核准。\n// 2026-07-31：《愚人食鹽》第 20 題依使用者要求移除整串順序單選，
 // 改為六張可拖曳事件卡；同步更新第十一篇草稿保護指紋。指紋不代表教材已核准。
 // 2026-07-31：《愚人食鹽》第 21 題補上機器可讀的「應勾選」欄位；
 // 六項敘述、正解與孩子端文案未改。同步更新第十一篇草稿保護指紋。
@@ -95,5 +95,5 @@ export const GUWEN_CHILD_BASELINE: Record<string, ChildSnapshot> = {
   '09-guwen-yangshizi-decoder-content.md': { questionCount: 20, hash: '8ca3e8c301f4613e3ae810c829d8954a663625df67b39be9dc118e99b0be18f5' },
   '10-guwen-zixiangmaodun-decoder-content.md': { questionCount: 20, hash: '59eb08ff9e270ba57ec559f27abc35d9b393f84200862e09000d07b703be6b38' },
   '11-guwen-yurenshiyan-decoder-content.md': { questionCount: 21, hash: '05c6a0cfe73f9fe03bd3cc712455d9b3352dd20e448f34501054171bec228093' },
-  '12-guwen-yilinqiefu-decoder-content.md': { questionCount: 20, hash: 'c6ad7f85a5ebb3320c317f54ce9c188279066952d4bca0f9c3c75d858840f7ac' },
+  '12-guwen-yilinqiefu-decoder-content.md': { questionCount: 20, hash: 'd554ecf30bef30937a13a9fa18f61cc2c51e5f59d474a1064649f36dc78b768d' },
 };
