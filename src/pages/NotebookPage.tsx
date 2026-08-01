@@ -11,12 +11,12 @@ export default function NotebookPage() {
     <div className="space-y-4">
       <div>
         <h2 className="text-xl font-bold text-gray-800">⭐ 成語筆記本</h2>
-        <p className="text-sm text-gray-500">收藏接龍時學到的成語，之後可以隨時回來複習。</p>
+        <p className="text-sm text-gray-500">收藏成語接龍或一字成語王學到的成語，之後可以隨時回來複習。</p>
       </div>
 
       {bookmarks.length === 0 ? (
         <div className="bg-white rounded-2xl shadow p-8 text-center text-gray-400 text-sm">
-          還沒有收藏任何成語喔！在「成語接龍師」的提示卡片或接龍紀錄上按 ☆ 就可以收藏。
+          還沒有收藏任何成語喔！在「成語接龍師」或「一字成語王」的提示卡片按 ☆ 就可以收藏。
         </div>
       ) : (
         <div className="space-y-3">

@@ -776,12 +776,25 @@ export default function IdiomAssociationGame() {
                       ) : (
                         <p className="text-xs text-gray-400">我們題庫裡還沒有這個成語的解釋</p>
                       )}
-                      <div className="flex justify-end pt-1">
+                      <div className="flex items-center justify-between gap-2 pt-1">
+                        <button
+                          type="button"
+                          onClick={() => handleToggleBookmark(entry)}
+                          className={`inline-flex min-h-11 items-center justify-center rounded-full border px-3 py-1.5 text-xs font-bold transition-colors ${
+                            isBookmarked(entry.word)
+                              ? 'border-amber-300 bg-amber-100 text-amber-700'
+                              : 'border-amber-200 bg-white text-amber-600 hover:bg-amber-50'
+                          }`}
+                          aria-label={isBookmarked(entry.word) ? '取消收藏' : '收藏到成語筆記本'}
+                          title={isBookmarked(entry.word) ? '取消收藏' : '收藏到成語筆記本'}
+                        >
+                          {isBookmarked(entry.word) ? '⭐ 已收藏' : '☆ 收到筆記本'}
+                        </button>
                         <a
                           href={buildIdiomSearchUrl(entry.word)}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="shrink-0 text-xs font-medium bg-sky-500 text-white rounded-full px-3 py-1.5 hover:bg-sky-600"
+                          className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-full bg-sky-500 px-3 py-1.5 text-xs font-medium text-white hover:bg-sky-600"
                         >
                           🔍 查意思／典故
                         </a>
