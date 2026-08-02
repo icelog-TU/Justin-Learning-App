@@ -93,6 +93,8 @@ import type { ChildSnapshot } from './guwen-master-child-snapshot';
 // 同步更新第十二篇草稿保護指紋。指紋不代表教材全文已核准。
 // 2026-08-02：《疑鄰竊斧》第 13、15～19 題依使用者意見修訂答案洩漏、舊鑰匙提示、
 // 詞組切分、線索白話與拖曳排序格式；同步更新第十二篇草稿保護指紋。指紋不代表教材已核准。
+// 2026-08-02：《疑鄰竊斧》第 13 題核心解答補上「抇」的注音；任務開場、第 1～20 題、
+// 白話驗證卷軸與徽章收尾已完成雙重 AI 審核及使用者人工成人預覽 App 審核，全文核准。
 export const GUWEN_CHILD_BASELINE: Record<string, ChildSnapshot> = {
   'lessons/01-guwen-wangrong-rewrite.md': { questionCount: 20, hash: 'f66b7f8c6daf8f03e85be9990e7305f90466a808ec2b6608a798ac09e2d7d7e8' },
   '02-guwen-simaguang-decoder-content.md': { questionCount: 18, hash: 'e78c3eec7012fa42d81eb24ef4a000221784b5c2ced4d479cda0757dd4bb817e' },
@@ -105,5 +107,5 @@ export const GUWEN_CHILD_BASELINE: Record<string, ChildSnapshot> = {
   '09-guwen-yangshizi-decoder-content.md': { questionCount: 20, hash: '8ca3e8c301f4613e3ae810c829d8954a663625df67b39be9dc118e99b0be18f5' },
   '10-guwen-zixiangmaodun-decoder-content.md': { questionCount: 20, hash: '59eb08ff9e270ba57ec559f27abc35d9b393f84200862e09000d07b703be6b38' },
   '11-guwen-yurenshiyan-decoder-content.md': { questionCount: 21, hash: 'a37a5de898ab43b884af823c02aef48c5ec93509e6b4853ad6fd2d002095ff77' },
-  '12-guwen-yilinqiefu-decoder-content.md': { questionCount: 20, hash: 'abd1188cae6dc069c52fd666033b6bc3460055e12cae636c908faffa1f1f05c8' },
+  '12-guwen-yilinqiefu-decoder-content.md': { questionCount: 20, hash: 'ec5d15ee23e30680fa963c7780aada7d3fa2868dc412ceb4234513f90f3aadf7' },
 };
