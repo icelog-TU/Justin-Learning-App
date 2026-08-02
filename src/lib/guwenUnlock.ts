@@ -1,7 +1,7 @@
 import type { GuwenLesson } from '../data/guwenLesson';
 import type { AppData } from './storage';
 
-type GuwenProgressData = Pick<AppData, 'guwenProgress'>;
+type GuwenProgressData = Pick<AppData, 'guwenProgress' | 'guwenAllLessonsUnlocked'>;
 
 export interface GuwenLessonUnlockState {
   unlocked: boolean;
@@ -24,6 +24,7 @@ export function getGuwenLessonUnlockState(
 ): GuwenLessonUnlockState {
   const lessonIndex = lessons.findIndex((lesson) => lesson.id === lessonId);
   if (lessonIndex < 0) return { unlocked: false };
+  if (data.guwenAllLessonsUnlocked) return { unlocked: true };
   if (lessonIndex === 0) return { unlocked: true };
 
   const blockingLesson = lessons

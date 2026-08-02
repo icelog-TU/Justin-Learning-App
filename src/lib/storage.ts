@@ -108,6 +108,8 @@ export interface AppData {
   associationCrackLog: Record<string, AssociationCrackRecord[]>;
   /** 古文破譯家: classical text id -> decoding progress on that text. */
   guwenProgress: Record<string, GuwenProgress>;
+  /** Adult/reviewer access: bypass lesson-order locks without marking lessons complete or awarding rewards. */
+  guwenAllLessonsUnlocked: boolean;
 }
 
 function emptyData(): AppData {
@@ -131,6 +133,7 @@ function emptyData(): AppData {
     associationCracked: {},
     associationCrackLog: {},
     guwenProgress: {},
+    guwenAllLessonsUnlocked: false,
   };
 }
 
