@@ -9,6 +9,7 @@ import { approvedKeZhouQiuJianLesson } from './keZhouQiuJianLesson';
 import { yangShiZhiZiLesson } from './yangShiZhiZiLesson';
 import { ziXiangMaoDunLesson } from './ziXiangMaoDunLesson';
 import { yuRenShiYanLesson } from './yuRenShiYanLesson';
+import { yiLinQieFuLesson } from './yiLinQieFuLesson';
 
 /**
  * 古文破譯家 — "Lesson" format: a stricter evidence-based methodology than the original GuwenWord model in
@@ -3313,6 +3314,7 @@ export const guwenLessons: GuwenLesson[] = [
   yangShiZhiZiLesson,
   ziXiangMaoDunLesson,
   yuRenShiYanLesson,
+  yiLinQieFuLesson,
 ].map(distributeCorrectAnswerPositions);
 
 export function findGuwenLesson(id: string): GuwenLesson | undefined {
